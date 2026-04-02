@@ -16,11 +16,14 @@ function fmtExpiry(ts) {
   if (h > 0) return h + 'h ' + m + 'm left';
   return m + 'm left';
 }
-const exp = luaUser ? luaUser.auth_expire : null;
+const exp          = luaUser ? luaUser.auth_expire : null;
 const expired      = exp && exp > 0 && exp < Date.now() / 1000;
 const expiringSoon = exp && exp > 0 && !expired && (exp - Date.now()/1000) < 7 * 86400;
-const pct      = Math.min(100, Math.round((resetsToday / dailyLimit) * 100));
-const pfClass  = pct >= 100 ? 'pf-red' : pct >= 70 ? 'pf-yellow' : 'pf-green';
+const pct          = Math.min(100, Math.round((resetsToday / dailyLimit) * 100));
+const pfClass      = pct >= 100 ? 'pf-red' : pct >= 70 ? 'pf-yellow' : 'pf-green';
+const executions   = (luaUser && luaUser.total_executions != null) ? luaUser.total_executions : 0;
+const hasDiscord   = !!(user && user.discordId);
+const hasHwid      = !!(luaUser && luaUser.identifier);
 %>
 
 <div class="layout">
@@ -63,8 +66,30 @@ const pfClass  = pct >= 100 ? 'pf-red' : pct >= 70 ? 'pf-yellow' : 'pf-green';
       </div>
       <% } %>
 
-      <!-- Stats -->
-      <div class="stat-grid">
+      <!-- Welcome banner -->
+      <div class="welcome-banner">
+        <img 
+          src="https://cdn.discordapp.com/icons/1398423987817807934/a_6f62815e5aee24b4964bd4113626e3fe.webp?size=64"
+          class="welcome-avatar" alt="logo"
+        />
+        <div class="welcome-text">
+          <div class="welcome-title">Welcome back</div>
+          <div class="welcome-sub">
+            Key: <span class="mono" style="color:var(--accent)"><%= user ? user.key.slice(0,20) + '…' : '—' %></span>
+            &nbsp;·&nbsp;
+            <span class="<%= !expired ? 'c-green' : 'c-red' %>">
+              <%= !expired ? '● Active' : '● Expired' %>
+            </span>
+          </div>
+        </div>
+        <div class="welcome-exec">
+          <div class="welcome-exec-num" id="exec-count"><%= executions.toLocaleString() %></div>
+          <div class="welcome-exec-label">total executions</div>
+        </div>
+      </div>
+
+      <!-- Top Stats Row -->
+      <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);">
         <div class="stat">
           <div class="stat-label">Key Status</div>
           <div style="margin-top:8px;">
@@ -92,17 +117,103 @@ const pfClass  = pct >= 100 ? 'pf-red' : pct >= 70 ? 'pf-yellow' : 'pf-green';
         </div>
 
         <div class="stat">
-          <div class="stat-label">Discord</div>
-          <div style="margin-top:8px;" id="s-discord">
-            <% if (user && user.discordId) { %>
-              <span class="badge badge-green">✓ Linked</span>
-            <% } else { %>
-              <span class="badge badge-gray">Not linked</span>
-            <% } %>
+          <div class="stat-label">Executions</div>
+          <div class="stat-val c-purple" id="s-exec"><%= executions.toLocaleString() %></div>
+          <div class="stat-sub">total runs</div>
+        </div>
+      </div>
+
+      <!-- Connected Accounts -->
+      <div class="card" id="stats">
+        <div class="card-head">
+          <div class="card-icon ci-purple">🔗</div>
+          <div>
+            <div class="card-title">Connected Accounts & Devices</div>
+            <div class="card-desc">Everything linked to your Luarmor key</div>
           </div>
-          <div class="stat-sub mono t-xs" id="s-discord-id">
-            <%= (user && user.discordId) ? user.discordId : '—' %>
+        </div>
+
+        <div class="accounts-grid">
+
+          <!-- Discord Account -->
+          <div class="account-card <%= hasDiscord ? 'connected' : 'disconnected' %>">
+            <div class="account-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color: #5865f2;">
+                <path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03z"/>
+              </svg>
+            </div>
+            <div class="account-info">
+              <div class="account-name">Discord</div>
+              <div class="account-val mono">
+                <% if (hasDiscord) { %><%= user.discordId %><% } else { %>Not linked<% } %>
+              </div>
+            </div>
+            <div class="account-status">
+              <% if (hasDiscord) { %>
+                <span class="badge badge-green">✓ Linked</span>
+              <% } else { %>
+                <span class="badge badge-gray">Not linked</span>
+              <% } %>
+            </div>
           </div>
+
+          <!-- HWID Device -->
+          <div class="account-card <%= hasHwid ? 'connected' : 'disconnected' %>">
+            <div class="account-icon">
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:#8b5cf6;">
+                <rect x="2" y="3" width="20" height="14" rx="2" stroke-width="2"/>
+                <path stroke-linecap="round" stroke-width="2" d="M8 21h8M12 17v4"/>
+              </svg>
+            </div>
+            <div class="account-info">
+              <div class="account-name">Linked Device (HWID)</div>
+              <div class="account-val mono">
+                <% if (hasHwid) { %><%= luaUser.identifier.slice(0,28) %>…<% } else { %>No device linked yet<% } %>
+              </div>
+            </div>
+            <div class="account-status">
+              <% if (hasHwid) { %>
+                <span class="badge badge-green">✓ Active</span>
+              <% } else { %>
+                <span class="badge badge-gray">None</span>
+              <% } %>
+            </div>
+          </div>
+
+          <!-- Note / Tag -->
+          <div class="account-card <%= (luaUser && luaUser.note) ? 'connected' : 'disconnected' %>">
+            <div class="account-icon">
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:#f59e0b;">
+                <path stroke-linecap="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+            </div>
+            <div class="account-info">
+              <div class="account-name">Custom Note / Tag</div>
+              <div class="account-val">
+                <% if (luaUser && luaUser.note) { %><%= luaUser.note %><% } else { %>No note set<% } %>
+              </div>
+            </div>
+            <div class="account-status">
+              <% if (luaUser && luaUser.note) { %>
+                <span class="badge badge-yellow">Set</span>
+              <% } else { %>
+                <span class="badge badge-gray">Empty</span>
+              <% } %>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Execution bar chart (visual) -->
+        <div style="margin-top:1.25rem; padding-top:1.25rem; border-top:1px solid var(--border);">
+          <div class="prog-meta">
+            <span style="font-size:0.78rem; font-weight:600; color:var(--text-2);">Total Script Executions</span>
+            <span class="badge badge-purple" id="exec-badge"><%= executions.toLocaleString() %> runs</span>
+          </div>
+          <div class="exec-meter">
+            <div class="exec-fill" id="exec-fill" style="width:<%= Math.min(100, executions > 0 ? Math.max(5, Math.min(100, executions / 10)) : 0) %>%"></div>
+          </div>
+          <div class="t-xs dimmed mt-1">Each time your script runs in the executor counts as one execution.</div>
         </div>
       </div>
 
@@ -159,14 +270,14 @@ const pfClass  = pct >= 100 ? 'pf-red' : pct >= 70 ? 'pf-yellow' : 'pf-green';
           <div class="card-icon ci-blue">🔑</div>
           <div>
             <div class="card-title">Key Information</div>
-            <div class="card-desc">Live data from Luarmor</div>
+            <div class="card-desc">Live data pulled from Luarmor</div>
           </div>
           <button class="btn btn-sm btn-ghost" style="margin-left:auto;" onclick="openModal('key-modal')">
             <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
               <path stroke-linecap="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
             </svg>
-            View Key
+            View Full Key
           </button>
         </div>
 
@@ -177,7 +288,7 @@ const pfClass  = pct >= 100 ? 'pf-red' : pct >= 70 ? 'pf-yellow' : 'pf-green';
               <rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2"/>
               <path stroke-width="2" d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
             </svg>
-            <%= user ? user.key.slice(0,18) + '…' : '—' %>
+            <%= user ? user.key.slice(0,20) + '…' : '—' %>
           </div>
         </div>
         <div class="info-row">
@@ -186,6 +297,7 @@ const pfClass  = pct >= 100 ? 'pf-red' : pct >= 70 ? 'pf-yellow' : 'pf-green';
             <% if ((luaUser && luaUser.status) === 'active')  { %><span class="badge badge-green">Active</span><% } %>
             <% if ((luaUser && luaUser.status) === 'reset')   { %><span class="badge badge-yellow">Reset</span><% } %>
             <% if ((luaUser && luaUser.status) === 'banned')  { %><span class="badge badge-red">Banned</span><% } %>
+            <% if (!luaUser || !['active','reset','banned'].includes(luaUser.status)) { %><span class="badge badge-gray">Unknown</span><% } %>
           </div>
         </div>
         <div class="info-row">
@@ -193,10 +305,6 @@ const pfClass  = pct >= 100 ? 'pf-red' : pct >= 70 ? 'pf-yellow' : 'pf-green';
           <div>
             <% if (luaUser && luaUser.banned) { %><span class="badge badge-red">🚫 Yes</span><% } else { %><span class="badge badge-green">✅ No</span><% } %>
           </div>
-        </div>
-        <div class="info-row">
-          <span class="info-k">HWID</span>
-          <span class="info-v mono muted t-xs"><%= (luaUser && luaUser.identifier) ? luaUser.identifier.slice(0,24) + '…' : '— not assigned' %></span>
         </div>
         <div class="info-row">
           <span class="info-k">Discord ID</span>
@@ -214,15 +322,14 @@ const pfClass  = pct >= 100 ? 'pf-red' : pct >= 70 ? 'pf-yellow' : 'pf-green';
         </div>
         <div class="info-row">
           <span class="info-k">Total Executions</span>
-          <span class="info-v"><%= (luaUser && luaUser.total_executions != null) ? luaUser.total_executions.toLocaleString() : '—' %></span>
+          <span class="info-v c-purple" id="s-exec-row"><strong><%= executions.toLocaleString() %></strong></span>
         </div>
       </div>
 
       <!-- Two columns: Discord + Note -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;" id="discord">
 
-        <!-- Link Discord -->
-        <div class="card" id="discord" style="margin-bottom:0;">
+        <div class="card" style="margin-bottom:0;">
           <div class="card-head">
             <div class="card-icon ci-purple" style="font-size:18px;">💬</div>
             <div>
@@ -248,7 +355,6 @@ const pfClass  = pct >= 100 ? 'pf-red' : pct >= 70 ? 'pf-yellow' : 'pf-green';
           </div>
         </div>
 
-        <!-- Note -->
         <div class="card" style="margin-bottom:0;">
           <div class="card-head">
             <div class="card-icon ci-yellow">📝</div>
@@ -268,11 +374,10 @@ const pfClass  = pct >= 100 ? 'pf-red' : pct >= 70 ? 'pf-yellow' : 'pf-green';
 
       </div>
 
-    </div><!-- /content -->
-  </div><!-- /main -->
-</div><!-- /layout -->
+    </div>
+  </div>
+</div>
 
-<!-- Toast container -->
 <div class="toast-wrap" id="toasts"></div>
 
 <!-- View Key Modal -->
@@ -339,17 +444,14 @@ async function doReset() {
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner"></div> Resetting…';
   document.getElementById('reset-result').innerHTML = '';
-
   try {
     const r = await fetch('/api/reset-hwid', { method: 'POST' });
     const d = await r.json();
-
     if (d.success) {
       resetsToday = d.resetsToday;
       resetsLeft  = d.resetsLeft;
       updateProgress();
-      document.getElementById('reset-result').innerHTML =
-        `<div class="alert alert-success mb-3">✅ ${d.message}</div>`;
+      document.getElementById('reset-result').innerHTML = `<div class="alert alert-success mb-3">✅ ${d.message}</div>`;
       toast('HWID reset successfully!', 'ok');
       if (resetsLeft <= 0) {
         btn.className = 'btn btn-secondary btn-lg';
@@ -359,8 +461,7 @@ async function doReset() {
         btn.innerHTML = `<svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Reset HWID &nbsp;·&nbsp; <span id="resets-left-txt">${resetsLeft}</span> remaining`;
       }
     } else {
-      document.getElementById('reset-result').innerHTML =
-        `<div class="alert alert-danger mb-3">❌ ${d.message}</div>`;
+      document.getElementById('reset-result').innerHTML = `<div class="alert alert-danger mb-3">❌ ${d.message}</div>`;
       toast(d.message, 'err');
       btn.disabled = false;
       btn.innerHTML = 'Try Again';
@@ -373,30 +474,21 @@ async function doReset() {
 }
 
 async function linkDiscord() {
-  const input = document.getElementById('discord-input');
-  const id    = (input?.value || '').trim();
-  const area  = document.getElementById('discord-result');
-
+  const id   = (document.getElementById('discord-input')?.value || '').trim();
+  const area = document.getElementById('discord-result');
   if (!id || !/^\d{15,20}$/.test(id)) {
     area.innerHTML = '<div class="alert alert-danger mb-3">❌ Invalid ID — must be 15–20 digits.</div>';
     return;
   }
-
   area.innerHTML = '<div class="alert alert-info mb-3"><div class="spinner"></div> Linking…</div>';
-
   try {
-    const r = await fetch('/api/link-discord', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ discord_id: id }),
-    });
+    const r = await fetch('/api/link-discord', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ discord_id: id }) });
     const d = await r.json();
     if (d.success) {
       area.innerHTML = `<div class="alert alert-success mb-3">✅ ${d.message || 'Discord linked successfully.'}</div>`;
       document.getElementById('discord-id-txt').textContent = id;
-      const sd  = document.getElementById('s-discord');
+      const sd = document.getElementById('s-discord');
       if (sd) sd.innerHTML = '<span class="badge badge-green">✓ Linked</span>';
-      const sdi = document.getElementById('s-discord-id');
-      if (sdi) sdi.textContent = id;
       toast('Discord linked!', 'ok');
     } else {
       area.innerHTML = `<div class="alert alert-danger mb-3">❌ ${d.message}</div>`;
@@ -411,10 +503,7 @@ async function saveNote() {
   const area = document.getElementById('note-result');
   area.innerHTML = '<div class="alert alert-info mb-3"><div class="spinner"></div> Saving…</div>';
   try {
-    const r = await fetch('/api/update-note', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ note }),
-    });
+    const r = await fetch('/api/update-note', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ note }) });
     const d = await r.json();
     if (d.success) {
       area.innerHTML = '<div class="alert alert-success mb-3">✅ Note saved.</div>';
@@ -435,6 +524,14 @@ async function refresh() {
       resetsToday = d.resetsToday;
       resetsLeft  = d.resetsLeft;
       updateProgress();
+      // update execution count if returned
+      if (d.user && d.user.total_executions != null) {
+        const ex = d.user.total_executions;
+        const els = ['exec-count','s-exec','s-exec-row'];
+        els.forEach(id => { const el = document.getElementById(id); if (el) el.textContent = ex.toLocaleString(); });
+        const eb = document.getElementById('exec-badge');
+        if (eb) eb.textContent = ex.toLocaleString() + ' runs';
+      }
       document.getElementById('lastUpdated').textContent = 'Updated just now';
       toast('Data refreshed.', 'ok');
     }
@@ -443,16 +540,11 @@ async function refresh() {
 
 function openModal(id)  { document.getElementById(id)?.classList.add('open'); }
 function closeModal(id) { document.getElementById(id)?.classList.remove('open'); }
-
 document.querySelectorAll('.overlay').forEach(el => {
   el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
 });
-
 function copyFullKey() {
-  navigator.clipboard.writeText(FULL_KEY).then(() => {
-    toast('Key copied to clipboard.', 'ok');
-    closeModal('key-modal');
-  });
+  navigator.clipboard.writeText(FULL_KEY).then(() => { toast('Key copied!', 'ok'); closeModal('key-modal'); });
 }
 
 document.querySelectorAll('a[href*="#"]').forEach(a => {

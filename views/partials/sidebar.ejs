@@ -1,11 +1,12 @@
 <aside class="sidebar">
   <div class="sb-logo">
-    <div class="sb-logo-icon">🔑</div>
+    <img src="https://cdn.discordapp.com/icons/1398423987817807934/a_6f62815e5aee24b4964bd4113626e3fe.webp?size=64" 
+         class="sb-logo-img" alt="logo" />
     <div class="sb-logo-name"><%= panelName %></div>
   </div>
 
   <nav class="sb-nav">
-    <div class="sb-label">Menu</div>
+    <div class="sb-label">Panel</div>
 
     <a href="/dashboard" class="sb-link <%= page === 'dashboard' ? 'active' : '' %>">
       <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -31,27 +32,24 @@
       Key Info
     </a>
 
+    <a href="/dashboard#stats" class="sb-link">
+      <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+      </svg>
+      Stats
+    </a>
+
     <a href="/dashboard#discord" class="sb-link">
       <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-width="2" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
       </svg>
       Link Discord
     </a>
-
-    <div class="sb-label" style="margin-top:0.5rem;">Setup</div>
-
-    <a href="/ip-info" class="sb-link <%= page === 'ipinfo' ? 'active' : '' %>">
-      <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="10" stroke-width="2"/>
-        <path stroke-linecap="round" stroke-width="2" d="M12 8v4m0 4h.01"/>
-      </svg>
-      Whitelist IP Guide
-      <span class="sb-badge">Help</span>
-    </a>
   </nav>
 
   <div class="sb-footer">
-    <div class="sb-avatar">🔑</div>
+    <img src="https://cdn.discordapp.com/icons/1398423987817807934/a_6f62815e5aee24b4964bd4113626e3fe.webp?size=64"
+         class="sb-avatar-img" alt="avatar" />
     <div class="sb-user">
       <div class="sb-user-key"><%= user ? user.key.slice(0,14) + '…' : '—' %></div>
       <div class="sb-user-sub">Active session</div>

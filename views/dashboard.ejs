@@ -16,12 +16,11 @@ function fmtExpiry(ts) {
   if (h > 0) return h + 'h ' + m + 'm left';
   return m + 'm left';
 }
-const lu = luaUser;
-const exp = lu ? lu.auth_expire : null;
-const expired    = exp && exp > 0 && exp < Date.now() / 1000;
+const exp = luaUser ? luaUser.auth_expire : null;
+const expired      = exp && exp > 0 && exp < Date.now() / 1000;
 const expiringSoon = exp && exp > 0 && !expired && (exp - Date.now()/1000) < 7 * 86400;
-const pct = Math.min(100, Math.round((resetsToday / dailyLimit) * 100));
-const pfClass = pct >= 100 ? 'pf-red' : pct >= 70 ? 'pf-yellow' : 'pf-green';
+const pct      = Math.min(100, Math.round((resetsToday / dailyLimit) * 100));
+const pfClass  = pct >= 100 ? 'pf-red' : pct >= 70 ? 'pf-yellow' : 'pf-green';
 %>
 
 <div class="layout">
@@ -68,14 +67,14 @@ const pfClass = pct >= 100 ? 'pf-red' : pct >= 70 ? 'pf-yellow' : 'pf-green';
       <div class="stat-grid">
         <div class="stat">
           <div class="stat-label">Key Status</div>
-          <div class="stat-val c-purple" style="font-size:1rem;margin-top:5px;">
-            <% const s = lu ? lu.status : 'unknown'; %>
+          <div style="margin-top:8px;">
+            <% const s = luaUser ? luaUser.status : 'unknown'; %>
             <% if (s === 'active')  { %><span class="badge badge-green">● Active</span><% } %>
             <% if (s === 'reset')   { %><span class="badge badge-yellow">● Reset</span><% } %>
             <% if (s === 'banned')  { %><span class="badge badge-red">● Banned</span><% } %>
             <% if (!['active','reset','banned'].includes(s)) { %><span class="badge badge-gray"><%= s %></span><% } %>
           </div>
-          <div class="stat-sub"><% if (lu && lu.banned) { %>Key is banned<% } else { %>No restrictions<% } %></div>
+          <div class="stat-sub"><% if (luaUser && luaUser.banned) { %>Key is banned<% } else { %>No restrictions<% } %></div>
         </div>
 
         <div class="stat">
@@ -86,7 +85,7 @@ const pfClass = pct >= 100 ? 'pf-red' : pct >= 70 ? 'pf-yellow' : 'pf-green';
 
         <div class="stat">
           <div class="stat-label">Expiry</div>
-          <div class="stat-val c-blue" style="font-size:0.9rem;margin-top:5px;">
+          <div class="stat-val c-blue" style="font-size:0.875rem;margin-top:4px;">
             <%= exp && exp > 0 ? fmtExpiry(exp) : 'Never' %>
           </div>
           <div class="stat-sub"><%= exp && exp > 0 ? fmtTs(exp) : 'Permanent key' %></div>
@@ -94,14 +93,14 @@ const pfClass = pct >= 100 ? 'pf-red' : pct >= 70 ? 'pf-yellow' : 'pf-green';
 
         <div class="stat">
           <div class="stat-label">Discord</div>
-          <div class="stat-val" style="font-size:0.9rem;margin-top:5px;" id="s-discord">
+          <div style="margin-top:8px;" id="s-discord">
             <% if (user && user.discordId) { %>
               <span class="badge badge-green">✓ Linked</span>
             <% } else { %>
               <span class="badge badge-gray">Not linked</span>
             <% } %>
           </div>
-          <div class="stat-sub mono" id="s-discord-id" style="font-size:0.65rem;">
+          <div class="stat-sub mono t-xs" id="s-discord-id">
             <%= (user && user.discordId) ? user.discordId : '—' %>
           </div>
         </div>
@@ -128,7 +127,7 @@ const pfClass = pct >= 100 ? 'pf-red' : pct >= 70 ? 'pf-yellow' : 'pf-green';
           <div class="t-xs dimmed mt-1">Quota resets at 00:00 UTC every day</div>
         </div>
 
-        <% if (lu && lu.status === 'active') { %>
+        <% if (luaUser && luaUser.status === 'active') { %>
         <div class="alert alert-info mb-3">
           <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="10" stroke-width="2"/>
@@ -184,28 +183,28 @@ const pfClass = pct >= 100 ? 'pf-red' : pct >= 70 ? 'pf-yellow' : 'pf-green';
         <div class="info-row">
           <span class="info-k">Status</span>
           <div>
-            <% if ((lu && lu.status) === 'active')  { %><span class="badge badge-green">Active</span><% } %>
-            <% if ((lu && lu.status) === 'reset')   { %><span class="badge badge-yellow">Reset</span><% } %>
-            <% if ((lu && lu.status) === 'banned')  { %><span class="badge badge-red">Banned</span><% } %>
+            <% if ((luaUser && luaUser.status) === 'active')  { %><span class="badge badge-green">Active</span><% } %>
+            <% if ((luaUser && luaUser.status) === 'reset')   { %><span class="badge badge-yellow">Reset</span><% } %>
+            <% if ((luaUser && luaUser.status) === 'banned')  { %><span class="badge badge-red">Banned</span><% } %>
           </div>
         </div>
         <div class="info-row">
           <span class="info-k">Banned</span>
           <div>
-            <% if (lu && lu.banned) { %><span class="badge badge-red">🚫 Yes</span><% } else { %><span class="badge badge-green">✅ No</span><% } %>
+            <% if (luaUser && luaUser.banned) { %><span class="badge badge-red">🚫 Yes</span><% } else { %><span class="badge badge-green">✅ No</span><% } %>
           </div>
         </div>
         <div class="info-row">
           <span class="info-k">HWID</span>
-          <span class="info-v mono muted t-xs"><%= (lu && lu.identifier) ? lu.identifier.slice(0,24) + '…' : '— not assigned' %></span>
+          <span class="info-v mono muted t-xs"><%= (luaUser && luaUser.identifier) ? luaUser.identifier.slice(0,24) + '…' : '— not assigned' %></span>
         </div>
         <div class="info-row">
           <span class="info-k">Discord ID</span>
-          <span class="info-v mono t-sm" id="discord-id-txt"><%= (lu && lu.discord_id) ? lu.discord_id : '—' %></span>
+          <span class="info-v mono t-sm" id="discord-id-txt"><%= (luaUser && luaUser.discord_id) ? luaUser.discord_id : '—' %></span>
         </div>
         <div class="info-row">
           <span class="info-k">Note</span>
-          <span class="info-v muted t-sm"><%= (lu && lu.note) ? lu.note : '—' %></span>
+          <span class="info-v muted t-sm"><%= (luaUser && luaUser.note) ? luaUser.note : '—' %></span>
         </div>
         <div class="info-row">
           <span class="info-k">Expiry</span>
@@ -215,12 +214,12 @@ const pfClass = pct >= 100 ? 'pf-red' : pct >= 70 ? 'pf-yellow' : 'pf-green';
         </div>
         <div class="info-row">
           <span class="info-k">Total Executions</span>
-          <span class="info-v"><%= (lu && lu.total_executions != null) ? lu.total_executions.toLocaleString() : '—' %></span>
+          <span class="info-v"><%= (luaUser && luaUser.total_executions != null) ? luaUser.total_executions.toLocaleString() : '—' %></span>
         </div>
       </div>
 
-      <!-- Two column: Discord + Note -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.125rem;">
+      <!-- Two columns: Discord + Note -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
 
         <!-- Link Discord -->
         <div class="card" id="discord" style="margin-bottom:0;">
@@ -245,7 +244,7 @@ const pfClass = pct >= 100 ? 'pf-red' : pct >= 70 ? 'pf-yellow' : 'pf-green';
           </div>
           <button class="btn btn-primary btn-full" onclick="linkDiscord()">Link Account</button>
           <div class="t-xs dimmed mt-2">
-            Discord → Settings → Advanced → Developer Mode → right-click your name → Copy ID
+            Settings → Advanced → Developer Mode → right-click name → Copy ID
           </div>
         </div>
 
@@ -308,7 +307,6 @@ const DAILY_LIMIT = <%= dailyLimit %>;
 let resetsToday   = <%= resetsToday %>;
 let resetsLeft    = <%= resetsLeft %>;
 
-/* ── Toast */
 function toast(msg, type = 'info') {
   const icons = { ok: '✅', err: '❌', warn: '⚠️', info: 'ℹ️' };
   const el = document.createElement('div');
@@ -318,9 +316,8 @@ function toast(msg, type = 'info') {
   setTimeout(() => { el.style.animation = 'toastOut 0.3s forwards'; setTimeout(() => el.remove(), 320); }, 4000);
 }
 
-/* ── Update UI */
 function updateProgress() {
-  const pct = Math.min(100, Math.round((resetsToday / DAILY_LIMIT) * 100));
+  const pct  = Math.min(100, Math.round((resetsToday / DAILY_LIMIT) * 100));
   const fill = document.getElementById('prog-fill');
   if (fill) {
     fill.style.width = pct + '%';
@@ -329,14 +326,13 @@ function updateProgress() {
   const lbl = document.getElementById('prog-label');
   if (lbl) lbl.textContent = resetsToday + '/' + DAILY_LIMIT;
   const st = document.getElementById('s-today');
-  if (st) st.textContent = resetsToday;
+  if (st) { st.textContent = resetsToday; st.className = 'stat-val ' + (resetsLeft > 0 ? 'c-green' : 'c-yellow'); }
   const sl = document.getElementById('s-left');
   if (sl) sl.textContent = resetsLeft + ' of ' + DAILY_LIMIT + ' remaining';
   const rl = document.getElementById('resets-left-txt');
   if (rl) rl.textContent = resetsLeft;
 }
 
-/* ── HWID Reset */
 async function doReset() {
   const btn = document.getElementById('reset-btn');
   if (!btn || btn.disabled) return;
@@ -355,7 +351,6 @@ async function doReset() {
       document.getElementById('reset-result').innerHTML =
         `<div class="alert alert-success mb-3">✅ ${d.message}</div>`;
       toast('HWID reset successfully!', 'ok');
-
       if (resetsLeft <= 0) {
         btn.className = 'btn btn-secondary btn-lg';
         btn.innerHTML = '🚫 Daily limit reached — come back tomorrow';
@@ -377,18 +372,17 @@ async function doReset() {
   }
 }
 
-/* ── Link Discord */
 async function linkDiscord() {
   const input = document.getElementById('discord-input');
-  const id = (input?.value || '').trim();
-  const area = document.getElementById('discord-result');
+  const id    = (input?.value || '').trim();
+  const area  = document.getElementById('discord-result');
 
   if (!id || !/^\d{15,20}$/.test(id)) {
     area.innerHTML = '<div class="alert alert-danger mb-3">❌ Invalid ID — must be 15–20 digits.</div>';
     return;
   }
 
-  area.innerHTML = '<div class="alert alert-info mb-3"><div class="spinner" style="display:inline-block"></div> Linking…</div>';
+  area.innerHTML = '<div class="alert alert-info mb-3"><div class="spinner"></div> Linking…</div>';
 
   try {
     const r = await fetch('/api/link-discord', {
@@ -396,11 +390,10 @@ async function linkDiscord() {
       body: JSON.stringify({ discord_id: id }),
     });
     const d = await r.json();
-
     if (d.success) {
       area.innerHTML = `<div class="alert alert-success mb-3">✅ ${d.message || 'Discord linked successfully.'}</div>`;
       document.getElementById('discord-id-txt').textContent = id;
-      const sd = document.getElementById('s-discord');
+      const sd  = document.getElementById('s-discord');
       if (sd) sd.innerHTML = '<span class="badge badge-green">✓ Linked</span>';
       const sdi = document.getElementById('s-discord-id');
       if (sdi) sdi.textContent = id;
@@ -413,19 +406,16 @@ async function linkDiscord() {
   }
 }
 
-/* ── Save note */
 async function saveNote() {
   const note = (document.getElementById('note-input')?.value || '').trim();
   const area = document.getElementById('note-result');
-  area.innerHTML = '<div class="alert alert-info mb-3"><div class="spinner" style="display:inline-block"></div> Saving…</div>';
-
+  area.innerHTML = '<div class="alert alert-info mb-3"><div class="spinner"></div> Saving…</div>';
   try {
     const r = await fetch('/api/update-note', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ note }),
     });
     const d = await r.json();
-
     if (d.success) {
       area.innerHTML = '<div class="alert alert-success mb-3">✅ Note saved.</div>';
       toast('Note updated!', 'ok');
@@ -437,7 +427,6 @@ async function saveNote() {
   }
 }
 
-/* ── Refresh */
 async function refresh() {
   try {
     const r = await fetch('/api/userinfo');
@@ -452,7 +441,6 @@ async function refresh() {
   } catch { toast('Refresh failed.', 'err'); }
 }
 
-/* ── Modal */
 function openModal(id)  { document.getElementById(id)?.classList.add('open'); }
 function closeModal(id) { document.getElementById(id)?.classList.remove('open'); }
 
@@ -460,7 +448,6 @@ document.querySelectorAll('.overlay').forEach(el => {
   el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
 });
 
-/* ── Copy key */
 function copyFullKey() {
   navigator.clipboard.writeText(FULL_KEY).then(() => {
     toast('Key copied to clipboard.', 'ok');
@@ -468,7 +455,6 @@ function copyFullKey() {
   });
 }
 
-/* ── Smooth scroll */
 document.querySelectorAll('a[href*="#"]').forEach(a => {
   a.addEventListener('click', e => {
     const id = a.getAttribute('href').split('#')[1];
@@ -478,7 +464,6 @@ document.querySelectorAll('a[href*="#"]').forEach(a => {
   });
 });
 
-/* ── Auto-refresh every 2min */
 setInterval(refresh, 2 * 60 * 1000);
 </script>
 </body>

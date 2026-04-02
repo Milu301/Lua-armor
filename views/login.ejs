@@ -1,17 +1,20 @@
-<%- include('partials/head', { title: 'Login — ' + panelName }) %>
+<%- include('partials/head', { title: 'Sign In — ' + panelName }) %>
 
 <div class="login-page">
-  <div class="login-bg"></div>
+  <div class="login-glow"></div>
+
   <div class="login-card">
-    <div class="login-logo">
-      <div class="login-logo-icon">🔑</div>
-      <h1><%= panelName %></h1>
-      <p>Ingresa tu key de Luarmor para continuar</p>
+    <div class="login-top">
+      <div class="login-icon">🔑</div>
+      <div>
+        <div class="login-title"><%= panelName %></div>
+        <div class="login-sub">Enter your Luarmor key to access the panel</div>
+      </div>
     </div>
 
     <% if (error) { %>
-    <div class="alert alert-error mb-3">
-      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:1px;">
+    <div class="alert alert-danger mb-3">
+      <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="10" stroke-width="2"/>
         <path stroke-linecap="round" stroke-width="2" d="M12 8v4m0 4h.01"/>
       </svg>
@@ -21,33 +24,31 @@
 
     <form action="/login" method="POST" id="loginForm">
       <div class="form-group">
-        <label class="form-label">Tu Key de Luarmor</label>
+        <label class="label">Your Luarmor Key</label>
         <input
           type="text"
           name="key"
-          class="form-input font-mono"
-          placeholder="Pega tu key aquí..."
-          required
-          minlength="6"
-          maxlength="128"
-          autocomplete="off"
-          autocorrect="off"
-          spellcheck="false"
+          class="input mono"
+          placeholder="Paste your key here…"
+          required minlength="6" maxlength="128"
+          autocomplete="off" spellcheck="false" autocorrect="off"
         />
-        <div class="text-xs text-muted mt-1">Puedes encontrar tu key en el executor o donde la compraste.</div>
+        <div class="t-xs dimmed mt-1">Your key can be found in your executor or wherever you purchased access.</div>
       </div>
 
-      <button type="submit" class="btn btn-primary btn-full btn-lg" id="loginBtn">
-        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <button type="submit" class="btn btn-primary btn-full btn-lg mt-2" id="loginBtn">
+        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-width="2" d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"/>
         </svg>
-        Entrar al Panel
+        Sign In
       </button>
     </form>
 
     <div class="divider"></div>
-    <div class="text-xs text-muted" style="text-align:center;">
-      Tu key nunca se almacena en texto plano. Verificación segura mediante Luarmor API.
+
+    <div class="t-xs dimmed" style="text-align:center;line-height:1.7;">
+      Your key is verified directly against Luarmor's API and never stored in plain text.
+      Sessions expire after 7 days.
     </div>
   </div>
 </div>
@@ -56,9 +57,8 @@
 document.getElementById('loginForm').addEventListener('submit', function() {
   const btn = document.getElementById('loginBtn');
   btn.disabled = true;
-  btn.innerHTML = '<div class="spinner"></div> Verificando...';
+  btn.innerHTML = '<div class="spinner"></div> Verifying…';
 });
 </script>
-
 </body>
 </html>

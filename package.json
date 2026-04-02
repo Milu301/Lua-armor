@@ -1,6 +1,6 @@
 {
   "name": "luarmor-panel",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Luarmor Web Dashboard",
   "main": "server.js",
   "scripts": {

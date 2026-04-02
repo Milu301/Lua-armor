@@ -1,100 +1,89 @@
-# 🔑 Luarmor Panel
+# 🔑 Luarmor Panel v2
 
-Panel web moderno para gestionar keys de Luarmor. Los usuarios inician sesión con su key, pueden resetear su HWID, ver información de su cuenta y vincular Discord.
+A modern, dark-themed web dashboard for Luarmor script key management. Users sign in with their key, can reset their HWID, view account info, link their Discord, and set custom notes.
 
-## ✨ Funciones
+## ✨ Features
 
-- **Login seguro** con key de Luarmor (verificación directa vía API)
-- **Reset de HWID** con límite diario configurable
-- **Info de key** — estado, expiración, ejecuciones, HWID vinculado
-- **Vincular Discord ID** directamente desde el panel
-- **Advertencias de expiración** — avisa 7 días antes
-- **Rate limiting** — protección anti-spam
-- **Dark mode** — UI gaming moderna
+- **Secure login** with Luarmor key (verified live via API)
+- **HWID Reset** with configurable daily limit
+- **Key details** — status, expiry, executions, HWID, Discord link
+- **Link Discord** from the dashboard
+- **Custom note** editor (syncs to Luarmor)
+- **IP Whitelist Guide** — built-in page to get your server's outbound IP and steps to whitelist it in Luarmor
+- Rate limiting, Helmet.js security, session management
 
 ---
 
-## 🚀 Deploy en Railway (5 minutos)
+## 🚀 Deploy on Railway
 
-### Paso 1 — Subir el proyecto
-
-Puedes usar GitHub o subir directamente:
+### Step 1 — Push to GitHub
 
 ```bash
-# Inicializar git
-git init
-git add .
-git commit -m "initial commit"
-
-# Crear repo en GitHub y conectar
-git remote add origin https://github.com/TU_USER/luarmor-panel.git
+git init && git add . && git commit -m "init"
+git remote add origin https://github.com/YOUR/repo.git
 git push -u origin main
 ```
 
-### Paso 2 — Crear proyecto en Railway
+### Step 2 — Create Railway project
 
-1. Ve a [railway.app](https://railway.app) y crea cuenta
-2. Clic en **New Project → Deploy from GitHub repo**
-3. Selecciona tu repositorio
-4. Railway detectará automáticamente el proyecto Node.js
+Go to [railway.app](https://railway.app) → **New Project → Deploy from GitHub repo** → select your repo.
 
-### Paso 3 — Configurar Variables de Entorno
+### Step 3 — Add environment variables
 
-En Railway, ve a tu proyecto → **Variables** → agregar:
+In Railway → your service → **Variables**:
 
-| Variable | Valor | Descripción |
+| Variable | Required | Description |
 |---|---|---|
-| `LUARMOR_API_KEY` | `tu_api_key` | De luarmor.net/profile |
-| `LUARMOR_PROJECT_ID` | `tu_project_id` | De luarmor.net/projects |
-| `SESSION_SECRET` | string aleatorio largo | Mínimo 32 caracteres |
-| `DAILY_RESET_LIMIT` | `3` | Límite de resets por día (default 3) |
-| `PANEL_NAME` | `Mi Script Hub` | Nombre que aparece en el panel |
-| `ACCENT_COLOR` | `8b5cf6` | Color hex sin # (default morado) |
-| `NODE_ENV` | `production` | Activa cookies seguras |
+| `LUARMOR_API_KEY` | ✅ | From luarmor.net/profile |
+| `LUARMOR_PROJECT_ID` | ✅ | From luarmor.net/projects |
+| `SESSION_SECRET` | ✅ | Any long random string (32+ chars) |
+| `DAILY_RESET_LIMIT` | ➖ | Resets per day (default: `3`) |
+| `PANEL_NAME` | ➖ | Display name (default: `Script Hub`) |
+| `ACCENT_COLOR` | ➖ | Hex color without # (default: `8b5cf6`) |
+| `NODE_ENV` | ➖ | Set to `production` for secure cookies |
 
-> ⚠️ **IMPORTANTE**: Debes whitelist la IP de Railway en [luarmor.net/profile](https://luarmor.net/profile) para que la API funcione.
-> Railway puede cambiar la IP. Para evitar problemas usa la opción "Static IP" de Railway o usa un proxy.
+### Step 4 — Whitelist your Railway IP in Luarmor ⚠️
 
-### Paso 4 — Deploy
+**This is the most important step.** Without it, Luarmor blocks all API calls.
 
-Railway hace deploy automático. Espera ~1 minuto y tu panel está listo en la URL que Railway te asigna.
+1. After your first deploy, go to your panel URL → **Whitelist IP Guide** (sidebar)
+2. Click **Refresh IP** to detect the current outbound IP
+3. Copy it and go to [luarmor.net/profile](https://luarmor.net/profile)
+4. Paste it in **"Whitelisted IPs for API access"** and save
+
+**On Railway Hobby plan:** The IP may change on redeploy. Re-do step 3-4 if it stops working.
+**On Railway Pro plan:** Go to Settings → Networking → Enable Static IPs → whitelist that IP once and never again.
 
 ---
 
-## ⚙️ Configuración local
+## ⚙️ Local development
 
 ```bash
-# Instalar dependencias
+cp .env.example .env   # fill in your values
 npm install
-
-# Copiar variables de entorno
-cp .env.example .env
-# Editar .env con tus valores
-
-# Correr en desarrollo
 node server.js
-# O con auto-reload:
-npx nodemon server.js
 ```
 
-Abre [http://localhost:3000](http://localhost:3000)
+Open [http://localhost:3000](http://localhost:3000)
+
+> For local dev you need to whitelist your home/office IP in Luarmor too.
 
 ---
 
-## 📁 Estructura
+## 📁 File structure
 
 ```
 luarmor-panel/
-├── server.js           # Servidor principal Express
+├── server.js              # Express app, all routes + API logic
 ├── package.json
-├── railway.toml        # Config de Railway
-├── .env.example        # Template de variables
+├── railway.toml
+├── .env.example
 ├── public/
-│   └── css/
-│       └── style.css   # Estilos globales
+│   └── css/style.css      # All styles
 └── views/
-    ├── login.ejs       # Página de login
-    ├── dashboard.ejs   # Panel principal
+    ├── login.ejs           # Login page
+    ├── dashboard.ejs       # Main panel
+    ├── ipinfo.ejs          # IP whitelist guide
     ├── 404.ejs
     ├── error.ejs
     └── partials/
@@ -104,27 +93,21 @@ luarmor-panel/
 
 ---
 
-## 🔒 Seguridad
+## 🔒 Security notes
 
-- Las keys se verifican directamente contra Luarmor API en cada login
-- Las sesiones usan `httpOnly` + `sameSite: lax` cookies
-- Rate limiting: 10 intentos de login / 15 min, 30 requests API / min
-- Helmet.js con CSP estricto
-- Las keys nunca se almacenan en texto plano en la DB (solo en sesión cifrada)
-
----
-
-## 📝 Notas
-
-- El tracking de resets diarios es **en memoria** (se resetea al reiniciar el servidor). Para producción con alta demanda, considera agregar Redis o una DB.
-- Railway hace restart automático al hacer push → los contadores se reinician. Esto es aceptable para uso normal.
-- Para mayor persistencia, puedes agregar una base de datos Railway MySQL/PostgreSQL y adaptar `server.js`.
+- Keys are never stored in plaintext — only in an encrypted session cookie
+- Sessions use `httpOnly`, `sameSite: lax`, and `secure` in production
+- Login: 12 attempts / 15 min rate limit
+- API endpoints: 40 requests / min rate limit
+- Helmet.js with strict Content Security Policy
 
 ---
 
-## 🎨 Personalización
+## 🎨 Customization
 
-- **Color de acento**: Cambia `ACCENT_COLOR` en las variables (hex sin #)
-- **Nombre del panel**: Cambia `PANEL_NAME`
-- **Límite de resets**: Cambia `DAILY_RESET_LIMIT`
-- **Estilos**: Edita `public/css/style.css`
+| What | How |
+|---|---|
+| Brand color | `ACCENT_COLOR` env var (hex without #) |
+| Panel name | `PANEL_NAME` env var |
+| Daily reset limit | `DAILY_RESET_LIMIT` env var |
+| Styles | Edit `public/css/style.css` |

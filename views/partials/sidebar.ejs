@@ -1,54 +1,63 @@
 <aside class="sidebar">
-  <div class="sidebar-logo">
-    <div class="logo-text">
-      <div class="logo-icon">🔑</div>
-      <%= panelName %>
-    </div>
+  <div class="sb-logo">
+    <div class="sb-logo-icon">🔑</div>
+    <div class="sb-logo-name"><%= panelName %></div>
   </div>
 
-  <nav class="sidebar-nav">
-    <div class="nav-section-label">Principal</div>
-    <a href="/dashboard" class="nav-link <%= page === 'dashboard' ? 'active' : '' %>">
-      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <rect x="3" y="3" width="7" height="7" rx="1" stroke-width="2"/>
-        <rect x="14" y="3" width="7" height="7" rx="1" stroke-width="2"/>
-        <rect x="3" y="14" width="7" height="7" rx="1" stroke-width="2"/>
-        <rect x="14" y="14" width="7" height="7" rx="1" stroke-width="2"/>
+  <nav class="sb-nav">
+    <div class="sb-label">Menu</div>
+
+    <a href="/dashboard" class="sb-link <%= page === 'dashboard' ? 'active' : '' %>">
+      <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <rect x="3" y="3" width="7" height="7" rx="1.5" stroke-width="2"/>
+        <rect x="14" y="3" width="7" height="7" rx="1.5" stroke-width="2"/>
+        <rect x="3" y="14" width="7" height="7" rx="1.5" stroke-width="2"/>
+        <rect x="14" y="14" width="7" height="7" rx="1.5" stroke-width="2"/>
       </svg>
       Dashboard
     </a>
-    <a href="/dashboard#hwid" class="nav-link">
-      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-width="2" d="M9 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V9l-6-6z"/>
-        <path stroke-width="2" d="M9 3v6h6"/>
+
+    <a href="/dashboard#hwid" class="sb-link">
+      <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
       </svg>
       Reset HWID
     </a>
-    <a href="/dashboard#keyinfo" class="nav-link">
-      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <circle cx="11" cy="11" r="8" stroke-width="2"/>
-        <path stroke-linecap="round" stroke-width="2" d="m21 21-4.35-4.35"/>
+
+    <a href="/dashboard#keyinfo" class="sb-link">
+      <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
       </svg>
-      Info de Key
+      Key Info
     </a>
-    <a href="/dashboard#discord" class="nav-link">
-      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-width="2" d="M18 9a5 5 0 00-5-5H6a5 5 0 00-5 5v6l4-2h8a5 5 0 005-5z"/>
+
+    <a href="/dashboard#discord" class="sb-link">
+      <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-width="2" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
       </svg>
-      Discord Link
+      Link Discord
+    </a>
+
+    <div class="sb-label" style="margin-top:0.5rem;">Setup</div>
+
+    <a href="/ip-info" class="sb-link <%= page === 'ipinfo' ? 'active' : '' %>">
+      <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" stroke-width="2"/>
+        <path stroke-linecap="round" stroke-width="2" d="M12 8v4m0 4h.01"/>
+      </svg>
+      Whitelist IP Guide
+      <span class="sb-badge">Help</span>
     </a>
   </nav>
 
-  <div class="sidebar-user">
-    <div class="user-avatar">🔑</div>
-    <div class="user-meta">
-      <div class="user-name font-mono" style="font-size:0.7rem;">
-        <%= user ? user.key.slice(0,12) + '…' : '—' %>
-      </div>
-      <div class="user-sub">Key vinculada</div>
+  <div class="sb-footer">
+    <div class="sb-avatar">🔑</div>
+    <div class="sb-user">
+      <div class="sb-user-key"><%= user ? user.key.slice(0,14) + '…' : '—' %></div>
+      <div class="sb-user-sub">Active session</div>
     </div>
-    <form action="/logout" method="POST" style="display:inline;">
-      <button type="submit" class="btn-logout" title="Cerrar sesión">
+    <form action="/logout" method="POST">
+      <button type="submit" class="btn-logout" title="Sign out">
         <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
         </svg>

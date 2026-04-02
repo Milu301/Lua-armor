@@ -1,0 +1,264 @@
+<%- include('partials/head', { title: 'IP Whitelist Guide — ' + panelName }) %>
+
+<div class="layout">
+  <%- include('partials/sidebar', { page: 'ipinfo' }) %>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="pulse-dot"></div>
+        <div class="topbar-title">Luarmor IP Whitelist Guide</div>
+      </div>
+      <div class="topbar-right">
+        <a href="/dashboard" class="btn btn-sm btn-ghost">← Back to Dashboard</a>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- Server IP Card -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-icon ci-green">🌐</div>
+          <div>
+            <div class="card-title">Your Server's Outbound IP</div>
+            <div class="card-desc">This is the IP you need to whitelist in Luarmor</div>
+          </div>
+        </div>
+
+        <div class="ip-box">
+          <div>
+            <div class="t-xs muted mb-1">Current outbound IP address</div>
+            <div class="ip-value" id="ip-display">
+              <% if (serverIp) { %>
+                <%= serverIp %>
+              <% } else { %>
+                <span class="muted t-sm">Not detected yet — click Refresh</span>
+              <% } %>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button class="btn btn-sm btn-secondary" id="refresh-ip-btn" onclick="refreshIp()">
+              <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+              Refresh IP
+            </button>
+            <button class="btn btn-sm btn-primary" id="copy-ip-btn" onclick="copyIp()" <%= serverIp ? '' : 'disabled' %>>
+              <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2"/>
+                <path stroke-width="2" d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+              </svg>
+              Copy
+            </button>
+          </div>
+        </div>
+
+        <div class="alert alert-warning" style="font-size:0.82rem;">
+          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink:0">
+            <path stroke-linecap="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+          <div>
+            <strong>Important:</strong> This IP may change on redeploy or restart if you're on Railway's Hobby plan.
+            See the plan options below to understand when this is stable.
+          </div>
+        </div>
+      </div>
+
+      <!-- Railway Plan Comparison -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-icon ci-blue">🚆</div>
+          <div>
+            <div class="card-title">Railway Plan — Which one do you need?</div>
+            <div class="card-desc">Understanding IP stability on Railway</div>
+          </div>
+        </div>
+
+        <div class="plan-grid">
+          <div class="plan-card">
+            <div class="plan-badge" style="color:var(--text-2);">Hobby / Trial</div>
+            <div class="plan-name">Free / $5 / month</div>
+            <div class="plan-price">Dynamic IP — changes on restart</div>
+            <div class="plan-feat">
+              ✅ Works for most things<br>
+              ⚠️ IP changes on every deploy<br>
+              ⚠️ Must re-whitelist after each restart<br>
+              ❌ No Static IP toggle available
+            </div>
+          </div>
+
+          <div class="plan-card recommended">
+            <div class="plan-badge" style="color:var(--accent);">⭐ Recommended</div>
+            <div class="plan-name">Pro Plan</div>
+            <div class="plan-price">~$20 / month</div>
+            <div class="plan-feat">
+              ✅ Enable Static Outbound IP<br>
+              ✅ IP stays fixed across restarts<br>
+              ✅ Whitelist once, never change it<br>
+              ✅ Settings → Networking → Static IPs
+            </div>
+          </div>
+        </div>
+
+        <div class="t-xs muted" style="line-height:1.8;">
+          💡 <strong>On Hobby plan?</strong> You can still use the panel — just re-whitelist the new IP whenever Railway restarts your service.
+          Click "Refresh IP" above to get the current one, then copy it to Luarmor.
+        </div>
+      </div>
+
+      <!-- Step by step -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-icon ci-purple">📋</div>
+          <div>
+            <div class="card-title">How to Whitelist Your IP in Luarmor</div>
+            <div class="card-desc">Follow these steps to allow the panel to communicate with Luarmor's API</div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <div class="step-title">Copy your server's IP address</div>
+            <div class="step-desc">
+              Use the box above to get your current outbound IP. Click <strong>Refresh IP</strong> to make sure it's current,
+              then click <strong>Copy</strong>.
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <div class="step-title">Go to your Luarmor profile</div>
+            <div class="step-desc">
+              Open <a href="https://luarmor.net/profile" target="_blank" style="color:var(--accent);">luarmor.net/profile</a>
+              and scroll down to the <strong>"Whitelisted IPs for API access"</strong> section.
+              You must be logged in as the script owner / API key holder.
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <div class="step-title">Add your IP to the whitelist</div>
+            <div class="step-desc">
+              Paste the IP address into the input field and save. Luarmor will now allow API requests
+              coming from that address. If you see a Cloudflare block error, this step was missing.
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <div class="step-title">(Pro plan only) Enable Static Outbound IP on Railway</div>
+            <div class="step-desc">
+              In Railway, go to your service → <strong>Settings</strong> → <strong>Networking</strong>
+              → toggle <strong>Enable Static IPs</strong>. After the next deploy, your service will always
+              use the same IP. Copy that IP to Luarmor and you're done permanently.
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-content">
+            <div class="step-title">Test it</div>
+            <div class="step-desc">
+              Go back to the <a href="/dashboard" style="color:var(--accent);">Dashboard</a> and try resetting your HWID or
+              viewing key info. If it works without errors, the whitelist is correct.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FAQ -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-icon ci-yellow">❓</div>
+          <div>
+            <div class="card-title">Frequently Asked Questions</div>
+          </div>
+        </div>
+
+        <div class="info-row" style="display:block;padding:0.875rem 0;">
+          <div style="font-size:0.875rem;font-weight:600;margin-bottom:0.3rem;">Why does Luarmor block my server's API calls?</div>
+          <div class="t-sm muted">Luarmor requires you to whitelist server IPs for security. Without it, Cloudflare blocks every request returning an error. This is by design — add your IP to the whitelist at luarmor.net/profile.</div>
+        </div>
+
+        <div class="info-row" style="display:block;padding:0.875rem 0;">
+          <div style="font-size:0.875rem;font-weight:600;margin-bottom:0.3rem;">My IP changed after a Railway redeploy. What do I do?</div>
+          <div class="t-sm muted">Click "Refresh IP" on this page to get the new IP, copy it, and add it to Luarmor again. To avoid this, upgrade to Railway Pro and enable Static Outbound IPs.</div>
+        </div>
+
+        <div class="info-row" style="display:block;padding:0.875rem 0;">
+          <div style="font-size:0.875rem;font-weight:600;margin-bottom:0.3rem;">Can I whitelist multiple IPs in Luarmor?</div>
+          <div class="t-sm muted">Yes. Luarmor allows multiple whitelisted IPs. If you're switching from Hobby to Pro plan on Railway, add both the old and new IP temporarily, then remove the old one after confirming it works.</div>
+        </div>
+
+        <div class="info-row" style="display:block;padding:0.875rem 0;border-bottom:none;">
+          <div style="font-size:0.875rem;font-weight:600;margin-bottom:0.3rem;">The IP box shows "Not detected" — what's wrong?</div>
+          <div class="t-sm muted">The server couldn't reach ipify.org to detect its own IP (network may be blocked or rate limited). Try clicking Refresh IP. If it still fails, check Railway logs or manually find the IP in your hosting provider's dashboard.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<script>
+let currentIp = '<%= serverIp || "" %>';
+
+function toast(msg, type = 'ok') {
+  const icons = { ok: '✅', err: '❌', warn: '⚠️', info: 'ℹ️' };
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${icons[type]}</span><span>${msg}</span>`;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => { el.style.animation = 'toastOut 0.3s forwards'; setTimeout(() => el.remove(), 320); }, 4000);
+}
+
+async function refreshIp() {
+  const btn = document.getElementById('refresh-ip-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Detecting…';
+
+  try {
+    const r = await fetch('/api/server-ip');
+    const d = await r.json();
+
+    const display = document.getElementById('ip-display');
+    const copyBtn = document.getElementById('copy-ip-btn');
+
+    if (d.ip) {
+      currentIp = d.ip;
+      display.textContent = d.ip;
+      display.style.color = '';
+      copyBtn.disabled = false;
+      toast('IP detected: ' + d.ip, 'ok');
+    } else {
+      display.innerHTML = '<span class="muted t-sm">Could not detect IP</span>';
+      toast('Could not detect IP. Check Railway logs.', 'err');
+    }
+  } catch {
+    toast('Network error while detecting IP.', 'err');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = `<svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Refresh IP`;
+}
+
+function copyIp() {
+  if (!currentIp) return;
+  navigator.clipboard.writeText(currentIp).then(() => {
+    toast('IP copied: ' + currentIp, 'ok');
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,488 @@
+<%- include('partials/head', { title: 'Dashboard — ' + panelName }) %>
+
+<%
+// Helper functions
+function fmtDate(ts) {
+  if (!ts) return 'N/A';
+  return new Date(Number(ts) * 1000).toLocaleDateString('es', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+function fmtExpiry(ts) {
+  if (!ts || ts < 0) return 'Nunca expira';
+  const now = Date.now() / 1000;
+  const diff = ts - now;
+  if (diff <= 0) return '⚠️ Expirado';
+  const days = Math.floor(diff / 86400);
+  const hrs = Math.floor((diff % 86400) / 3600);
+  if (days > 0) return `${days}d ${hrs}h restantes`;
+  const mins = Math.floor((diff % 3600) / 60);
+  if (hrs > 0) return `${hrs}h ${mins}m restantes`;
+  return `${mins}m restantes`;
+}
+function statusBadge(s) {
+  if (s === 'active') return '<span class="badge badge-success">● Activo</span>';
+  if (s === 'reset') return '<span class="badge badge-warning">● Reseteado</span>';
+  if (s === 'banned') return '<span class="badge badge-danger">● Baneado</span>';
+  return '<span class="badge badge-gray">' + (s || 'Desconocido') + '</span>';
+}
+const lu = luaUser;
+const expiry = lu ? lu.auth_expire : null;
+const isExpired = expiry && expiry > 0 && (expiry < Date.now() / 1000);
+const expiresIn7 = expiry && expiry > 0 && !isExpired && ((expiry - Date.now()/1000) < 7 * 86400);
+const resetPct = Math.min(100, Math.round((resetsToday / dailyLimit) * 100));
+const resetClass = resetPct >= 100 ? 'danger' : resetPct >= 70 ? 'warning' : 'green';
+%>
+
+<div class="page-wrapper">
+  <%- include('partials/sidebar', { page: 'dashboard' }) %>
+
+  <div class="main-content">
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="topbar-title">Panel de Control</div>
+      <div class="topbar-right">
+        <div class="status-dot"></div>
+        <span class="text-sm text-muted">Conectado</span>
+        <button class="btn btn-sm btn-secondary" onclick="refreshData()">
+          <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          Actualizar
+        </button>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content-area">
+
+      <!-- Expiry warning -->
+      <% if (isExpired) { %>
+      <div class="expiry-bar" style="background:rgba(239,68,68,0.08);border-color:rgba(239,68,68,0.2);color:#f87171;">
+        ⚠️ Tu key ha <strong>expirado</strong>. Contacta al staff para renovarla.
+      </div>
+      <% } else if (expiresIn7) { %>
+      <div class="expiry-bar">
+        ⚠️ Tu key expira pronto: <strong><%= fmtExpiry(expiry) %></strong>. Renueva antes de quedarte sin acceso.
+      </div>
+      <% } %>
+
+      <!-- Stats grid -->
+      <div class="stats-grid section-gap" id="statsGrid">
+        <div class="stat-card">
+          <div class="stat-label">Estado de Key</div>
+          <div class="stat-value purple" style="font-size:1rem;margin-top:4px;">
+            <%- statusBadge(lu ? lu.status : 'unknown') %>
+          </div>
+          <div class="stat-sub">
+            <% if (lu && lu.banned) { %>🚫 Baneada<% } else { %>✅ Sin restricciones<% } %>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">Resets Hoy</div>
+          <div class="stat-value <%= resetsLeft > 0 ? 'green' : 'amber' %>" id="statResetsToday"><%= resetsToday %></div>
+          <div class="stat-sub" id="statResetsLeft"><%= resetsLeft %> de <%= dailyLimit %> restantes</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">Expira</div>
+          <div class="stat-value blue" style="font-size:0.95rem;margin-top:4px;">
+            <%= expiry && expiry > 0 ? fmtExpiry(expiry) : 'Nunca' %>
+          </div>
+          <div class="stat-sub">
+            <%= expiry && expiry > 0 ? fmtDate(expiry) : 'Key permanente' %>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">Discord</div>
+          <div class="stat-value blue" style="font-size:0.9rem;margin-top:4px;" id="statDiscord">
+            <% if (user && user.discordId) { %>
+              <span class="badge badge-success">Vinculado</span>
+            <% } else { %>
+              <span class="badge badge-gray">No vinculado</span>
+            <% } %>
+          </div>
+          <div class="stat-sub" id="statDiscordId">
+            ID: <%= (user && user.discordId) ? user.discordId : '—' %>
+          </div>
+        </div>
+      </div>
+
+      <!-- HWID Reset -->
+      <div class="card section-gap" id="hwid">
+        <div class="card-header">
+          <div class="card-icon purple">🔄</div>
+          <div>
+            <div class="card-title">Reset de HWID</div>
+            <div class="card-subtitle">Cambia el hardware vinculado a tu key</div>
+          </div>
+        </div>
+
+        <div class="progress-wrap mb-3">
+          <div class="progress-label">
+            <span>Resets usados hoy</span>
+            <span id="resetProgressLabel"><%= resetsToday %>/<%= dailyLimit %></span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill <%= resetClass %>" id="resetProgressFill" style="width:<%= resetPct %>%"></div>
+          </div>
+          <div class="text-xs text-muted mt-1">Se reinicia automáticamente a las 00:00 UTC</div>
+        </div>
+
+        <% if (lu && lu.status === 'active') { %>
+        <div class="alert alert-info mb-3">
+          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:1px;">
+            <circle cx="12" cy="12" r="10" stroke-width="2"/>
+            <path stroke-linecap="round" stroke-width="2" d="M12 8v4m0 4h.01"/>
+          </svg>
+          Tu HWID actual está activo. Al resetear, el próximo executor que uses quedará vinculado.
+        </div>
+        <% } %>
+
+        <div id="resetResultArea"></div>
+
+        <% if (resetsLeft > 0) { %>
+        <button class="btn btn-primary btn-lg" id="resetBtn" onclick="doReset()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          Resetear HWID (<%= resetsLeft %> restantes)
+        </button>
+        <% } else { %>
+        <button class="btn btn-secondary btn-lg" disabled>
+          🛑 Límite diario alcanzado — vuelve mañana
+        </button>
+        <% } %>
+      </div>
+
+      <!-- Key Info -->
+      <div class="card section-gap" id="keyinfo">
+        <div class="card-header">
+          <div class="card-icon blue">🔑</div>
+          <div>
+            <div class="card-title">Información de tu Key</div>
+            <div class="card-subtitle">Datos actuales desde Luarmor</div>
+          </div>
+        </div>
+
+        <div class="info-row">
+          <span class="info-key">Tu Key</span>
+          <div class="key-display" onclick="copyKey()" title="Clic para copiar">
+            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2"/>
+              <path stroke-width="2" d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+            </svg>
+            <span id="keyText"><%= user ? user.key.slice(0,16) + '…' : '—' %></span>
+          </div>
+        </div>
+
+        <div class="info-row">
+          <span class="info-key">Estado</span>
+          <div><%- statusBadge(lu ? lu.status : 'unknown') %></div>
+        </div>
+
+        <div class="info-row">
+          <span class="info-key">Baneado</span>
+          <div>
+            <% if (lu && lu.banned) { %>
+              <span class="badge badge-danger">🚫 Sí</span>
+            <% } else { %>
+              <span class="badge badge-success">✅ No</span>
+            <% } %>
+          </div>
+        </div>
+
+        <div class="info-row">
+          <span class="info-key">HWID Vinculado</span>
+          <span class="info-val font-mono text-sm text-muted">
+            <%= (lu && lu.identifier) ? lu.identifier.slice(0,20) + '…' : '—' %>
+          </span>
+        </div>
+
+        <div class="info-row">
+          <span class="info-key">Discord ID</span>
+          <span class="info-val font-mono text-sm" id="discordIdDisplay">
+            <%= (lu && lu.discord_id) ? lu.discord_id : '—' %>
+          </span>
+        </div>
+
+        <div class="info-row">
+          <span class="info-key">Nota</span>
+          <span class="info-val text-sm text-muted">
+            <%= (lu && lu.note) ? lu.note : '—' %>
+          </span>
+        </div>
+
+        <div class="info-row">
+          <span class="info-key">Expiración</span>
+          <span class="info-val text-sm">
+            <%= expiry && expiry > 0 ? fmtDate(expiry) + ' (' + fmtExpiry(expiry) + ')' : 'Nunca expira' %>
+          </span>
+        </div>
+
+        <div class="info-row">
+          <span class="info-key">Ejecuciones</span>
+          <span class="info-val">
+            <% if (lu && lu.total_executions !== undefined) { %>
+              <%= lu.total_executions.toLocaleString() %>
+            <% } else { %>
+              —
+            <% } %>
+          </span>
+        </div>
+      </div>
+
+      <!-- Link Discord -->
+      <div class="card section-gap" id="discord">
+        <div class="card-header">
+          <div class="card-icon blue" style="font-size:18px;">💬</div>
+          <div>
+            <div class="card-title">Vincular Discord</div>
+            <div class="card-subtitle">Asocia tu cuenta de Discord a la key</div>
+          </div>
+        </div>
+
+        <% if (user && user.discordId) { %>
+        <div class="alert alert-success mb-3">
+          ✅ Discord ya vinculado: <strong class="font-mono"><%= user.discordId %></strong>
+        </div>
+        <% } %>
+
+        <p class="text-sm mb-3">
+          Vincular tu Discord te permite gestionar la key desde el bot de Discord y resetear HWID vía comandos.
+        </p>
+
+        <div id="discordLinkResult"></div>
+
+        <div class="flex gap-2" style="align-items:flex-end;">
+          <div class="form-group" style="flex:1;margin-bottom:0;">
+            <label class="form-label">Tu Discord ID (numérico)</label>
+            <input
+              type="text"
+              class="form-input font-mono"
+              id="discordIdInput"
+              placeholder="Ej: 123456789012345678"
+              pattern="[0-9]{15,20}"
+              maxlength="20"
+            />
+          </div>
+          <button class="btn btn-primary" onclick="linkDiscord()" style="flex-shrink:0;margin-bottom:0;">
+            Vincular
+          </button>
+        </div>
+        <div class="text-xs text-muted mt-1">
+          Para obtener tu ID: Discord → Ajustes → Avanzado → Modo Desarrollador → clic derecho en tu nombre → Copiar ID.
+        </div>
+      </div>
+
+    </div><!-- /content-area -->
+  </div><!-- /main-content -->
+</div><!-- /page-wrapper -->
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Full key modal -->
+<div class="modal-backdrop" id="keyModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Tu Key Completa</h2>
+      <button class="modal-close" onclick="closeModal('keyModal')">×</button>
+    </div>
+    <div class="alert alert-warning mb-3">
+      ⚠️ Nunca compartas tu key con nadie. Quien tenga tu key tiene acceso completo.
+    </div>
+    <div class="key-display w-full" style="word-break:break-all;user-select:all;cursor:text;">
+      <%= user ? user.key : '' %>
+    </div>
+    <div class="mt-3 flex gap-2">
+      <button class="btn btn-primary" onclick="copyFullKey()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2"/>
+          <path stroke-width="2" d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+        </svg>
+        Copiar
+      </button>
+      <button class="btn btn-secondary" onclick="closeModal('keyModal')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const FULL_KEY = <%= JSON.stringify(user ? user.key : '') %>;
+const DAILY_LIMIT = <%= dailyLimit %>;
+let resetsToday = <%= resetsToday %>;
+let resetsLeft = <%= resetsLeft %>;
+
+// ── Toast
+function showToast(msg, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  const icons = {
+    success: '✅',
+    error: '❌',
+    warning: '⚠️',
+    info: 'ℹ️',
+  };
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span style="flex-shrink:0">${icons[type] || 'ℹ️'}</span><span>${msg}</span>`;
+  container.appendChild(el);
+  setTimeout(() => {
+    el.style.animation = 'fadeOut 0.3s forwards';
+    setTimeout(() => el.remove(), 300);
+  }, 4000);
+}
+
+// ── HWID Reset
+async function doReset() {
+  const btn = document.getElementById('resetBtn');
+  if (!btn || btn.disabled) return;
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Reseteando...';
+
+  const resultArea = document.getElementById('resetResultArea');
+  resultArea.innerHTML = '';
+
+  try {
+    const res = await fetch('/api/reset-hwid', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+    const data = await res.json();
+
+    if (data.success) {
+      resetsToday = data.resetsToday;
+      resetsLeft = data.resetsLeft;
+      updateResetUI();
+
+      resultArea.innerHTML = `<div class="alert alert-success mb-3">
+        ✅ ${data.message}
+      </div>`;
+      showToast('HWID reseteado correctamente.', 'success');
+
+      if (resetsLeft <= 0) {
+        btn.disabled = true;
+        btn.innerHTML = '🛑 Límite diario alcanzado — vuelve mañana';
+        btn.className = 'btn btn-secondary btn-lg';
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = `<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Resetear HWID (${resetsLeft} restantes)`;
+      }
+    } else {
+      resultArea.innerHTML = `<div class="alert alert-error mb-3">❌ ${data.message}</div>`;
+      showToast(data.message, 'error');
+      btn.disabled = false;
+      btn.innerHTML = `<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Intentar de nuevo`;
+    }
+  } catch (e) {
+    resultArea.innerHTML = `<div class="alert alert-error mb-3">❌ Error de red. Intenta de nuevo.</div>`;
+    showToast('Error de conexión.', 'error');
+    btn.disabled = false;
+    btn.innerHTML = 'Error — Reintentar';
+  }
+}
+
+function updateResetUI() {
+  const pct = Math.min(100, Math.round((resetsToday / DAILY_LIMIT) * 100));
+  const fill = document.getElementById('resetProgressFill');
+  const label = document.getElementById('resetProgressLabel');
+  const statToday = document.getElementById('statResetsToday');
+  const statLeft = document.getElementById('statResetsLeft');
+
+  if (fill) {
+    fill.style.width = pct + '%';
+    fill.className = 'progress-fill ' + (pct >= 100 ? 'danger' : pct >= 70 ? 'warning' : 'green');
+  }
+  if (label) label.textContent = resetsToday + '/' + DAILY_LIMIT;
+  if (statToday) statToday.textContent = resetsToday;
+  if (statLeft) statLeft.textContent = resetsLeft + ' de ' + DAILY_LIMIT + ' restantes';
+}
+
+// ── Link Discord
+async function linkDiscord() {
+  const input = document.getElementById('discordIdInput');
+  const id = (input?.value || '').trim();
+  const resultArea = document.getElementById('discordLinkResult');
+
+  if (!id || !/^\d{15,20}$/.test(id)) {
+    resultArea.innerHTML = '<div class="alert alert-error mb-3">❌ ID inválido. Debe ser numérico (15-20 dígitos).</div>';
+    return;
+  }
+
+  resultArea.innerHTML = '<div class="alert alert-info mb-3"><div class="spinner" style="display:inline-block;"></div> Vinculando...</div>';
+
+  try {
+    const res = await fetch('/api/link-discord', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ discord_id: id }),
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      resultArea.innerHTML = `<div class="alert alert-success mb-3">✅ ${data.message || 'Discord vinculado correctamente.'}</div>`;
+      document.getElementById('discordIdDisplay').textContent = id;
+      document.getElementById('statDiscordId').textContent = 'ID: ' + id;
+      showToast('Discord vinculado correctamente.', 'success');
+    } else {
+      resultArea.innerHTML = `<div class="alert alert-error mb-3">❌ ${data.message}</div>`;
+    }
+  } catch {
+    resultArea.innerHTML = '<div class="alert alert-error mb-3">❌ Error de red.</div>';
+  }
+}
+
+// ── Copy key
+function copyKey() {
+  document.getElementById('keyModal').classList.add('open');
+}
+
+function copyFullKey() {
+  navigator.clipboard.writeText(FULL_KEY).then(() => {
+    showToast('Key copiada al portapapeles.', 'success');
+  });
+}
+
+// ── Modal
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+document.querySelectorAll('.modal-backdrop').forEach(el => {
+  el.addEventListener('click', e => {
+    if (e.target === el) el.classList.remove('open');
+  });
+});
+
+// ── Refresh data
+async function refreshData() {
+  try {
+    const res = await fetch('/api/userinfo');
+    const data = await res.json();
+    if (data.success) {
+      resetsToday = data.resetsToday;
+      resetsLeft = data.resetsLeft;
+      updateResetUI();
+      showToast('Datos actualizados.', 'success');
+    }
+  } catch {
+    showToast('Error al actualizar.', 'error');
+  }
+}
+
+// ── Smooth scroll for anchor links
+document.querySelectorAll('a[href*="#"]').forEach(link => {
+  link.addEventListener('click', e => {
+    const hash = link.getAttribute('href').split('#')[1];
+    if (!hash) return;
+    const target = document.getElementById(hash);
+    if (target) {
+      e.preventDefault();
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+});
+
+// ── Auto-refresh every 2 minutes
+setInterval(refreshData, 2 * 60 * 1000);
+</script>
+
+</body>
+</html>

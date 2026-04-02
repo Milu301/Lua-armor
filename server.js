@@ -13,7 +13,7 @@ const app = express();
 
 const PORT              = process.env.PORT || 3000;
 const SESSION_SECRET    = process.env.SESSION_SECRET || 'fallback-secret-change-me';
-const PANEL_NAME        = process.env.PANEL_NAME || 'Script Hub';
+const PANEL_NAME        = process.env.PANEL_NAME || 'AuroraHud';
 const ACCENT_COLOR      = process.env.ACCENT_COLOR || '8b5cf6';
 const DAILY_RESET_LIMIT = Math.max(1, Number(process.env.DAILY_RESET_LIMIT || 3));
 const LUARMOR_API_KEY   = process.env.LUARMOR_API_KEY || '';

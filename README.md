@@ -38,7 +38,7 @@ In Railway → your service → **Variables**:
 | `LUARMOR_PROJECT_ID` | ✅ | From luarmor.net/projects |
 | `SESSION_SECRET` | ✅ | Any long random string (32+ chars) |
 | `DAILY_RESET_LIMIT` | ➖ | Resets per day (default: `3`) |
-| `PANEL_NAME` | ➖ | Display name (default: `Script Hub`) |
+| `PANEL_NAME` | ➖ | Display name (default: `AuroraHud`) |
 | `ACCENT_COLOR` | ➖ | Hex color without # (default: `8b5cf6`) |
 | `NODE_ENV` | ➖ | Set to `production` for secure cookies |
 

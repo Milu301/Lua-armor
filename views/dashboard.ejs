@@ -205,33 +205,40 @@ const hasHwid      = !!(luaUser && luaUser.identifier);
             </div>
           </div>
 
-          <!-- Roblox Live Session -->
-          <div class="account-card <%= liveSession ? 'connected' : 'disconnected' %>" id="roblox-session-card" style="grid-column:1/-1;">
-            <div class="account-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color:#e74c3c;">
-                <path d="M5.001 5.54L8.916 18.46l10.083-2.54L15.084 3zm7.315 5.397l1.688 5.896-3.525.888-1.688-5.896z"/>
-              </svg>
-            </div>
-            <div class="account-info" style="flex:1;" id="roblox-session-info">
-              <div class="account-name">Roblox — Live Session</div>
-              <div id="roblox-session-val">
-                <% if (liveSession) { %>
-                <div class="account-val" style="display:flex;flex-wrap:wrap;gap:0.4rem;align-items:center;margin-top:2px;">
-                  <span class="mono" style="color:var(--text-1)"><%= liveSession.roblox_username || '—' %></span>
-                  <% if (liveSession.place_name) { %>
-                  <span class="badge badge-gray" style="font-size:0.65rem;">🎮 <%= liveSession.place_name %></span>
-                  <% } %>
-                </div>
+          <!-- Roblox Live Sessions -->
+          <div class="account-card <%= liveSessions && liveSessions.length > 0 ? 'connected' : 'disconnected' %>" id="roblox-session-card" style="grid-column:1/-1;flex-direction:column;align-items:stretch;gap:0.5rem;">
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+              <div class="account-icon" style="flex-shrink:0;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color:#e74c3c;">
+                  <path d="M5.001 5.54L8.916 18.46l10.083-2.54L15.084 3zm7.315 5.397l1.688 5.896-3.525.888-1.688-5.896z"/>
+                </svg>
+              </div>
+              <div style="flex:1;">
+                <div class="account-name">Roblox — Live Sessions</div>
+                <div class="account-val muted" style="font-size:0.7rem;">Updates every 30s · heartbeat every 30s from script</div>
+              </div>
+              <div id="roblox-session-badge">
+                <% if (liveSessions && liveSessions.length > 0) { %>
+                  <span class="badge badge-green">● <%= liveSessions.length %> Online</span>
                 <% } else { %>
-                <div class="account-val muted">Not executing right now</div>
+                  <span class="badge badge-gray">● Offline</span>
                 <% } %>
               </div>
             </div>
-            <div class="account-status" id="roblox-session-badge">
-              <% if (liveSession) { %>
-                <span class="badge badge-green">● Online</span>
+            <div id="roblox-sessions-list" style="display:flex;flex-direction:column;gap:0.4rem;">
+              <% if (liveSessions && liveSessions.length > 0) { %>
+                <% liveSessions.forEach(function(s) { %>
+                <div class="roblox-session-row">
+                  <span class="pulse-dot" style="width:6px;height:6px;flex-shrink:0;"></span>
+                  <span class="mono" style="color:var(--text-1);font-size:0.82rem;font-weight:600;"><%= s.roblox_username || '—' %></span>
+                  <% if (s.place_name) { %>
+                  <span class="badge badge-gray" style="font-size:0.65rem;">🎮 <%= s.place_name %></span>
+                  <% } %>
+                  <span class="muted" style="font-size:0.68rem;margin-left:auto;">ID: <%= s.roblox_user_id %></span>
+                </div>
+                <% }) %>
               <% } else { %>
-                <span class="badge badge-gray">● Offline</span>
+                <div class="account-val muted" style="font-size:0.78rem;padding:0.25rem 0;">No accounts executing right now</div>
               <% } %>
             </div>
           </div>
@@ -845,22 +852,24 @@ async function pollLiveSession() {
     if (!r.ok) return;
     const d = await r.json();
     const card  = document.getElementById('roblox-session-card');
-    const val   = document.getElementById('roblox-session-val');
+    const list  = document.getElementById('roblox-sessions-list');
     const badge = document.getElementById('roblox-session-badge');
-    if (!card || !val || !badge) return;
-    if (d.online && d.session) {
-      card.className = card.className.replace('disconnected','connected');
-      if (!card.className.includes('connected')) card.className += ' connected';
-      val.innerHTML = `<div class="account-val" style="display:flex;flex-wrap:wrap;gap:0.4rem;align-items:center;margin-top:2px;">
-        <span class="mono" style="color:var(--text-1)">${d.session.roblox_username || '—'}</span>
-        ${d.session.place_name ? `<span class="badge badge-gray" style="font-size:0.65rem;">🎮 ${d.session.place_name}</span>` : ''}
-      </div>`;
-      badge.innerHTML = '<span class="badge badge-green">● Online</span>';
+    if (!card || !list || !badge) return;
+
+    if (d.online && d.sessions && d.sessions.length > 0) {
+      card.className = card.className.replace('disconnected','') + ' connected';
+      badge.innerHTML = `<span class="badge badge-green">● ${d.sessions.length} Online</span>`;
+      list.innerHTML = d.sessions.map(s => `
+        <div class="roblox-session-row">
+          <span class="pulse-dot" style="width:6px;height:6px;flex-shrink:0;"></span>
+          <span class="mono" style="color:var(--text-1);font-size:0.82rem;font-weight:600;">${s.roblox_username || '—'}</span>
+          ${s.place_name ? `<span class="badge badge-gray" style="font-size:0.65rem;">🎮 ${s.place_name}</span>` : ''}
+          <span class="muted" style="font-size:0.68rem;margin-left:auto;">ID: ${s.roblox_user_id}</span>
+        </div>`).join('');
     } else {
-      card.className = card.className.replace('connected','disconnected');
-      if (!card.className.includes('disconnected')) card.className += ' disconnected';
-      val.innerHTML = '<div class="account-val muted">Not executing right now</div>';
+      card.className = card.className.replace('connected','') + ' disconnected';
       badge.innerHTML = '<span class="badge badge-gray">● Offline</span>';
+      list.innerHTML = '<div class="account-val muted" style="font-size:0.78rem;padding:0.25rem 0;">No accounts executing right now</div>';
     }
   } catch {}
 }

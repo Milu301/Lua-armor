@@ -111,14 +111,16 @@ async function initDB() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     ALTER TABLE users ADD COLUMN IF NOT EXISTS script_token VARCHAR(32) UNIQUE;
-    CREATE TABLE IF NOT EXISTS live_sessions (
-      user_id INT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-      roblox_username VARCHAR(64) NOT NULL DEFAULT '',
+    DROP TABLE IF EXISTS live_sessions;
+    CREATE TABLE live_sessions (
+      user_id         INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       roblox_user_id  VARCHAR(32) NOT NULL DEFAULT '',
+      roblox_username VARCHAR(64) NOT NULL DEFAULT '',
       place_id        VARCHAR(32) NOT NULL DEFAULT '',
       place_name      VARCHAR(128) NOT NULL DEFAULT '',
       job_id          VARCHAR(64) NOT NULL DEFAULT '',
-      last_seen       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      last_seen       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (user_id, roblox_user_id)
     );
   `);
 
@@ -450,16 +452,18 @@ app.get('/dashboard', auth, async (req, res) => {
     WHERE user_id=$1 ORDER BY reset_date DESC LIMIT 7
   `, [id]);
 
-  /* Live Roblox session (heartbeat within last 5 minutes = online) */
-  const liveSession = await db.one(`
-    SELECT * FROM live_sessions
+  /* Live Roblox sessions (heartbeat within last 5 minutes = online) */
+  const liveSessions = await db.all(`
+    SELECT roblox_username, roblox_user_id, place_name, place_id, last_seen
+    FROM live_sessions
     WHERE user_id=$1 AND last_seen > NOW() - INTERVAL '5 minutes'
+    ORDER BY last_seen DESC
   `, [id]);
 
   res.render('dashboard', {
     dbUser, proj, luaUser,
     resetsToday, resetsLeft, dailyLimit, pct, pfClass, ringOffset,
-    announcements, history, liveSession,
+    announcements, history, liveSessions,
   });
 });
 
@@ -766,12 +770,13 @@ app.post('/api/admin/toggle-user', apiAuth, adminApiOnly, async (req, res) => {
 
 /* Live session status — called from dashboard JS */
 app.get('/api/live-status', apiAuth, async (req, res) => {
-  const session = await db.one(`
-    SELECT roblox_username, place_name, last_seen
+  const sessions = await db.all(`
+    SELECT roblox_username, roblox_user_id, place_name, place_id, last_seen
     FROM live_sessions
     WHERE user_id=$1 AND last_seen > NOW() - INTERVAL '5 minutes'
+    ORDER BY last_seen DESC
   `, [req.session.user.id]);
-  res.json({ online: !!session, session: session || null });
+  res.json({ online: sessions.length > 0, sessions });
 });
 
 /* ─────────────────────────────────────
@@ -793,13 +798,13 @@ app.get('/api/heartbeat', heartbeatLimiter, async (req, res) => {
   const pn = (req.query.pn || '').slice(0, 128);  // place name
   const ji = (req.query.ji || '').slice(0, 64);   // job id
 
+  const robloxId = ri || 'unknown';
   await db.query(`
-    INSERT INTO live_sessions (user_id, roblox_username, roblox_user_id, place_id, place_name, job_id, last_seen)
+    INSERT INTO live_sessions (user_id, roblox_user_id, roblox_username, place_id, place_name, job_id, last_seen)
     VALUES ($1,$2,$3,$4,$5,$6,NOW())
-    ON CONFLICT (user_id) DO UPDATE SET
-      roblox_username=$2, roblox_user_id=$3,
-      place_id=$4, place_name=$5, job_id=$6, last_seen=NOW()
-  `, [dbUser.id, rn, ri, pi, pn, ji]);
+    ON CONFLICT (user_id, roblox_user_id) DO UPDATE SET
+      roblox_username=$3, place_id=$4, place_name=$5, job_id=$6, last_seen=NOW()
+  `, [dbUser.id, robloxId, rn, pi, pn, ji]);
 
   res.json({ ok: true });
 });

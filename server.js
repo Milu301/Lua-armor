@@ -33,17 +33,16 @@ async function detectServerIp() {
   }
 }
 
-// FIX 1: CSP — added connectSrc for api.luarmor.net, fontSrc includes data:
-// This stops the font CSP error and allows API fetch() calls to work
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
-      styleSrc:   ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
-      fontSrc:    ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "data:"],
-      scriptSrc:  ["'self'", "'unsafe-inline'"],
-      imgSrc:     ["'self'", "data:", "https://cdn.discordapp.com", "https://i.imgur.com"],
-      connectSrc: ["'self'", "https://api.luarmor.net", "https://api.ipify.org"],
+      defaultSrc:    ["'self'"],
+      styleSrc:      ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
+      fontSrc:       ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "data:"],
+      scriptSrc:     ["'self'", "'unsafe-inline'"],
+      scriptSrcAttr: ["'unsafe-inline'"],
+      imgSrc:        ["'self'", "data:", "https://cdn.discordapp.com", "https://i.imgur.com"],
+      connectSrc:    ["'self'", "https://api.luarmor.net", "https://api.ipify.org"],
     },
   },
   crossOriginEmbedderPolicy: false,

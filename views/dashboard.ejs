@@ -484,7 +484,7 @@ const hasHwid      = !!(luaUser && luaUser.identifier);
 </div>
 
 <script>
-const FULL_KEY    = <%= JSON.stringify(user ? user.key : '') %>;
+const FULL_KEY    = <%- JSON.stringify(user ? user.key : '') %>;
 const DAILY_LIMIT = <%= dailyLimit %>;
 let resetsToday   = <%= resetsToday %>;
 let resetsLeft    = <%= resetsLeft %>;

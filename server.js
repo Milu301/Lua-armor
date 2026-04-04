@@ -23,6 +23,9 @@ const PANEL_NAME    = process.env.PANEL_NAME || 'LuarmorHub';
 const DISCORD_URL   = process.env.DISCORD_URL || 'https://discord.gg/dnUMzRhDuK';
 const PANEL_LOGO    = process.env.PANEL_LOGO || 'https://cdn.discordapp.com/icons/1398423987817807934/a_6f62815e5aee24b4964bd4113626e3fe.webp?size=64';
 
+/* Dynamic settings (overrides env vars, editable from admin panel) */
+let dynSettings = { panel_name: PANEL_NAME, discord_url: DISCORD_URL, panel_logo: PANEL_LOGO };
+
 if (!DATABASE_URL) { console.error('DATABASE_URL required'); process.exit(1); }
 
 /* ─── PostgreSQL Pool ─── */
@@ -36,6 +39,14 @@ const db = {
   one:   async (text, params) => { const r = await pool.query(text, params); return r.rows[0] || null; },
   all:   async (text, params) => { const r = await pool.query(text, params); return r.rows; },
 };
+
+/* ─── Dynamic Settings ─── */
+async function loadSettings() {
+  try {
+    const rows = await db.all('SELECT key, value FROM settings');
+    rows.forEach(r => { dynSettings[r.key] = r.value; });
+  } catch {}
+}
 
 /* ─── DB Schema ─── */
 async function initDB() {
@@ -94,6 +105,11 @@ async function initDB() {
     );
     CREATE INDEX IF NOT EXISTS idx_session_expire ON session(expire);
     CREATE INDEX IF NOT EXISTS idx_users_project ON users(project_id);
+    CREATE TABLE IF NOT EXISTS settings (
+      key VARCHAR(64) PRIMARY KEY,
+      value TEXT NOT NULL DEFAULT '',
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
   `);
 
   /* Seed projects from env vars PROJECT_N_* */
@@ -258,9 +274,9 @@ app.use(session({
 }));
 
 app.use((req, res, next) => {
-  res.locals.panelName  = PANEL_NAME;
-  res.locals.discordUrl = DISCORD_URL;
-  res.locals.panelLogo  = PANEL_LOGO;
+  res.locals.panelName  = dynSettings.panel_name  || PANEL_NAME;
+  res.locals.discordUrl = dynSettings.discord_url || DISCORD_URL;
+  res.locals.panelLogo  = dynSettings.panel_logo  || PANEL_LOGO;
   res.locals.user       = req.session.user || null;
   next();
 });
@@ -423,39 +439,183 @@ app.get('/dashboard', auth, async (req, res) => {
   });
 });
 
-/* IP Info */
-app.get('/ip-info', auth, async (_req, res) => {
-  let serverIp = null;
-  try {
-    const r = await fetch('https://api.ipify.org?format=json', { timeout: 5000 });
-    const d = await r.json();
-    serverIp = d.ip || null;
-  } catch {}
-  res.render('ipinfo', { serverIp });
-});
-
-app.get('/api/server-ip', apiAuth, async (req, res) => {
-  try {
-    const r = await fetch('https://api.ipify.org?format=json', { timeout: 5000 });
-    const d = await r.json();
-    res.json({ ip: d.ip || null });
-  } catch (e) {
-    res.json({ ip: null, error: e.message });
-  }
-});
 
 /* Admin panel */
 app.get('/admin', auth, adminOnly, async (req, res) => {
-  const [projects, users, announcements] = await Promise.all([
+  const [projects, users, announcements, totalUsers, activeToday, totalResets] = await Promise.all([
     db.all('SELECT p.*, COUNT(u.id) AS user_count FROM projects p LEFT JOIN users u ON u.project_id=p.id GROUP BY p.id ORDER BY p.sort_order'),
-    db.all('SELECT u.*, p.name AS project_name, p.color AS project_color FROM users u LEFT JOIN projects p ON p.id=u.project_id ORDER BY u.created_at DESC LIMIT 50'),
-    db.all('SELECT a.*, u.username AS author_name FROM announcements a LEFT JOIN users u ON u.id=a.author_id ORDER BY a.created_at DESC LIMIT 20'),
+    db.all('SELECT u.*, p.name AS project_name, p.color AS project_color, p.icon AS project_icon FROM users u LEFT JOIN projects p ON p.id=u.project_id ORDER BY u.created_at DESC LIMIT 100'),
+    db.all('SELECT a.*, u.username AS author_name FROM announcements a LEFT JOIN users u ON u.id=a.author_id ORDER BY a.pinned DESC, a.created_at DESC LIMIT 30'),
+    db.one('SELECT COUNT(*) AS c FROM users'),
+    db.one('SELECT COUNT(DISTINCT user_id) AS c FROM reset_log WHERE reset_date=CURRENT_DATE'),
+    db.one('SELECT SUM(total_resets) AS c FROM users'),
   ]);
-  const totalUsers   = await db.one('SELECT COUNT(*) AS c FROM users');
-  const activeToday  = await db.one(`SELECT COUNT(DISTINCT user_id) AS c FROM reset_log WHERE reset_date=CURRENT_DATE`);
-  const totalResets  = await db.one('SELECT SUM(total_resets) AS c FROM users');
-  res.render('admin', { projects, users, announcements,
-    stats: { totalUsers: totalUsers.c, activeToday: activeToday.c, totalResets: totalResets.c || 0 } });
+  res.render('admin', {
+    projects, users, announcements,
+    stats: { totalUsers: totalUsers.c, activeToday: activeToday.c, totalResets: totalResets.c || 0 },
+    settings: { ...dynSettings },
+  });
+});
+
+/* ─────────────────────────────────────
+   ADMIN API — Projects CRUD
+───────────────────────────────────── */
+app.post('/api/admin/project', apiAuth, adminApiOnly, async (req, res) => {
+  const name  = (req.body.name  || '').trim();
+  const pid   = (req.body.luarmor_project_id || '').trim();
+  const pkey  = (req.body.luarmor_api_key    || '').trim();
+  if (!name || !pid || !pkey)
+    return res.json({ success: false, message: 'Name, Project ID and API Key are required.' });
+
+  const slug  = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').slice(0, 32);
+  const color = (req.body.color || '#8b5cf6').trim();
+  const grad  = (req.body.gradient || `linear-gradient(135deg,${color},${color}cc)`).trim();
+  const icon  = (req.body.icon  || '⚡').trim();
+  const limit = Math.max(1, Number(req.body.daily_reset_limit) || 3);
+  const desc  = (req.body.description || '').trim();
+
+  try {
+    const proj = await db.one(`
+      INSERT INTO projects (name,slug,luarmor_project_id,luarmor_api_key,color,gradient,icon,daily_reset_limit,description)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id
+    `, [name, slug, pid, pkey, color, grad, icon, limit, desc]);
+    res.json({ success: true, id: proj.id, message: `Project "${name}" created.` });
+  } catch (e) {
+    res.json({ success: false, message: e.detail || e.message });
+  }
+});
+
+app.patch('/api/admin/project/:id', apiAuth, adminApiOnly, async (req, res) => {
+  const id = Number(req.params.id);
+  const allowed = ['name','luarmor_project_id','luarmor_api_key','color','gradient','icon','daily_reset_limit','description','is_active','sort_order'];
+  const fields = []; const vals = []; let i = 1;
+  for (const key of allowed) {
+    if (req.body[key] === undefined) continue;
+    let val = req.body[key];
+    if (key === 'daily_reset_limit' || key === 'sort_order') val = Number(val);
+    if (key === 'is_active') val = val === true || val === 'true';
+    fields.push(`${key}=$${i++}`); vals.push(val);
+  }
+  if (!fields.length) return res.json({ success: false, message: 'Nothing to update.' });
+  vals.push(id);
+  await db.query(`UPDATE projects SET ${fields.join(',')} WHERE id=$${i}`, vals);
+  res.json({ success: true, message: 'Project updated.' });
+});
+
+app.delete('/api/admin/project/:id', apiAuth, adminApiOnly, async (req, res) => {
+  await db.query('UPDATE projects SET is_active=false WHERE id=$1', [req.params.id]);
+  res.json({ success: true, message: 'Project disabled.' });
+});
+
+/* ─────────────────────────────────────
+   ADMIN API — Users CRUD
+───────────────────────────────────── */
+app.get('/api/admin/users', apiAuth, adminApiOnly, async (req, res) => {
+  const q      = (req.query.q || '').trim();
+  const lim    = Math.min(100, Number(req.query.limit)  || 50);
+  const offset = Math.max(0,   Number(req.query.offset) || 0);
+  const vals   = [];
+  let where    = 'WHERE 1=1';
+  if (q) {
+    vals.push(`%${q}%`);
+    where += ` AND (u.username ILIKE $1 OR u.luarmor_key ILIKE $1 OR u.discord_id ILIKE $1)`;
+  }
+  const [users, total] = await Promise.all([
+    db.all(`SELECT u.*, p.name AS project_name, p.color AS project_color, p.icon AS project_icon
+            FROM users u LEFT JOIN projects p ON p.id=u.project_id
+            ${where} ORDER BY u.created_at DESC LIMIT ${lim} OFFSET ${offset}`, vals),
+    db.one(`SELECT COUNT(*) AS c FROM users u ${where}`, vals),
+  ]);
+  res.json({ success: true, users, total: Number(total.c) });
+});
+
+app.patch('/api/admin/user/:id', apiAuth, adminApiOnly, async (req, res) => {
+  const id = Number(req.params.id);
+  const allowed = ['role','project_id','discord_id','note','is_active','username'];
+  const fields = []; const vals = []; let i = 1;
+  for (const key of allowed) {
+    if (req.body[key] === undefined) continue;
+    let val = req.body[key];
+    if (key === 'role' && !['user','admin','mod'].includes(val)) continue;
+    if (key === 'is_active') val = val === true || val === 'true';
+    if (key === 'project_id') val = val ? Number(val) : null;
+    if (key === 'note') val = String(val).slice(0, 100);
+    if (key === 'username') val = String(val).toLowerCase().trim();
+    fields.push(`${key}=$${i++}`); vals.push(val);
+  }
+  if (!fields.length) return res.json({ success: false, message: 'Nothing to update.' });
+  vals.push(id);
+  try {
+    await db.query(`UPDATE users SET ${fields.join(',')} WHERE id=$${i}`, vals);
+    res.json({ success: true, message: 'User updated.' });
+  } catch (e) {
+    res.json({ success: false, message: e.detail || e.message });
+  }
+});
+
+app.delete('/api/admin/user/:id', apiAuth, adminApiOnly, async (req, res) => {
+  const id = Number(req.params.id);
+  if (req.session.user.id === id) return res.json({ success: false, message: "Can't delete your own account." });
+  await db.query('DELETE FROM reset_log WHERE user_id=$1', [id]);
+  await db.query('DELETE FROM users WHERE id=$1', [id]);
+  res.json({ success: true, message: 'User deleted.' });
+});
+
+app.post('/api/admin/user/:id/force-reset', apiAuth, adminApiOnly, async (req, res) => {
+  const id   = Number(req.params.id);
+  const user = await db.one('SELECT * FROM users WHERE id=$1', [id]);
+  if (!user) return res.json({ success: false, message: 'User not found.' });
+  const proj = user.project_id ? await db.one('SELECT * FROM projects WHERE id=$1', [user.project_id]) : null;
+  if (!proj)  return res.json({ success: false, message: 'User has no project assigned.' });
+  const { json } = await luarmorReq('POST', proj.luarmor_project_id, proj.luarmor_api_key,
+    '/users/resethwid', { user_key: user.luarmor_key, force: true });
+  res.json({ success: json?.success || false, message: json?.message || 'Done.' });
+});
+
+app.post('/api/admin/user/:id/change-password', apiAuth, adminApiOnly, async (req, res) => {
+  const id  = Number(req.params.id);
+  const pwd = (req.body.password || '').trim();
+  if (pwd.length < 8) return res.json({ success: false, message: 'Password must be 8+ characters.' });
+  const hash = await bcrypt.hash(pwd, 12);
+  await db.query('UPDATE users SET password_hash=$1 WHERE id=$2', [hash, id]);
+  res.json({ success: true, message: 'Password changed.' });
+});
+
+/* ─────────────────────────────────────
+   ADMIN API — Settings
+───────────────────────────────────── */
+app.get('/api/admin/settings', apiAuth, adminApiOnly, (_req, res) => {
+  res.json({ success: true, settings: { ...dynSettings } });
+});
+
+app.post('/api/admin/settings', apiAuth, adminApiOnly, async (req, res) => {
+  const allowed = ['panel_name','panel_logo','discord_url'];
+  for (const key of allowed) {
+    if (req.body[key] === undefined) continue;
+    const val = String(req.body[key]).trim();
+    await db.query(`INSERT INTO settings (key,value,updated_at) VALUES ($1,$2,NOW())
+      ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()`, [key, val]);
+    dynSettings[key] = val;
+  }
+  res.json({ success: true, message: 'Settings saved.' });
+});
+
+/* ─────────────────────────────────────
+   ADMIN API — Stats
+───────────────────────────────────── */
+app.get('/api/admin/stats', apiAuth, adminApiOnly, async (_req, res) => {
+  const [totalUsers, activeToday, totalResets, newToday] = await Promise.all([
+    db.one('SELECT COUNT(*) AS c FROM users'),
+    db.one('SELECT COUNT(DISTINCT user_id) AS c FROM reset_log WHERE reset_date=CURRENT_DATE'),
+    db.one('SELECT SUM(total_resets) AS c FROM users'),
+    db.one("SELECT COUNT(*) AS c FROM users WHERE created_at >= CURRENT_DATE"),
+  ]);
+  res.json({ success: true, stats: {
+    totalUsers:  Number(totalUsers.c),
+    activeToday: Number(activeToday.c),
+    totalResets: Number(totalResets.c || 0),
+    newToday:    Number(newToday.c),
+  }});
 });
 
 /* ─────────────────────────────────────
@@ -587,6 +747,7 @@ app.use((err, req, res, next) => { console.error(err); res.status(500).render('e
 /* ─── Boot ─── */
 async function main() {
   await initDB();
+  await loadSettings();
   app.listen(PORT, () => {
     console.log(`\n✅ ${PANEL_NAME} running on port ${PORT}`);
     console.log(`🔗 Discord: ${DISCORD_URL}`);

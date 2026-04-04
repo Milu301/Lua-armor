@@ -164,9 +164,23 @@ setInterval(() => {
   for (const [k] of resetTracker) { if (!k.endsWith(today)) resetTracker.delete(k); }
 }, 60 * 60 * 1000);
 
+// For page routes — redirect to login
 function auth(req, res, next) {
   if (req.session.user) return next();
   res.redirect('/login');
+}
+
+// ✅ FIX: For API routes — return JSON 401, NOT a redirect.
+// Previously auth() returned a 302 redirect on expired session. fetch() followed
+// it to /login HTML, r.json() threw a parse error → caught as "Network error".
+// Now API routes get a clean JSON error and the UI shows a helpful message.
+function apiAuth(req, res, next) {
+  if (req.session.user) return next();
+  res.status(401).json({
+    success: false,
+    message: 'Session expired. Please refresh the page and log in again.',
+    expired: true,
+  });
 }
 
 app.get('/', (req, res) => res.redirect(req.session.user ? '/dashboard' : '/login'));
@@ -218,30 +232,34 @@ app.get('/dashboard', auth, async (req, res) => {
 
 app.get('/ip-info', auth, (req, res) => res.render('ipinfo', { page: 'ipinfo' }));
 
-app.get('/api/userinfo', auth, apiLimiter, async (req, res) => {
+app.get('/api/userinfo', apiAuth, apiLimiter, async (req, res) => {
   const luaUser = await getUser(req.session.user.key);
   const resetsToday = getResetCount(req.session.user.key);
   const resetsLeft  = Math.max(0, DAILY_RESET_LIMIT - resetsToday);
   res.json({ success: true, user: luaUser, resetsToday, resetsLeft, dailyLimit: DAILY_RESET_LIMIT });
 });
 
-app.post('/api/reset-hwid', auth, apiLimiter, async (req, res) => {
+app.post('/api/reset-hwid', apiAuth, apiLimiter, async (req, res) => {
   const userKey     = req.session.user.key;
   const resetsToday = getResetCount(userKey);
   if (resetsToday >= DAILY_RESET_LIMIT)
     return res.json({ success: false, message: `Daily limit reached (${DAILY_RESET_LIMIT}/${DAILY_RESET_LIMIT}). Resets at 00:00 UTC.` });
   const luaUser = await getUser(userKey);
+  if (!luaUser)
+    return res.json({ success: false, message: 'Could not verify your key with Luarmor. Try again.' });
   if (luaUser?.banned || luaUser?.blacklisted)
     return res.json({ success: false, message: 'Your key is banned. Contact staff.' });
   const { status, json } = await luarmorPost('/users/resethwid', { user_key: userKey, force: true });
-  if (!json?.success)
+  if (!json?.success) {
+    console.error(`[reset-hwid] Luarmor error HTTP ${status}: ${json?.message}`);
     return res.json({ success: false, message: json?.message || `API error (HTTP ${status})` });
+  }
   const newCount  = incResetCount(userKey);
   const remaining = Math.max(0, DAILY_RESET_LIMIT - newCount);
   res.json({ success: true, message: json.message || 'HWID reset successfully.', resetsToday: newCount, resetsLeft: remaining, dailyLimit: DAILY_RESET_LIMIT });
 });
 
-app.post('/api/link-discord', auth, apiLimiter, async (req, res) => {
+app.post('/api/link-discord', apiAuth, apiLimiter, async (req, res) => {
   const discordId = (req.body.discord_id || '').trim();
   if (!discordId || !/^\d{15,20}$/.test(discordId))
     return res.json({ success: false, message: 'Invalid Discord ID (must be 15-20 digits).' });
@@ -250,14 +268,14 @@ app.post('/api/link-discord', auth, apiLimiter, async (req, res) => {
   res.json({ success: json?.success || false, message: json?.message || `API error (HTTP ${status})` });
 });
 
-app.post('/api/update-note', auth, apiLimiter, async (req, res) => {
+app.post('/api/update-note', apiAuth, apiLimiter, async (req, res) => {
   const note = (req.body.note || '').trim().slice(0, 100);
   const { status, json } = await luarmorPatch('/users', { user_key: req.session.user.key, note });
   if (json?.success) req.session.user.note = note;
   res.json({ success: json?.success || false, message: json?.message || `API error (HTTP ${status})` });
 });
 
-app.get('/api/server-ip', auth, apiLimiter, async (req, res) => {
+app.get('/api/server-ip', apiAuth, apiLimiter, async (req, res) => {
   try {
     const r = await fetch('https://api.ipify.org?format=json', { timeout: 5000 });
     const d = await r.json();

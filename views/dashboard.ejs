@@ -218,48 +218,125 @@ const hasHwid      = !!(luaUser && luaUser.identifier);
       </div>
 
       <!-- HWID Reset -->
-      <div class="card" id="hwid">
-        <div class="card-head">
-          <div class="card-icon ci-purple">🔄</div>
-          <div>
-            <div class="card-title">HWID Reset</div>
-            <div class="card-desc">Change the hardware ID linked to your key</div>
+      <div class="hwid-card" id="hwid">
+        <div class="hwid-orb hwid-orb-1"></div>
+        <div class="hwid-orb hwid-orb-2"></div>
+
+        <!-- Header -->
+        <div class="hwid-header">
+          <div class="hwid-header-left">
+            <div class="hwid-icon-wrap">
+              <svg class="hwid-icon-svg" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+            </div>
+            <div>
+              <div class="hwid-title">HWID Reset</div>
+              <div class="hwid-subtitle">Unlink your device &amp; bind a new one</div>
+            </div>
+          </div>
+          <div class="hwid-quota-pill" id="quota-pill">
+            <span id="quota-num"><%= resetsToday %></span>/<%= dailyLimit %> used
           </div>
         </div>
 
-        <div class="prog-wrap mb-3">
-          <div class="prog-meta">
-            <span>Daily resets used</span>
-            <span id="prog-label"><%= resetsToday %>/<%= dailyLimit %></span>
+        <!-- Ring + Stats row -->
+        <div class="hwid-body">
+          <div class="hwid-ring-wrap">
+            <svg class="hwid-ring" viewBox="0 0 120 120">
+              <defs>
+                <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#8b5cf6"/>
+                  <stop offset="100%" stop-color="#6366f1"/>
+                </linearGradient>
+                <filter id="ringGlow">
+                  <feGaussianBlur stdDeviation="3" result="blur"/>
+                  <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+                </filter>
+              </defs>
+              <circle class="hwid-ring-bg"   cx="60" cy="60" r="50" fill="none" stroke-width="7"/>
+              <circle class="hwid-ring-track" cx="60" cy="60" r="50" fill="none" stroke-width="7"/>
+              <circle class="hwid-ring-prog" id="ring-prog" cx="60" cy="60" r="50" fill="none" stroke-width="7"
+                stroke="url(#ringGrad)"
+                stroke-dasharray="314"
+                stroke-dashoffset="<%= Math.round(314 * (1 - pct/100)) %>"
+                stroke-linecap="round"
+                transform="rotate(-90 60 60)"
+              />
+            </svg>
+            <div class="hwid-ring-inner">
+              <div class="hwid-ring-pct" id="ring-pct"><%= pct %>%</div>
+              <div class="hwid-ring-lbl">quota used</div>
+            </div>
           </div>
-          <div class="prog-track">
-            <div class="prog-fill <%= pfClass %>" id="prog-fill" style="width:<%= pct %>%"></div>
+
+          <div class="hwid-stats-col">
+            <div class="hwid-stat">
+              <span class="hwid-stat-label">Used Today</span>
+              <span class="hwid-stat-val c-yellow" id="s-today"><%= resetsToday %></span>
+            </div>
+            <div class="hwid-stat">
+              <span class="hwid-stat-label">Remaining</span>
+              <span class="hwid-stat-val <%= resetsLeft > 0 ? 'c-green' : 'c-red' %>" id="s-left"><%= resetsLeft %></span>
+            </div>
+            <div class="hwid-stat">
+              <span class="hwid-stat-label">Daily Limit</span>
+              <span class="hwid-stat-val"><%= dailyLimit %></span>
+            </div>
+            <div class="hwid-stat">
+              <span class="hwid-stat-label">Resets At</span>
+              <span class="hwid-stat-val c-blue" style="font-size:0.75rem;">00:00 UTC</span>
+            </div>
           </div>
-          <div class="t-xs dimmed mt-1">Quota resets at 00:00 UTC every day</div>
         </div>
 
-        <% if (luaUser && luaUser.status === 'active') { %>
-        <div class="alert alert-info mb-3">
-          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <!-- Progress bar -->
+        <div class="hwid-prog-wrap">
+          <div class="hwid-prog-track">
+            <div class="hwid-prog-fill <%= pfClass %>" id="prog-fill" style="width:<%= pct %>%">
+              <div class="hwid-prog-shimmer"></div>
+            </div>
+          </div>
+          <div class="hwid-prog-meta">
+            <span class="t-xs dimmed">Resets at midnight UTC</span>
+            <span class="t-xs" id="prog-label" style="color:var(--text-2)"><%= resetsToday %>/<%= dailyLimit %></span>
+          </div>
+        </div>
+
+        <!-- Result area -->
+        <div id="reset-result"></div>
+
+        <!-- Particles layer -->
+        <div id="particles-wrap" aria-hidden="true"></div>
+
+        <!-- Button -->
+        <% if (resetsLeft > 0) { %>
+        <button class="hwid-btn" id="reset-btn" onclick="doReset()">
+          <span id="btn-state-idle" class="hwid-btn-state">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            Reset HWID
+            <span class="hwid-btn-badge" id="resets-left-txt"><%= resetsLeft %> remaining</span>
+          </span>
+          <span id="btn-state-loading" class="hwid-btn-state" style="display:none;">
+            <span class="hwid-spinner"></span>
+            <span id="loading-msg">Contacting Luarmor…</span>
+          </span>
+          <span id="btn-state-success" class="hwid-btn-state" style="display:none;">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+            </svg>
+            Done!
+          </span>
+        </button>
+        <% } else { %>
+        <button class="hwid-btn hwid-btn-disabled" disabled>
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="10" stroke-width="2"/>
             <path stroke-linecap="round" stroke-width="2" d="M12 8v4m0 4h.01"/>
           </svg>
-          Your HWID is currently active. After resetting, the next executor you run will be linked.
-        </div>
-        <% } %>
-
-        <div id="reset-result"></div>
-
-        <% if (resetsLeft > 0) { %>
-        <button class="btn btn-primary btn-lg" id="reset-btn" onclick="doReset()">
-          <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-          </svg>
-          Reset HWID &nbsp;·&nbsp; <span id="resets-left-txt"><%= resetsLeft %></span> remaining
-        </button>
-        <% } else { %>
-        <button class="btn btn-secondary btn-lg" disabled>
-          🚫 Daily limit reached — come back tomorrow
+          Limit reached — resets at 00:00 UTC
         </button>
         <% } %>
       </div>
@@ -421,55 +498,212 @@ function toast(msg, type = 'info') {
   setTimeout(() => { el.style.animation = 'toastOut 0.3s forwards'; setTimeout(() => el.remove(), 320); }, 4000);
 }
 
+/* ── Progress helpers ── */
 function updateProgress() {
-  const pct  = Math.min(100, Math.round((resetsToday / DAILY_LIMIT) * 100));
+  const pct = Math.min(100, Math.round((resetsToday / DAILY_LIMIT) * 100));
+
+  // Bar
   const fill = document.getElementById('prog-fill');
   if (fill) {
     fill.style.width = pct + '%';
-    fill.className = 'prog-fill ' + (pct >= 100 ? 'pf-red' : pct >= 70 ? 'pf-yellow' : 'pf-green');
+    fill.className = 'hwid-prog-fill ' + (pct >= 100 ? 'pf-red' : pct >= 70 ? 'pf-yellow' : 'pf-green');
   }
+
+  // Label
   const lbl = document.getElementById('prog-label');
   if (lbl) lbl.textContent = resetsToday + '/' + DAILY_LIMIT;
+
+  // Ring
+  const ring = document.getElementById('ring-prog');
+  if (ring) {
+    const offset = Math.round(314 * (1 - pct / 100));
+    ring.style.strokeDashoffset = offset;
+  }
+  const ringPct = document.getElementById('ring-pct');
+  if (ringPct) ringPct.textContent = pct + '%';
+
+  // Stats
   const st = document.getElementById('s-today');
-  if (st) { st.textContent = resetsToday; st.className = 'stat-val ' + (resetsLeft > 0 ? 'c-green' : 'c-yellow'); }
+  if (st) st.textContent = resetsToday;
   const sl = document.getElementById('s-left');
-  if (sl) sl.textContent = resetsLeft + ' of ' + DAILY_LIMIT + ' remaining';
+  if (sl) {
+    sl.textContent = resetsLeft;
+    sl.className = 'hwid-stat-val ' + (resetsLeft > 0 ? 'c-green' : 'c-red');
+  }
   const rl = document.getElementById('resets-left-txt');
-  if (rl) rl.textContent = resetsLeft;
+  if (rl) rl.textContent = resetsLeft + ' remaining';
+
+  // Quota pill
+  const qn = document.getElementById('quota-num');
+  if (qn) qn.textContent = resetsToday;
 }
 
+/* ── Particle burst ── */
+function spawnParticles(container, count = 18, success = true) {
+  const colors = success
+    ? ['#8b5cf6','#a78bfa','#6366f1','#22c55e','#34d399','#fff']
+    : ['#ef4444','#f87171','#fbbf24'];
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement('div');
+    p.style.cssText = [
+      'position:absolute',
+      'border-radius:50%',
+      'pointer-events:none',
+      `width:${4 + Math.random()*6}px`,
+      `height:${4 + Math.random()*6}px`,
+      `background:${colors[Math.floor(Math.random()*colors.length)]}`,
+      `left:${20 + Math.random()*60}%`,
+      `top:${30 + Math.random()*40}%`,
+      'opacity:1',
+      'transition:none',
+    ].join(';');
+    container.appendChild(p);
+    const angle  = Math.random() * Math.PI * 2;
+    const speed  = 40 + Math.random() * 80;
+    const dx = Math.cos(angle) * speed;
+    const dy = Math.sin(angle) * speed - 30;
+    let start = null;
+    const dur = 600 + Math.random() * 400;
+    function step(ts) {
+      if (!start) start = ts;
+      const t = (ts - start) / dur;
+      if (t >= 1) { p.remove(); return; }
+      const ease = 1 - Math.pow(t, 2);
+      p.style.transform = `translate(${dx*t}px, ${dy*t + 40*t*t}px)`;
+      p.style.opacity = ease;
+      requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+}
+
+/* ── Loading message rotation ── */
+const loadingMessages = [
+  'Contacting Luarmor…',
+  'Sending reset request…',
+  'Unlinking device…',
+  'Almost done…',
+];
+let loadingMsgInterval = null;
+
+function startLoadingMessages() {
+  let i = 0;
+  const el = document.getElementById('loading-msg');
+  if (el) el.textContent = loadingMessages[0];
+  loadingMsgInterval = setInterval(() => {
+    i = (i + 1) % loadingMessages.length;
+    if (el) el.textContent = loadingMessages[i];
+  }, 900);
+}
+function stopLoadingMessages() {
+  clearInterval(loadingMsgInterval);
+  loadingMsgInterval = null;
+}
+
+/* ── doReset ── */
 async function doReset() {
   const btn = document.getElementById('reset-btn');
   if (!btn || btn.disabled) return;
+
+  const idle    = document.getElementById('btn-state-idle');
+  const loading = document.getElementById('btn-state-loading');
+  const success = document.getElementById('btn-state-success');
+  const result  = document.getElementById('reset-result');
+  const pwrap   = document.getElementById('particles-wrap');
+
+  // → Loading state
   btn.disabled = true;
-  btn.innerHTML = '<div class="spinner"></div> Resetting…';
-  document.getElementById('reset-result').innerHTML = '';
+  btn.classList.add('hwid-btn-busy');
+  if (idle)    idle.style.display    = 'none';
+  if (loading) loading.style.display = '';
+  if (success) success.style.display = 'none';
+  if (result)  result.innerHTML      = '';
+  startLoadingMessages();
+
   try {
     const r = await fetch('/api/reset-hwid', { method: 'POST' });
+
+    // Handle non-JSON (session expired redirect)
+    if (!r.ok && r.status === 401) {
+      const d = await r.json().catch(() => ({}));
+      if (d.expired) {
+        stopLoadingMessages();
+        if (result) result.innerHTML = '<div class="hwid-alert hwid-alert-warn">⚠️ Session expired — <a href="/login" style="color:var(--accent)">log in again</a></div>';
+        btn.disabled = false;
+        btn.classList.remove('hwid-btn-busy');
+        if (idle) idle.style.display = '';
+        if (loading) loading.style.display = 'none';
+        return;
+      }
+    }
+
     const d = await r.json();
+    stopLoadingMessages();
+
     if (d.success) {
       resetsToday = d.resetsToday;
       resetsLeft  = d.resetsLeft;
+
+      // → Success state
+      if (loading) loading.style.display = 'none';
+      if (success) success.style.display = '';
+      btn.classList.remove('hwid-btn-busy');
+      btn.classList.add('hwid-btn-ok');
+
+      // Particles burst
+      if (pwrap) spawnParticles(pwrap, 22, true);
+
+      // Update all UI
       updateProgress();
-      document.getElementById('reset-result').innerHTML = `<div class="alert alert-success mb-3">✅ ${d.message}</div>`;
+
+      // Success message
+      if (result) result.innerHTML = `<div class="hwid-alert hwid-alert-ok">✅ ${d.message}</div>`;
       toast('HWID reset successfully!', 'ok');
-      if (resetsLeft <= 0) {
-        btn.className = 'btn btn-secondary btn-lg';
-        btn.innerHTML = '🚫 Daily limit reached — come back tomorrow';
-      } else {
-        btn.disabled = false;
-        btn.innerHTML = `<svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Reset HWID &nbsp;·&nbsp; <span id="resets-left-txt">${resetsLeft}</span> remaining`;
-      }
+
+      // After 2s → back to idle or disabled
+      setTimeout(() => {
+        btn.classList.remove('hwid-btn-ok');
+        if (resetsLeft <= 0) {
+          btn.classList.add('hwid-btn-disabled');
+          btn.disabled = true;
+          if (success) success.style.display = 'none';
+          if (idle) {
+            idle.style.display = '';
+            document.getElementById('btn-state-idle').querySelector('svg') && (idle.innerHTML = idle.innerHTML);
+            const badge = document.getElementById('resets-left-txt');
+            if (badge) badge.textContent = '0 remaining';
+          }
+        } else {
+          if (success) success.style.display = 'none';
+          if (idle)    idle.style.display    = '';
+          btn.disabled = false;
+        }
+      }, 2000);
+
     } else {
-      document.getElementById('reset-result').innerHTML = `<div class="alert alert-danger mb-3">❌ ${d.message}</div>`;
-      toast(d.message, 'err');
+      // → Error state
+      btn.classList.remove('hwid-btn-busy');
+      btn.classList.add('hwid-btn-shake');
+      setTimeout(() => btn.classList.remove('hwid-btn-shake'), 500);
+
+      if (loading) loading.style.display = 'none';
+      if (idle)    idle.style.display    = '';
       btn.disabled = false;
-      btn.innerHTML = 'Try Again';
+
+      if (pwrap) spawnParticles(pwrap, 8, false);
+      if (result) result.innerHTML = `<div class="hwid-alert hwid-alert-err">❌ ${d.message}</div>`;
+      toast(d.message || 'Reset failed. Try again.', 'err');
     }
-  } catch {
-    toast('Network error. Try again.', 'err');
+  } catch (e) {
+    stopLoadingMessages();
+    btn.classList.remove('hwid-btn-busy');
+    btn.classList.add('hwid-btn-shake');
+    setTimeout(() => btn.classList.remove('hwid-btn-shake'), 500);
+    if (loading) loading.style.display = 'none';
+    if (idle)    idle.style.display    = '';
     btn.disabled = false;
-    btn.innerHTML = 'Try Again';
+    if (result) result.innerHTML = '<div class="hwid-alert hwid-alert-err">❌ Network error. Check your connection.</div>';
+    toast('Network error. Try again.', 'err');
   }
 }
 

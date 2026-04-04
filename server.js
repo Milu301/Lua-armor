@@ -125,7 +125,7 @@ async function initDB() {
   }
 
   /* Seed admin from env */
-  const adminUser = process.env.ADMIN_USERNAME;
+  const adminUser = (process.env.ADMIN_USERNAME || '').toLowerCase();
   const adminPass = process.env.ADMIN_PASSWORD;
   const adminKey  = process.env.ADMIN_LUARMOR_KEY || 'admin-key-placeholder';
   if (adminUser && adminPass) {
@@ -408,6 +408,27 @@ app.get('/dashboard', auth, async (req, res) => {
     resetsToday, resetsLeft, dailyLimit, pct, pfClass, ringOffset,
     announcements, history,
   });
+});
+
+/* IP Info */
+app.get('/ip-info', auth, async (_req, res) => {
+  let serverIp = null;
+  try {
+    const r = await fetch('https://api.ipify.org?format=json', { timeout: 5000 });
+    const d = await r.json();
+    serverIp = d.ip || null;
+  } catch {}
+  res.render('ipinfo', { serverIp });
+});
+
+app.get('/api/server-ip', apiAuth, async (req, res) => {
+  try {
+    const r = await fetch('https://api.ipify.org?format=json', { timeout: 5000 });
+    const d = await r.json();
+    res.json({ ip: d.ip || null });
+  } catch (e) {
+    res.json({ ip: null, error: e.message });
+  }
 });
 
 /* Admin panel */

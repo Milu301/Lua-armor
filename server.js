@@ -124,20 +124,33 @@ async function initDB() {
     console.log(`  ✓ Project seeded: ${name}`);
   }
 
-  /* Seed admin from env */
-  const adminUser = (process.env.ADMIN_USERNAME || '').toLowerCase();
-  const adminPass = process.env.ADMIN_PASSWORD;
-  const adminKey  = process.env.ADMIN_LUARMOR_KEY || 'admin-key-placeholder';
+  /* Seed admin from env — fully idempotent, never crashes */
+  const adminUser = (process.env.ADMIN_USERNAME || '').toLowerCase().trim();
+  const adminPass = process.env.ADMIN_PASSWORD || '';
   if (adminUser && adminPass) {
-    const exists = await db.one('SELECT id FROM users WHERE username=$1', [adminUser]);
-    if (!exists) {
-      const hash = await bcrypt.hash(adminPass, 12);
+    const hash = await bcrypt.hash(adminPass, 12);
+    const existing = await db.one('SELECT id FROM users WHERE username=$1', [adminUser]);
+    if (existing) {
+      /* User already exists — just update password + role */
       await db.query(
-        `INSERT INTO users (username, password_hash, luarmor_key, role) VALUES ($1,$2,$3,'admin')
-         ON CONFLICT (username) DO NOTHING`,
+        'UPDATE users SET password_hash=$1, role=$2, is_active=true WHERE id=$3',
+        [hash, 'admin', existing.id]
+      );
+      console.log(`  ✓ Admin updated: ${adminUser}`);
+    } else {
+      /* New admin — generate a unique internal key */
+      let adminKey = process.env.ADMIN_LUARMOR_KEY || '';
+      if (!adminKey || adminKey === 'admin-key-placeholder') {
+        adminKey = `admin-${adminUser}-${Date.now()}`;
+      }
+      const keyTaken = await db.one('SELECT id FROM users WHERE luarmor_key=$1', [adminKey]);
+      if (keyTaken) adminKey = `admin-${adminUser}-${Date.now()}`;
+      await db.query(
+        `INSERT INTO users (username, password_hash, luarmor_key, role, is_active)
+         VALUES ($1,$2,$3,'admin',true)`,
         [adminUser, hash, adminKey]
       );
-      console.log(`  ✓ Admin user created: ${adminUser}`);
+      console.log(`  ✓ Admin created: ${adminUser}`);
     }
   }
 

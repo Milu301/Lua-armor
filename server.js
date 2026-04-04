@@ -20,7 +20,7 @@ const PORT          = process.env.PORT || 3000;
 const DATABASE_URL  = process.env.DATABASE_URL || '';
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
 const PANEL_NAME    = process.env.PANEL_NAME || 'LuarmorHub';
-const DISCORD_URL   = process.env.DISCORD_URL || 'https://discord.gg/dnUMzRhDuK';
+const DISCORD_URL   = process.env.DISCORD_URL || 'https://discord.gg/tHrR89y7kn';
 const PANEL_LOGO    = process.env.PANEL_LOGO || 'https://cdn.discordapp.com/icons/1398423987817807934/a_6f62815e5aee24b4964bd4113626e3fe.webp?size=64';
 
 /* Dynamic settings (overrides env vars, editable from admin panel) */
@@ -762,6 +762,16 @@ app.post('/api/admin/toggle-user', apiAuth, adminApiOnly, async (req, res) => {
   if (!user) return res.json({ success:false, message:'User not found.' });
   await db.query('UPDATE users SET is_active=$1 WHERE id=$2', [!user.is_active, userId]);
   res.json({ success:true, active: !user.is_active });
+});
+
+/* Live session status — called from dashboard JS */
+app.get('/api/live-status', apiAuth, async (req, res) => {
+  const session = await db.one(`
+    SELECT roblox_username, place_name, last_seen
+    FROM live_sessions
+    WHERE user_id=$1 AND last_seen > NOW() - INTERVAL '5 minutes'
+  `, [req.session.user.id]);
+  res.json({ online: !!session, session: session || null });
 });
 
 /* ─────────────────────────────────────

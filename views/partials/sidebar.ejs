@@ -1,12 +1,21 @@
 <aside class="sidebar">
+  <!-- Logo -->
   <div class="sb-logo">
-    <img src="https://cdn.discordapp.com/icons/1398423987817807934/a_6f62815e5aee24b4964bd4113626e3fe.webp?size=64" 
-         class="sb-logo-img" alt="logo" />
-    <div class="sb-logo-name"><%= panelName %></div>
+    <img src="<%= panelLogo %>" class="sb-logo-img" alt="<%= panelName %>" />
+    <div>
+      <div class="sb-logo-name"><%= panelName %></div>
+      <div style="font-size:0.6rem;color:var(--text-3);letter-spacing:0.04em;text-transform:uppercase;margin-top:1px;">Dashboard</div>
+    </div>
+  </div>
+
+  <!-- Online status strip -->
+  <div class="sb-status-strip">
+    <div class="pulse-dot" style="width:6px;height:6px;"></div>
+    <span class="t-xs" style="color:var(--green);">All systems operational</span>
   </div>
 
   <nav class="sb-nav">
-    <div class="sb-label">Panel</div>
+    <div class="sb-label">Navigation</div>
 
     <a href="/dashboard" class="sb-link <%= page === 'dashboard' ? 'active' : '' %>">
       <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -43,16 +52,46 @@
       <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-width="2" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
       </svg>
-      Link Discord
+      Settings
+    </a>
+
+    <% if (user && user.role === 'admin') { %>
+    <div class="sb-label" style="margin-top:0.5rem;">Admin</div>
+    <a href="/admin" class="sb-link sb-link-admin <%= page === 'admin' ? 'active' : '' %>">
+      <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+        <path stroke-linecap="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+      </svg>
+      Admin Panel
+      <span class="sb-badge">ADMIN</span>
+    </a>
+    <% } %>
+
+    <div class="sb-label" style="margin-top:0.5rem;">Support</div>
+    <a href="<%= discordUrl %>" target="_blank" rel="noopener" class="sb-link">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="color:#5865f2;">
+        <path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03z"/>
+      </svg>
+      Discord Server
     </a>
   </nav>
 
+  <!-- User footer -->
   <div class="sb-footer">
-    <img src="https://cdn.discordapp.com/icons/1398423987817807934/a_6f62815e5aee24b4964bd4113626e3fe.webp?size=64"
-         class="sb-avatar-img" alt="avatar" />
+    <div class="sb-avatar">
+      <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:var(--accent);">
+        <path stroke-linecap="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+      </svg>
+    </div>
     <div class="sb-user">
-      <div class="sb-user-key"><%= user ? user.key.slice(0,14) + '…' : '—' %></div>
-      <div class="sb-user-sub">Active session</div>
+      <div class="sb-user-key"><%= user ? user.username : '—' %></div>
+      <div class="sb-user-sub">
+        <% if (user && user.role === 'admin') { %>
+        <span style="color:var(--accent);">Admin</span>
+        <% } else { %>
+        Active session
+        <% } %>
+      </div>
     </div>
     <form action="/logout" method="POST">
       <button type="submit" class="btn-logout" title="Sign out">

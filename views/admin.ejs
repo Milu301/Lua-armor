@@ -1,0 +1,321 @@
+<%- include('partials/head', { title: 'Admin Panel — ' + panelName }) %>
+
+<div class="layout">
+  <%- include('partials/sidebar', { page: 'admin' }) %>
+
+  <div class="main">
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="pulse-dot" style="background:var(--accent);box-shadow:0 0 0 2px rgba(139,92,246,0.2);"></div>
+        <div class="topbar-title">Admin Panel</div>
+        <span class="badge badge-purple" style="font-size:0.65rem;">ADMIN</span>
+      </div>
+      <div class="topbar-right">
+        <a href="/dashboard" class="btn btn-sm btn-ghost">
+          <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+          </svg>
+          Back to Dashboard
+        </a>
+      </div>
+    </div>
+
+    <div class="content" style="max-width:1100px;">
+
+      <!-- Stats Overview -->
+      <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.5rem;">
+        <div class="stat" style="border-top:2px solid var(--accent);">
+          <div class="stat-label">Total Users</div>
+          <div class="stat-val c-purple"><%= stats.totalUsers %></div>
+          <div class="stat-sub">registered accounts</div>
+        </div>
+        <div class="stat" style="border-top:2px solid var(--green);">
+          <div class="stat-label">Active Today</div>
+          <div class="stat-val c-green"><%= stats.activeToday %></div>
+          <div class="stat-sub">users reset today</div>
+        </div>
+        <div class="stat" style="border-top:2px solid var(--blue);">
+          <div class="stat-label">Total Resets</div>
+          <div class="stat-val c-blue"><%= Number(stats.totalResets).toLocaleString() %></div>
+          <div class="stat-sub">all time</div>
+        </div>
+        <div class="stat" style="border-top:2px solid var(--yellow);">
+          <div class="stat-label">Projects</div>
+          <div class="stat-val c-yellow"><%= projects.length %></div>
+          <div class="stat-sub">active tiers</div>
+        </div>
+      </div>
+
+      <!-- Two-column layout -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+
+        <!-- Projects -->
+        <div class="card" style="margin-bottom:0;">
+          <div class="card-head">
+            <div class="card-icon ci-purple">🗂️</div>
+            <div>
+              <div class="card-title">Projects / Tiers</div>
+              <div class="card-desc">All Luarmor project tiers</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:0.5rem;">
+            <% projects.forEach(p => { %>
+            <div class="admin-project-row">
+              <div class="admin-proj-icon" style="background:<%= p.gradient %>"><%= p.icon %></div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:0.82rem;font-weight:600;display:flex;align-items:center;gap:0.5rem;">
+                  <%= p.name %>
+                  <% if (!p.is_active) { %><span class="badge badge-red" style="font-size:0.6rem;">Disabled</span><% } %>
+                </div>
+                <div class="t-xs dimmed"><%= p.user_count %> users · <%= p.daily_reset_limit %> resets/day</div>
+              </div>
+              <div class="t-xs mono dimmed" style="flex-shrink:0;"><%= p.slug %></div>
+            </div>
+            <% }) %>
+          </div>
+        </div>
+
+        <!-- Post Announcement -->
+        <div class="card" style="margin-bottom:0;">
+          <div class="card-head">
+            <div class="card-icon ci-blue">📢</div>
+            <div>
+              <div class="card-title">Post Announcement</div>
+              <div class="card-desc">Broadcast to all users</div>
+            </div>
+          </div>
+          <div id="ann-result"></div>
+          <div class="form-group">
+            <label class="label">Title</label>
+            <input type="text" class="input" id="ann-title" placeholder="Update v2.5 released" maxlength="128" />
+          </div>
+          <div class="form-group">
+            <label class="label">Content</label>
+            <textarea class="input" id="ann-content" rows="3" placeholder="Describe the update…" maxlength="2000" style="resize:vertical;"></textarea>
+          </div>
+          <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.75rem;">
+            <label class="label" style="margin:0;flex-shrink:0;">Type</label>
+            <select class="input" id="ann-type" style="width:auto;flex:1;">
+              <option value="info">Info</option>
+              <option value="success">Success</option>
+              <option value="warning">Warning</option>
+              <option value="danger">Danger</option>
+            </select>
+            <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.78rem;color:var(--text-2);flex-shrink:0;cursor:pointer;">
+              <input type="checkbox" id="ann-pinned" style="accent-color:var(--accent);" /> Pinned
+            </label>
+          </div>
+          <button class="btn btn-primary btn-full" onclick="postAnnouncement()">Post Announcement</button>
+        </div>
+      </div>
+
+      <!-- Announcements list -->
+      <div class="card" style="margin-bottom:1rem;">
+        <div class="card-head">
+          <div class="card-icon ci-yellow">📋</div>
+          <div>
+            <div class="card-title">Active Announcements</div>
+            <div class="card-desc">Click trash icon to delete</div>
+          </div>
+        </div>
+        <% if (announcements.length === 0) { %>
+        <div class="empty-state">No announcements yet.</div>
+        <% } else { %>
+        <div style="display:flex;flex-direction:column;gap:0.5rem;" id="ann-list">
+          <% announcements.forEach(a => { %>
+          <div class="admin-ann-row announce-<%= a.type %>" id="ann-<%= a.id %>">
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:0.82rem;font-weight:600;">
+                <% if (a.pinned) { %><span class="badge badge-purple" style="font-size:0.6rem;margin-right:0.35rem;">PINNED</span><% } %>
+                <%= a.title %>
+              </div>
+              <div class="t-xs dimmed" style="margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><%= a.content %></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;">
+              <span class="badge badge-gray" style="font-size:0.6rem;"><%= a.type %></span>
+              <span class="t-xs dimmed"><%= a.author_name || 'system' %></span>
+              <button class="btn btn-sm" style="background:var(--red-dim);border:1px solid var(--red-border);color:#f87171;padding:4px 8px;" onclick="deleteAnn(<%= a.id %>)" title="Delete">
+                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <% }) %>
+        </div>
+        <% } %>
+      </div>
+
+      <!-- Users Table -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-icon ci-green">👥</div>
+          <div>
+            <div class="card-title">Users</div>
+            <div class="card-desc">Latest 50 registered accounts</div>
+          </div>
+          <div style="margin-left:auto;">
+            <input type="text" class="input" id="user-search" placeholder="Search users…" style="width:180px;font-size:0.78rem;padding:0.4rem 0.7rem;" oninput="filterUsers()" />
+          </div>
+        </div>
+
+        <div class="admin-table-wrap">
+          <table class="admin-table" id="users-table">
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Project</th>
+                <th>Discord ID</th>
+                <th>Role</th>
+                <th>Resets</th>
+                <th>Joined</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% users.forEach(u => { %>
+              <tr id="urow-<%= u.id %>" data-username="<%= u.username.toLowerCase() %>">
+                <td>
+                  <div style="font-weight:600;font-size:0.82rem;"><%= u.username %></div>
+                  <div class="t-xs dimmed mono" style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="<%= u.luarmor_key %>"><%= u.luarmor_key ? u.luarmor_key.slice(0,16) + '…' : '—' %></div>
+                </td>
+                <td>
+                  <% if (u.project_name) { %>
+                  <span class="badge" style="background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.2);color:<%= u.project_color || '#a78bfa' %>;font-size:0.65rem;">
+                    <%= u.project_name %>
+                  </span>
+                  <% } else { %><span class="dimmed t-xs">—</span><% } %>
+                </td>
+                <td><span class="mono t-xs dimmed"><%= u.discord_id || '—' %></span></td>
+                <td>
+                  <% if (u.role === 'admin') { %>
+                  <span class="badge badge-purple" style="font-size:0.65rem;">Admin</span>
+                  <% } else { %>
+                  <span class="badge badge-gray" style="font-size:0.65rem;">User</span>
+                  <% } %>
+                </td>
+                <td><span class="t-sm"><%= u.total_resets %></span></td>
+                <td>
+                  <span class="t-xs dimmed">
+                    <%= new Date(u.created_at).toLocaleDateString('en', {day:'numeric',month:'short',year:'2-digit'}) %>
+                  </span>
+                </td>
+                <td>
+                  <span id="ustatus-<%= u.id %>" class="badge <%= u.is_active ? 'badge-green' : 'badge-red' %>" style="font-size:0.65rem;">
+                    <%= u.is_active ? 'Active' : 'Banned' %>
+                  </span>
+                </td>
+                <td>
+                  <button class="btn btn-sm" style="font-size:0.7rem;padding:3px 8px;background:<%= u.is_active ? 'var(--red-dim)' : 'var(--green-dim)' %>;border:1px solid <%= u.is_active ? 'var(--red-border)' : 'var(--green-border)' %>;color:<%= u.is_active ? '#f87171' : '#4ade80' %>;"
+                    onclick="toggleUser(<%= u.id %>, this)">
+                    <%= u.is_active ? 'Ban' : 'Unban' %>
+                  </button>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<script>
+function toast(msg, type = 'info') {
+  const icons = { ok:'✅', err:'❌', warn:'⚠️', info:'ℹ️' };
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${icons[type]||'ℹ️'}</span><span>${msg}</span>`;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => { el.style.animation = 'toastOut 0.3s forwards'; setTimeout(() => el.remove(), 320); }, 4000);
+}
+
+async function postAnnouncement() {
+  const title   = document.getElementById('ann-title').value.trim();
+  const content = document.getElementById('ann-content').value.trim();
+  const type    = document.getElementById('ann-type').value;
+  const pinned  = document.getElementById('ann-pinned').checked;
+  const res     = document.getElementById('ann-result');
+
+  if (!title || !content) { toast('Title and content are required.', 'warn'); return; }
+
+  res.innerHTML = '<div class="t-xs dimmed">Posting…</div>';
+  const r = await fetch('/api/admin/announcement', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, content, type, pinned: String(pinned) }),
+  });
+  const d = await r.json();
+  if (d.success) {
+    res.innerHTML = '<div class="alert alert-success" style="font-size:0.78rem;padding:0.5rem 0.75rem;">✓ Announcement posted. Reload to see it.</div>';
+    document.getElementById('ann-title').value = '';
+    document.getElementById('ann-content').value = '';
+    toast('Announcement posted!', 'ok');
+  } else {
+    res.innerHTML = `<div class="alert alert-danger" style="font-size:0.78rem;padding:0.5rem 0.75rem;">${d.message}</div>`;
+    toast(d.message, 'err');
+  }
+}
+
+async function deleteAnn(id) {
+  if (!confirm('Delete this announcement?')) return;
+  const r = await fetch(`/api/admin/announcement/${id}`, { method: 'DELETE' });
+  const d = await r.json();
+  if (d.success) {
+    const el = document.getElementById('ann-' + id);
+    if (el) el.style.animation = 'fadeOut 0.3s forwards';
+    setTimeout(() => el && el.remove(), 320);
+    toast('Announcement removed.', 'ok');
+  } else {
+    toast('Failed to delete.', 'err');
+  }
+}
+
+async function toggleUser(userId, btn) {
+  const r = await fetch('/api/admin/toggle-user', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: userId }),
+  });
+  const d = await r.json();
+  if (d.success) {
+    const badge = document.getElementById('ustatus-' + userId);
+    if (d.active) {
+      badge.className = 'badge badge-green';
+      badge.style.fontSize = '0.65rem';
+      badge.textContent = 'Active';
+      btn.textContent = 'Ban';
+      btn.style.background = 'var(--red-dim)';
+      btn.style.borderColor = 'var(--red-border)';
+      btn.style.color = '#f87171';
+    } else {
+      badge.className = 'badge badge-red';
+      badge.style.fontSize = '0.65rem';
+      badge.textContent = 'Banned';
+      btn.textContent = 'Unban';
+      btn.style.background = 'var(--green-dim)';
+      btn.style.borderColor = 'var(--green-border)';
+      btn.style.color = '#4ade80';
+    }
+    toast(d.active ? 'User unbanned.' : 'User banned.', d.active ? 'ok' : 'warn');
+  } else {
+    toast(d.message || 'Error.', 'err');
+  }
+}
+
+function filterUsers() {
+  const q = document.getElementById('user-search').value.toLowerCase();
+  document.querySelectorAll('#users-table tbody tr').forEach(row => {
+    const name = row.dataset.username || '';
+    row.style.display = name.includes(q) ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>

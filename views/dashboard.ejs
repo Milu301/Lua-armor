@@ -22,7 +22,7 @@ const expiringSoon = exp && exp > 0 && !expired && (exp - Date.now()/1000) < 7 *
 const pct          = Math.min(100, Math.round((resetsToday / dailyLimit) * 100));
 const pfClass      = pct >= 100 ? 'pf-red' : pct >= 70 ? 'pf-yellow' : 'pf-green';
 const executions   = (luaUser && luaUser.total_executions != null) ? luaUser.total_executions : 0;
-const hasDiscord   = !!(user && user.discordId);
+const hasDiscord   = !!(user && user.discordId) || !!(luaUser && luaUser.discord_id);
 const hasHwid      = !!(luaUser && luaUser.identifier);
 %>
 
@@ -66,6 +66,27 @@ const hasHwid      = !!(luaUser && luaUser.identifier);
       </div>
       <% } %>
 
+      <!-- Announcements -->
+      <% if (announcements && announcements.length > 0) { %>
+      <div class="announce-stack">
+        <% announcements.forEach(a => { %>
+        <div class="announce-item announce-<%= a.type %>">
+          <% if (a.pinned) { %>
+          <div class="announce-pin">
+            <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24"><path d="M16 4v8l2 4H6l2-4V4h8zm-8 0H6a2 2 0 00-2 2v6l-2 4h16l-2-4V6a2 2 0 00-2-2h-2M12 20v-2"/></svg>
+            PINNED
+          </div>
+          <% } %>
+          <div class="announce-body">
+            <div class="announce-title"><%= a.title %></div>
+            <div class="announce-content"><%= a.content %></div>
+          </div>
+          <div class="announce-meta"><%= new Date(a.created_at).toLocaleDateString('en', {day:'numeric',month:'short',year:'numeric'}) %></div>
+        </div>
+        <% }) %>
+      </div>
+      <% } %>
+
       <!-- Welcome banner -->
       <div class="welcome-banner">
         <img 
@@ -73,13 +94,16 @@ const hasHwid      = !!(luaUser && luaUser.identifier);
           class="welcome-avatar" alt="logo"
         />
         <div class="welcome-text">
-          <div class="welcome-title">Welcome back</div>
+          <div class="welcome-title">Welcome back, <span style="color:var(--accent)"><%= user ? user.username : 'User' %></span></div>
           <div class="welcome-sub">
-            Key: <span class="mono" style="color:var(--accent)"><%= user ? user.key.slice(0,20) + '…' : '—' %></span>
+            Key: <span class="mono" style="color:var(--accent)"><%= user ? (user.luarmorKey || '').slice(0,20) + '…' : '—' %></span>
             &nbsp;·&nbsp;
             <span class="<%= !expired ? 'c-green' : 'c-red' %>">
               <%= !expired ? '● Active' : '● Expired' %>
             </span>
+            <% if (proj) { %>
+            &nbsp;·&nbsp;<span class="badge badge-purple" style="font-size:0.7rem;"><%= proj.icon %> <%= proj.name %></span>
+            <% } %>
           </div>
         </div>
         <div class="welcome-exec">
@@ -145,7 +169,8 @@ const hasHwid      = !!(luaUser && luaUser.identifier);
             <div class="account-info">
               <div class="account-name">Discord</div>
               <div class="account-val mono">
-                <% if (hasDiscord) { %><%= user.discordId %><% } else { %>Not linked<% } %>
+                <% const dId = (user && user.discordId) || (luaUser && luaUser.discord_id) || ''; %>
+                <% if (hasDiscord) { %><%= dId %><% } else { %>Not linked<% } %>
               </div>
             </div>
             <div class="account-status">
@@ -365,7 +390,7 @@ const hasHwid      = !!(luaUser && luaUser.identifier);
               <rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2"/>
               <path stroke-width="2" d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
             </svg>
-            <%= user ? user.key.slice(0,20) + '…' : '—' %>
+            <%= user ? (user.luarmorKey || '').slice(0,20) + '…' : '—' %>
           </div>
         </div>
         <div class="info-row">
@@ -415,9 +440,10 @@ const hasHwid      = !!(luaUser && luaUser.identifier);
             </div>
           </div>
 
-          <% if (user && user.discordId) { %>
+          <% const linkedDid = (user && user.discordId) || (luaUser && luaUser.discord_id) || ''; %>
+          <% if (linkedDid) { %>
           <div class="alert alert-success mb-3" style="font-size:0.78rem;">
-            ✓ Linked: <span class="mono"><%= user.discordId %></span>
+            ✓ Linked: <span class="mono"><%= linkedDid %></span>
           </div>
           <% } %>
 
@@ -444,7 +470,7 @@ const hasHwid      = !!(luaUser && luaUser.identifier);
           <div class="form-group">
             <label class="label">Your note <span class="dimmed">(max 100 chars)</span></label>
             <input type="text" class="input" id="note-input" placeholder="e.g. my gaming PC" maxlength="100"
-              value="<%= (user && user.note) ? user.note : '' %>" />
+              value="<%= (luaUser && luaUser.note) ? luaUser.note : (user && user.note ? user.note : '') %>" />
           </div>
           <button class="btn btn-secondary btn-full" onclick="saveNote()">Save Note</button>
         </div>
@@ -468,7 +494,7 @@ const hasHwid      = !!(luaUser && luaUser.identifier);
       ⚠️ Never share your key with anyone. Whoever has it has full access.
     </div>
     <div class="chip w-full" style="word-break:break-all;cursor:text;user-select:all;justify-content:flex-start;padding:0.75rem;">
-      <%= user ? user.key : '' %>
+      <%= user ? user.luarmorKey : '' %>
     </div>
     <div class="flex gap-2 mt-3">
       <button class="btn btn-primary" onclick="copyFullKey()">
@@ -484,7 +510,7 @@ const hasHwid      = !!(luaUser && luaUser.identifier);
 </div>
 
 <script>
-const FULL_KEY    = <%- JSON.stringify(user ? user.key : '') %>;
+const FULL_KEY    = <%- JSON.stringify(user ? user.luarmorKey : '') %>;
 const DAILY_LIMIT = <%= dailyLimit %>;
 let resetsToday   = <%= resetsToday %>;
 let resetsLeft    = <%= resetsLeft %>;

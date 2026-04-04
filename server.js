@@ -110,6 +110,16 @@ async function initDB() {
       value TEXT NOT NULL DEFAULT '',
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS script_token VARCHAR(32) UNIQUE;
+    CREATE TABLE IF NOT EXISTS live_sessions (
+      user_id INT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      roblox_username VARCHAR(64) NOT NULL DEFAULT '',
+      roblox_user_id  VARCHAR(32) NOT NULL DEFAULT '',
+      place_id        VARCHAR(32) NOT NULL DEFAULT '',
+      place_name      VARCHAR(128) NOT NULL DEFAULT '',
+      job_id          VARCHAR(64) NOT NULL DEFAULT '',
+      last_seen       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
   `);
 
   /* Seed projects from env vars PROJECT_N_* */
@@ -335,12 +345,19 @@ app.post('/login', loginLimiter, async (req, res) => {
     ? await db.one('SELECT * FROM projects WHERE id=$1', [user.project_id])
     : null;
 
+  /* Ensure script_token exists — generate lazily for older accounts */
+  let scriptToken = user.script_token;
+  if (!scriptToken) {
+    scriptToken = crypto.randomBytes(16).toString('hex');
+    await db.query('UPDATE users SET script_token=$1 WHERE id=$2', [scriptToken, user.id]);
+  }
+
   req.session.user = {
     id: user.id, username: user.username, role: user.role,
     luarmorKey: user.luarmor_key, projectId: user.project_id,
     project: proj,
     discordId: user.discord_id || '',
-    note: user.note || '',
+    note: user.note || '', scriptToken,
   };
   await db.query('UPDATE users SET last_login=NOW() WHERE id=$1', [user.id]);
   res.redirect('/dashboard');
@@ -384,10 +401,11 @@ app.post('/register', registerLimiter, async (req, res) => {
     return fail('This key is banned. Contact staff on Discord.');
 
   const hash = await bcrypt.hash(password, 12);
+  const scriptToken = crypto.randomBytes(16).toString('hex');
   const newUser = await db.one(
-    `INSERT INTO users (username, password_hash, luarmor_key, project_id, discord_id)
-     VALUES ($1,$2,$3,$4,$5) RETURNING id`,
-    [username, hash, key, project.id, luaUser.discord_id || '']
+    `INSERT INTO users (username, password_hash, luarmor_key, project_id, discord_id, script_token)
+     VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
+    [username, hash, key, project.id, luaUser.discord_id || '', scriptToken]
   );
 
   /* Auto-link Discord in Luarmor if not already */
@@ -400,7 +418,7 @@ app.post('/register', registerLimiter, async (req, res) => {
     id: newUser.id, username, role: 'user',
     luarmorKey: key, projectId: project.id, project,
     discordId: luaUser.discord_id || '',
-    note: '',
+    note: '', scriptToken,
   };
   res.redirect('/dashboard');
 });
@@ -410,7 +428,7 @@ app.post('/logout', (req, res) => req.session.destroy(() => res.redirect('/login
 
 /* Dashboard */
 app.get('/dashboard', auth, async (req, res) => {
-  const { id, luarmorKey, projectId } = req.session.user;
+  const { id, projectId } = req.session.user;
   const dbUser = await db.one('SELECT * FROM users WHERE id=$1', [id]);
   const proj   = projectId ? await db.one('SELECT * FROM projects WHERE id=$1', [projectId]) : null;
   const luaUser = await getLuaUser(dbUser);
@@ -432,10 +450,16 @@ app.get('/dashboard', auth, async (req, res) => {
     WHERE user_id=$1 ORDER BY reset_date DESC LIMIT 7
   `, [id]);
 
+  /* Live Roblox session (heartbeat within last 5 minutes = online) */
+  const liveSession = await db.one(`
+    SELECT * FROM live_sessions
+    WHERE user_id=$1 AND last_seen > NOW() - INTERVAL '5 minutes'
+  `, [id]);
+
   res.render('dashboard', {
     dbUser, proj, luaUser,
     resetsToday, resetsLeft, dailyLimit, pct, pfClass, ringOffset,
-    announcements, history,
+    announcements, history, liveSession,
   });
 });
 
@@ -738,6 +762,36 @@ app.post('/api/admin/toggle-user', apiAuth, adminApiOnly, async (req, res) => {
   if (!user) return res.json({ success:false, message:'User not found.' });
   await db.query('UPDATE users SET is_active=$1 WHERE id=$2', [!user.is_active, userId]);
   res.json({ success:true, active: !user.is_active });
+});
+
+/* ─────────────────────────────────────
+   HEARTBEAT — called from Roblox executor (no session auth)
+───────────────────────────────────── */
+const heartbeatLimiter = rateLimit({ windowMs: 60*1000, max: 240,
+  handler: (_req, res) => res.status(429).json({ ok: false }) });
+
+app.get('/api/heartbeat', heartbeatLimiter, async (req, res) => {
+  const key = (req.query.key || '').trim();
+  if (!key || key.length < 6) return res.status(400).json({ ok: false });
+
+  const dbUser = await db.one('SELECT id FROM users WHERE luarmor_key=$1', [key]);
+  if (!dbUser) return res.status(401).json({ ok: false });
+
+  const rn = (req.query.rn || '').slice(0, 64);   // roblox username
+  const ri = (req.query.ri || '').slice(0, 32);   // roblox user id
+  const pi = (req.query.pi || '').slice(0, 32);   // place id
+  const pn = (req.query.pn || '').slice(0, 128);  // place name
+  const ji = (req.query.ji || '').slice(0, 64);   // job id
+
+  await db.query(`
+    INSERT INTO live_sessions (user_id, roblox_username, roblox_user_id, place_id, place_name, job_id, last_seen)
+    VALUES ($1,$2,$3,$4,$5,$6,NOW())
+    ON CONFLICT (user_id) DO UPDATE SET
+      roblox_username=$2, roblox_user_id=$3,
+      place_id=$4, place_name=$5, job_id=$6, last_seen=NOW()
+  `, [dbUser.id, rn, ri, pi, pn, ji]);
+
+  res.json({ ok: true });
 });
 
 app.get('/health', (req, res) => res.json({ ok:true, ts: Date.now() }));

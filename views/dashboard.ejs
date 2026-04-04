@@ -205,6 +205,35 @@ const hasHwid      = !!(luaUser && luaUser.identifier);
             </div>
           </div>
 
+          <!-- Roblox Live Session -->
+          <div class="account-card <%= liveSession ? 'connected' : 'disconnected' %>" style="grid-column:1/-1;">
+            <div class="account-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color:#e74c3c;">
+                <path d="M5.001 5.54L8.916 18.46l10.083-2.54L15.084 3zm7.315 5.397l1.688 5.896-3.525.888-1.688-5.896z"/>
+              </svg>
+            </div>
+            <div class="account-info" style="flex:1;">
+              <div class="account-name">Roblox — Live Session</div>
+              <% if (liveSession) { %>
+              <div class="account-val" style="display:flex;flex-wrap:wrap;gap:0.4rem;align-items:center;margin-top:2px;">
+                <span class="mono" style="color:var(--text-1)"><%= liveSession.roblox_username || '—' %></span>
+                <% if (liveSession.place_name) { %>
+                <span class="badge badge-gray" style="font-size:0.65rem;">🎮 <%= liveSession.place_name %></span>
+                <% } %>
+              </div>
+              <% } else { %>
+              <div class="account-val muted">Not executing right now</div>
+              <% } %>
+            </div>
+            <div class="account-status">
+              <% if (liveSession) { %>
+                <span class="badge badge-green">● Online</span>
+              <% } else { %>
+                <span class="badge badge-gray">● Offline</span>
+              <% } %>
+            </div>
+          </div>
+
           <!-- Note / Tag -->
           <div class="account-card <%= (luaUser && luaUser.note) ? 'connected' : 'disconnected' %>">
             <div class="account-icon">

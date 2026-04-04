@@ -748,10 +748,17 @@ app.use((err, req, res, next) => { console.error(err); res.status(500).render('e
 async function main() {
   await initDB();
   await loadSettings();
-  app.listen(PORT, () => {
-    console.log(`\n✅ ${PANEL_NAME} running on port ${PORT}`);
-    console.log(`🔗 Discord: ${DISCORD_URL}`);
+  app.listen(PORT, async () => {
+    console.log(`\n✅ ${dynSettings.panel_name || PANEL_NAME} running on port ${PORT}`);
+    console.log(`🔗 Discord: ${dynSettings.discord_url || DISCORD_URL}`);
     console.log(`💾 Sessions: PostgreSQL (persistent)`);
+    try {
+      const r = await fetch('https://api.ipify.org?format=json', { timeout: 6000 });
+      const d = await r.json();
+      console.log(`🌐 Outbound IP (whitelist this in Luarmor): ${d.ip}`);
+    } catch {
+      console.log(`🌐 Outbound IP: could not detect (check Railway logs later)`);
+    }
   });
 }
 main().catch(e => { console.error('Boot error:', e); process.exit(1); });

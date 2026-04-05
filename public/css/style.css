@@ -834,6 +834,40 @@ a { color: inherit; text-decoration: none; }
   margin-left: auto;
   white-space: nowrap;
 }
+.live-inv-table {
+  margin-top: 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.live-inv-table-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 8px;
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-3);
+}
+.live-inv-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.live-inv-row:last-child { border-bottom: none; }
+.live-inv-row:hover { background: rgba(255,255,255,0.02); }
+.live-inv-more {
+  padding: 3px 8px;
+  font-size: 0.62rem;
+  color: var(--text-3);
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+/* legacy — keep for any old references */
 .live-inv-grid {
   display: flex;
   flex-wrap: wrap;
@@ -849,11 +883,12 @@ a { color: inherit; text-decoration: none; }
   padding: 2px 8px;
 }
 .live-inv-name {
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   color: var(--text-2);
 }
 .live-inv-count {
-  font-size: 0.68rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
   font-weight: 700;
   color: var(--accent);
 }

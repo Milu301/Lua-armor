@@ -251,16 +251,20 @@ const hasHwid      = !!(luaUser && luaUser.identifier);
                       </button>
                     </div>
                     <% if (invEntries.length > 0) { %>
-                    <div class="live-inv-grid">
-                      <% invEntries.forEach(function(e) { %>
-                      <div class="live-inv-item">
+                    <div class="live-inv-table">
+                      <div class="live-inv-table-header">
+                        <span>Item</span><span>Qty</span>
+                      </div>
+                      <% invEntries.slice(0,15).forEach(function(e) { %>
+                      <div class="live-inv-row">
                         <span class="live-inv-name"><%= e[0] %></span>
                         <span class="live-inv-count"><%= e[1].toLocaleString() %></span>
                       </div>
                       <% }) %>
+                      <% if (invEntries.length > 15) { %>
+                      <div class="live-inv-more">+<%= invEntries.length - 15 %> more items</div>
+                      <% } %>
                     </div>
-                    <% } else { %>
-                    <div style="font-size:0.7rem;color:var(--text-3);margin-top:0.35rem;">Loading inventory...</div>
                     <% } %>
                   </div>
                   <% }) %>
@@ -890,11 +894,17 @@ function renderSessions(sessions) {
     list.innerHTML = sessions.map(s => {
       const inv = s.inventory && typeof s.inventory === 'object' ? s.inventory : {};
       const invEntries = Object.entries(inv).sort((a,b) => b[1]-a[1]);
+      const shown = invEntries.slice(0, 15);
+      const extra = invEntries.length - 15;
       const invHtml = invEntries.length > 0
-        ? `<div class="live-inv-grid">${invEntries.map(([n,c]) =>
-            `<div class="live-inv-item"><span class="live-inv-name">${n}</span><span class="live-inv-count">${c.toLocaleString()}</span></div>`
-          ).join('')}</div>`
-        : `<div style="font-size:0.7rem;color:var(--text-3);margin-top:0.35rem;">Loading inventory...</div>`;
+        ? `<div class="live-inv-table">
+            <div class="live-inv-table-header"><span>Item</span><span>Qty</span></div>
+            ${shown.map(([n,c]) =>
+              `<div class="live-inv-row"><span class="live-inv-name">${n}</span><span class="live-inv-count">${c.toLocaleString()}</span></div>`
+            ).join('')}
+            ${extra > 0 ? `<div class="live-inv-more">+${extra} more items</div>` : ''}
+          </div>`
+        : '';
       return `<div class="live-session-row">
         <div class="live-session-top">
           <div style="display:flex;align-items:center;gap:0.5rem;flex:1;min-width:0;">

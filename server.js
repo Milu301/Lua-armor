@@ -111,20 +111,20 @@ async function initDB() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     ALTER TABLE users ADD COLUMN IF NOT EXISTS script_token VARCHAR(32) UNIQUE;
-    CREATE TABLE IF NOT EXISTS live_sessions (
-      user_id         INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      roblox_user_id  VARCHAR(32) NOT NULL DEFAULT '',
+    -- live_sessions: roblox_user_id is the PK so unregistered users can appear too
+    -- Safe to drop/recreate — this table is ephemeral (35-second TTL rows)
+    DROP TABLE IF EXISTS live_sessions;
+    CREATE TABLE live_sessions (
+      roblox_user_id  VARCHAR(32) NOT NULL PRIMARY KEY,
       roblox_username VARCHAR(64) NOT NULL DEFAULT '',
+      user_id         INT REFERENCES users(id) ON DELETE SET NULL,
       place_id        VARCHAR(32) NOT NULL DEFAULT '',
       place_name      VARCHAR(128) NOT NULL DEFAULT '',
       job_id          VARCHAR(64) NOT NULL DEFAULT '',
-      inventory        JSONB NOT NULL DEFAULT '{}',
-      kick_requested   BOOL NOT NULL DEFAULT false,
-      last_seen        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      PRIMARY KEY (user_id, roblox_user_id)
+      inventory       JSONB NOT NULL DEFAULT '{}',
+      kick_requested  BOOL NOT NULL DEFAULT false,
+      last_seen       TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
-    ALTER TABLE live_sessions ADD COLUMN IF NOT EXISTS inventory JSONB NOT NULL DEFAULT '{}';
-    ALTER TABLE live_sessions ADD COLUMN IF NOT EXISTS kick_requested BOOL NOT NULL DEFAULT false;
   `);
 
   /* Seed projects from env vars PROJECT_N_* */
@@ -639,11 +639,12 @@ app.get('/api/admin/live-sessions', apiAuth, adminApiOnly, async (_req, res) => 
     SELECT ls.user_id, ls.roblox_user_id, ls.roblox_username,
            ls.place_id, ls.place_name, ls.job_id,
            ls.inventory, ls.last_seen,
-           u.username
+           COALESCE(u.username, NULL) AS username,
+           (ls.user_id IS NULL) AS is_guest
     FROM live_sessions ls
-    JOIN users u ON u.id = ls.user_id
+    LEFT JOIN users u ON u.id = ls.user_id
     WHERE ls.last_seen > NOW() - INTERVAL '35 seconds'
-    ORDER BY u.username ASC, ls.last_seen DESC
+    ORDER BY is_guest ASC, COALESCE(u.username, ls.roblox_username) ASC, ls.last_seen DESC
   `);
   res.json({ sessions });
 });
@@ -652,17 +653,19 @@ app.get('/api/admin/live-sessions', apiAuth, adminApiOnly, async (_req, res) => 
    ADMIN API — Stats
 ───────────────────────────────────── */
 app.get('/api/admin/stats', apiAuth, adminApiOnly, async (_req, res) => {
-  const [totalUsers, activeToday, totalResets, newToday] = await Promise.all([
+  const [totalUsers, activeToday, totalResets, newToday, liveSessions] = await Promise.all([
     db.one('SELECT COUNT(*) AS c FROM users'),
     db.one('SELECT COUNT(DISTINCT user_id) AS c FROM reset_log WHERE reset_date=CURRENT_DATE'),
     db.one('SELECT SUM(total_resets) AS c FROM users'),
     db.one("SELECT COUNT(*) AS c FROM users WHERE created_at >= CURRENT_DATE"),
+    db.one("SELECT COUNT(*) AS c FROM live_sessions WHERE last_seen > NOW() - INTERVAL '35 seconds'"),
   ]);
   res.json({ success: true, stats: {
-    totalUsers:  Number(totalUsers.c),
-    activeToday: Number(activeToday.c),
-    totalResets: Number(totalResets.c || 0),
-    newToday:    Number(newToday.c),
+    totalUsers:   Number(totalUsers.c),
+    activeToday:  Number(activeToday.c),
+    totalResets:  Number(totalResets.c || 0),
+    newToday:     Number(newToday.c),
+    liveNow:      Number(liveSessions.c),
   }});
 });
 
@@ -814,6 +817,8 @@ app.get('/api/live-status', apiAuth, async (req, res) => {
   res.json({ online: sessions.length > 0, sessions });
 });
 
+/* Admin stats: include live session count */
+
 /* ─────────────────────────────────────
    HEARTBEAT — called from Roblox executor (no session auth)
 ───────────────────────────────────── */
@@ -821,17 +826,22 @@ const heartbeatLimiter = rateLimit({ windowMs: 60*1000, max: 240,
   handler: (_req, res) => res.status(429).json({ ok: false }) });
 
 app.get('/api/heartbeat', heartbeatLimiter, async (req, res) => {
-  const key = (req.query.key || '').trim();
-  if (!key || key.length < 6) return res.status(400).json({ ok: false });
-
-  const dbUser = await db.one('SELECT id FROM users WHERE luarmor_key=$1', [key]);
-  if (!dbUser) return res.status(401).json({ ok: false });
-
   const rn = (req.query.rn || '').slice(0, 64);   // roblox username
   const ri = (req.query.ri || '').slice(0, 32);   // roblox user id
   const pi = (req.query.pi || '').slice(0, 32);   // place id
   const pn = (req.query.pn || '').slice(0, 128);  // place name
   const ji = (req.query.ji || '').slice(0, 64);   // job id
+
+  const robloxId = (ri || '').trim();
+  if (!robloxId) return res.status(400).json({ ok: false });
+
+  /* Try to link to a registered user via key (optional — guests have no key) */
+  const key = (req.query.key || '').trim();
+  let userId = null;
+  if (key && key.length >= 6) {
+    const dbUser = await db.one('SELECT id FROM users WHERE luarmor_key=$1', [key]);
+    if (dbUser) userId = dbUser.id;
+  }
 
   /* Parse inventory: "Wood:10,Stone:5,Gold:2" → { Wood:10, Stone:5, Gold:2 } */
   const invRaw = (req.query.inv || '').slice(0, 2000);
@@ -847,34 +857,31 @@ app.get('/api/heartbeat', heartbeatLimiter, async (req, res) => {
     });
   }
 
-  const robloxId = ri || 'unknown';
   /* Check if a kick was requested BEFORE upserting (so we can return it) */
   const existing = await db.one(
-    'SELECT kick_requested FROM live_sessions WHERE user_id=$1 AND roblox_user_id=$2',
-    [dbUser.id, robloxId || 'unknown']
+    'SELECT kick_requested FROM live_sessions WHERE roblox_user_id=$1',
+    [robloxId]
   );
   const shouldKick = !!(existing && existing.kick_requested);
 
   await db.query(`
-    INSERT INTO live_sessions (user_id, roblox_user_id, roblox_username, place_id, place_name, job_id, inventory, kick_requested, last_seen)
+    INSERT INTO live_sessions (roblox_user_id, roblox_username, user_id, place_id, place_name, job_id, inventory, kick_requested, last_seen)
     VALUES ($1,$2,$3,$4,$5,$6,$7,false,NOW())
-    ON CONFLICT (user_id, roblox_user_id) DO UPDATE SET
-      roblox_username=$3, place_id=$4, place_name=$5, job_id=$6,
+    ON CONFLICT (roblox_user_id) DO UPDATE SET
+      roblox_username=$2,
+      user_id=COALESCE($3, live_sessions.user_id),
+      place_id=$4, place_name=$5, job_id=$6,
       inventory=$7, kick_requested=false, last_seen=NOW()
-  `, [dbUser.id, robloxId, rn, pi, pn, ji, JSON.stringify(inventory)]);
+  `, [robloxId, rn, userId, pi, pn, ji, JSON.stringify(inventory)]);
 
   res.json({ ok: true, kick: shouldKick });
 });
 
 /* OFFLINE — called when player disconnects (no session auth) */
 app.get('/api/offline', heartbeatLimiter, async (req, res) => {
-  const key = (req.query.key || '').trim();
-  const ri  = (req.query.ri  || '').slice(0, 32);
-  if (!key || key.length < 6) return res.status(400).json({ ok: false });
-  const dbUser = await db.one('SELECT id FROM users WHERE luarmor_key=$1', [key]);
-  if (!dbUser) return res.status(401).json({ ok: false });
-  const robloxId = ri || 'unknown';
-  await db.query('DELETE FROM live_sessions WHERE user_id=$1 AND roblox_user_id=$2', [dbUser.id, robloxId]);
+  const ri = (req.query.ri || '').slice(0, 32).trim();
+  if (!ri) return res.status(400).json({ ok: false });
+  await db.query('DELETE FROM live_sessions WHERE roblox_user_id=$1', [ri]);
   res.json({ ok: true });
 });
 

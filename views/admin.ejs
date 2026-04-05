@@ -779,40 +779,57 @@ async function refreshAdminLive() {
       return;
     }
 
-    /* Group by username */
+    /* Separate registered users from guests */
     const grouped = {};
+    const guests  = [];
     sessions.forEach(s => {
-      if (!grouped[s.username]) grouped[s.username] = [];
-      grouped[s.username].push(s);
+      if (s.is_guest) {
+        guests.push(s);
+      } else {
+        const key = s.username || '?';
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(s);
+      }
     });
 
-    list.innerHTML = Object.entries(grouped).map(([username, accs]) => `
+    const renderSession = s => `
+      <div class="admin-live-session">
+        <div class="admin-live-session-top">
+          <div class="admin-live-session-info">
+            <span class="admin-live-roblox-name">${s.roblox_username || '—'}</span>
+            ${s.place_name ? `<span class="live-session-game">🎮 ${s.place_name}</span>` : ''}
+            <span class="live-session-id">ID: ${s.roblox_user_id}</span>
+          </div>
+          <button class="btn-kick" onclick="adminKickSession('${s.roblox_user_id}',this)" title="Kick ${s.roblox_username || ''}">
+            <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            Kick
+          </button>
+        </div>
+        ${renderAdminInv(s.inventory)}
+      </div>`;
+
+    const registeredHtml = Object.entries(grouped).map(([username, accs]) => `
       <div class="admin-live-group">
         <div class="admin-live-group-header">
           <span class="pulse-dot" style="width:8px;height:8px;flex-shrink:0;"></span>
           <span class="admin-live-group-name">${username}</span>
           <span class="badge badge-green" style="font-size:0.62rem;">${accs.length} account${accs.length !== 1 ? 's' : ''}</span>
         </div>
-        <div class="admin-live-accounts">
-          ${accs.map(s => `
-            <div class="admin-live-session">
-              <div class="admin-live-session-top">
-                <div class="admin-live-session-info">
-                  <span class="admin-live-roblox-name">${s.roblox_username || '—'}</span>
-                  ${s.place_name ? `<span class="live-session-game">🎮 ${s.place_name}</span>` : ''}
-                  <span class="live-session-id">ID: ${s.roblox_user_id}</span>
-                </div>
-                <button class="btn-kick" onclick="adminKickSession('${s.roblox_user_id}',this)" title="Kick ${s.roblox_username || ''}">
-                  <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-                  Kick
-                </button>
-              </div>
-              ${renderAdminInv(s.inventory)}
-            </div>
-          `).join('')}
+        <div class="admin-live-accounts">${accs.map(renderSession).join('')}</div>
+      </div>`).join('');
+
+    const guestsHtml = guests.length === 0 ? '' : `
+      <div class="admin-live-group">
+        <div class="admin-live-group-header" style="background:rgba(251,146,60,0.06);">
+          <span class="pulse-dot" style="width:8px;height:8px;flex-shrink:0;background:var(--yellow);box-shadow:0 0 0 3px rgba(251,146,60,0.18);"></span>
+          <span class="admin-live-group-name" style="color:var(--yellow);">Guests</span>
+          <span class="badge" style="background:rgba(251,146,60,0.18);color:var(--yellow);font-size:0.62rem;">${guests.length} sin cuenta</span>
+          <span style="font-size:0.68rem;color:var(--text-3);margin-left:auto;">ejecutaron el script pero no están registrados</span>
         </div>
-      </div>
-    `).join('');
+        <div class="admin-live-accounts">${guests.map(renderSession).join('')}</div>
+      </div>`;
+
+    list.innerHTML = registeredHtml + guestsHtml;
   } catch(e) {}
 }
 

@@ -632,6 +632,23 @@ app.post('/api/admin/settings', apiAuth, adminApiOnly, async (req, res) => {
 });
 
 /* ─────────────────────────────────────
+   ADMIN API — Live Sessions (all users)
+───────────────────────────────────── */
+app.get('/api/admin/live-sessions', apiAuth, adminApiOnly, async (_req, res) => {
+  const sessions = await db.all(`
+    SELECT ls.user_id, ls.roblox_user_id, ls.roblox_username,
+           ls.place_id, ls.place_name, ls.job_id,
+           ls.inventory, ls.last_seen,
+           u.username
+    FROM live_sessions ls
+    JOIN users u ON u.id = ls.user_id
+    WHERE ls.last_seen > NOW() - INTERVAL '35 seconds'
+    ORDER BY u.username ASC, ls.last_seen DESC
+  `);
+  res.json({ sessions });
+});
+
+/* ─────────────────────────────────────
    ADMIN API — Stats
 ───────────────────────────────────── */
 app.get('/api/admin/stats', apiAuth, adminApiOnly, async (_req, res) => {

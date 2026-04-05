@@ -786,10 +786,11 @@ a { color: inherit; text-decoration: none; }
 
 /* ── Live Sessions Card ── */
 .live-sessions-card {
-  background: var(--bg-raised);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
+  background: var(--bg-card);
+  border: 1px solid var(--border-acc);
+  border-radius: var(--rl);
   overflow: hidden;
+  box-shadow: 0 0 24px rgba(139,92,246,0.05);
 }
 .live-sessions-header {
   display: flex;
@@ -797,7 +798,7 @@ a { color: inherit; text-decoration: none; }
   justify-content: space-between;
   padding: 0.875rem 1.1rem;
   border-bottom: 1px solid var(--border);
-  background: rgba(147,51,234,0.04);
+  background: linear-gradient(135deg, rgba(139,92,246,0.07), rgba(99,102,241,0.04));
 }
 .live-session-row {
   padding: 0.875rem 1.1rem;
@@ -917,6 +918,63 @@ a { color: inherit; text-decoration: none; }
   justify-content: center;
   padding: 2.5rem 1rem;
   text-align: center;
+}
+
+/* ── Admin Live Sessions ── */
+.admin-live-group {
+  border-bottom: 1px solid var(--border);
+}
+.admin-live-group:last-child { border-bottom: none; }
+.admin-live-group-header {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.6rem 1.1rem;
+  background: rgba(139,92,246,0.04);
+  border-bottom: 1px solid var(--border);
+}
+.admin-live-group-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--accent);
+  font-family: var(--mono);
+}
+.admin-live-accounts {
+  display: flex;
+  flex-direction: column;
+}
+.admin-live-session {
+  padding: 0.75rem 1.1rem 0.75rem 2rem;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  transition: background 0.1s;
+}
+.admin-live-session:last-child { border-bottom: none; }
+.admin-live-session:hover { background: rgba(255,255,255,0.015); }
+.admin-live-session-top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+.admin-live-session-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.admin-live-roblox-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text);
+  font-family: var(--mono);
+  white-space: nowrap;
+}
+
+/* ── Visual polish improvements ── */
+.live-session-row:hover {
+  background: rgba(139,92,246,0.03);
 }
 .roblox-session-row {
   display: flex;

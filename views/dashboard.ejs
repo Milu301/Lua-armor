@@ -210,11 +210,14 @@ const hasHwid      = !!(luaUser && luaUser.identifier);
             <div class="live-sessions-card">
               <!-- Header -->
               <div class="live-sessions-header">
-                <div style="display:flex;align-items:center;gap:0.6rem;">
-                  <span style="font-size:1rem;">🎮</span>
+                <div style="display:flex;align-items:center;gap:0.7rem;">
+                  <div style="width:34px;height:34px;border-radius:9px;background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.2);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">🎮</div>
                   <div>
-                    <div style="font-weight:700;font-size:0.9rem;color:var(--text-1);">Live Accounts</div>
-                    <div style="font-size:0.67rem;color:var(--text-3);margin-top:1px;">Booga Booga · updates every 8s</div>
+                    <div style="font-weight:700;font-size:0.88rem;color:var(--text);">Live Accounts</div>
+                    <div style="font-size:0.65rem;color:var(--text-3);margin-top:2px;display:flex;align-items:center;gap:0.3rem;">
+                      <span class="pulse-dot" style="width:5px;height:5px;"></span>
+                      Booga Booga · auto-refresh 8s
+                    </div>
                   </div>
                 </div>
                 <div id="roblox-session-badge">

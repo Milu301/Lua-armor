@@ -111,8 +111,7 @@ async function initDB() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     ALTER TABLE users ADD COLUMN IF NOT EXISTS script_token VARCHAR(32) UNIQUE;
-    DROP TABLE IF EXISTS live_sessions;
-    CREATE TABLE live_sessions (
+    CREATE TABLE IF NOT EXISTS live_sessions (
       user_id         INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       roblox_user_id  VARCHAR(32) NOT NULL DEFAULT '',
       roblox_username VARCHAR(64) NOT NULL DEFAULT '',
@@ -124,6 +123,8 @@ async function initDB() {
       last_seen        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       PRIMARY KEY (user_id, roblox_user_id)
     );
+    ALTER TABLE live_sessions ADD COLUMN IF NOT EXISTS inventory JSONB NOT NULL DEFAULT '{}';
+    ALTER TABLE live_sessions ADD COLUMN IF NOT EXISTS kick_requested BOOL NOT NULL DEFAULT false;
   `);
 
   /* Seed projects from env vars PROJECT_N_* */
@@ -458,7 +459,7 @@ app.get('/dashboard', auth, async (req, res) => {
   const liveSessions = await db.all(`
     SELECT roblox_username, roblox_user_id, place_name, place_id, inventory, last_seen
     FROM live_sessions
-    WHERE user_id=$1 AND last_seen > NOW() - INTERVAL '5 minutes'
+    WHERE user_id=$1 AND last_seen > NOW() - INTERVAL '35 seconds'
     ORDER BY last_seen DESC
   `, [id]);
 
@@ -790,7 +791,7 @@ app.get('/api/live-status', apiAuth, async (req, res) => {
   const sessions = await db.all(`
     SELECT roblox_username, roblox_user_id, place_name, place_id, inventory, last_seen
     FROM live_sessions
-    WHERE user_id=$1 AND last_seen > NOW() - INTERVAL '5 minutes'
+    WHERE user_id=$1 AND last_seen > NOW() - INTERVAL '35 seconds'
     ORDER BY last_seen DESC
   `, [req.session.user.id]);
   res.json({ online: sessions.length > 0, sessions });
@@ -846,6 +847,18 @@ app.get('/api/heartbeat', heartbeatLimiter, async (req, res) => {
   `, [dbUser.id, robloxId, rn, pi, pn, ji, JSON.stringify(inventory)]);
 
   res.json({ ok: true, kick: shouldKick });
+});
+
+/* OFFLINE — called when player disconnects (no session auth) */
+app.get('/api/offline', heartbeatLimiter, async (req, res) => {
+  const key = (req.query.key || '').trim();
+  const ri  = (req.query.ri  || '').slice(0, 32);
+  if (!key || key.length < 6) return res.status(400).json({ ok: false });
+  const dbUser = await db.one('SELECT id FROM users WHERE luarmor_key=$1', [key]);
+  if (!dbUser) return res.status(401).json({ ok: false });
+  const robloxId = ri || 'unknown';
+  await db.query('DELETE FROM live_sessions WHERE user_id=$1 AND roblox_user_id=$2', [dbUser.id, robloxId]);
+  res.json({ ok: true });
 });
 
 app.get('/health', (req, res) => res.json({ ok:true, ts: Date.now() }));

@@ -119,7 +119,9 @@ async function initDB() {
       place_id        VARCHAR(32) NOT NULL DEFAULT '',
       place_name      VARCHAR(128) NOT NULL DEFAULT '',
       job_id          VARCHAR(64) NOT NULL DEFAULT '',
-      last_seen       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      inventory        JSONB NOT NULL DEFAULT '{}',
+      kick_requested   BOOL NOT NULL DEFAULT false,
+      last_seen        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       PRIMARY KEY (user_id, roblox_user_id)
     );
   `);
@@ -454,7 +456,7 @@ app.get('/dashboard', auth, async (req, res) => {
 
   /* Live Roblox sessions (heartbeat within last 5 minutes = online) */
   const liveSessions = await db.all(`
-    SELECT roblox_username, roblox_user_id, place_name, place_id, last_seen
+    SELECT roblox_username, roblox_user_id, place_name, place_id, inventory, last_seen
     FROM live_sessions
     WHERE user_id=$1 AND last_seen > NOW() - INTERVAL '5 minutes'
     ORDER BY last_seen DESC
@@ -768,10 +770,25 @@ app.post('/api/admin/toggle-user', apiAuth, adminApiOnly, async (req, res) => {
   res.json({ success:true, active: !user.is_active });
 });
 
+/* Kick a live session */
+app.post('/api/kick-session', apiAuth, async (req, res) => {
+  const robloxUserId = (req.body.roblox_user_id || '').trim();
+  if (!robloxUserId) return res.json({ success: false, message: 'Missing roblox_user_id.' });
+  const { id, role } = req.session.user;
+  /* Users can only kick their own sessions; admins can kick any */
+  const where = role === 'admin'
+    ? 'roblox_user_id=$1'
+    : 'roblox_user_id=$1 AND user_id=$2';
+  const params = role === 'admin' ? [robloxUserId] : [robloxUserId, id];
+  const r = await db.query(`UPDATE live_sessions SET kick_requested=true WHERE ${where}`, params);
+  if (r.rowCount === 0) return res.json({ success: false, message: 'Session not found.' });
+  res.json({ success: true });
+});
+
 /* Live session status — called from dashboard JS */
 app.get('/api/live-status', apiAuth, async (req, res) => {
   const sessions = await db.all(`
-    SELECT roblox_username, roblox_user_id, place_name, place_id, last_seen
+    SELECT roblox_username, roblox_user_id, place_name, place_id, inventory, last_seen
     FROM live_sessions
     WHERE user_id=$1 AND last_seen > NOW() - INTERVAL '5 minutes'
     ORDER BY last_seen DESC
@@ -798,15 +815,37 @@ app.get('/api/heartbeat', heartbeatLimiter, async (req, res) => {
   const pn = (req.query.pn || '').slice(0, 128);  // place name
   const ji = (req.query.ji || '').slice(0, 64);   // job id
 
-  const robloxId = ri || 'unknown';
-  await db.query(`
-    INSERT INTO live_sessions (user_id, roblox_user_id, roblox_username, place_id, place_name, job_id, last_seen)
-    VALUES ($1,$2,$3,$4,$5,$6,NOW())
-    ON CONFLICT (user_id, roblox_user_id) DO UPDATE SET
-      roblox_username=$3, place_id=$4, place_name=$5, job_id=$6, last_seen=NOW()
-  `, [dbUser.id, robloxId, rn, pi, pn, ji]);
+  /* Parse inventory: "Wood:10,Stone:5,Gold:2" → { Wood:10, Stone:5, Gold:2 } */
+  const invRaw = (req.query.inv || '').slice(0, 2000);
+  const inventory = {};
+  if (invRaw) {
+    invRaw.split(',').forEach(part => {
+      const idx = part.lastIndexOf(':');
+      if (idx > 0) {
+        const name  = part.slice(0, idx).trim();
+        const count = Number(part.slice(idx + 1)) || 0;
+        if (name && count > 0) inventory[name] = count;
+      }
+    });
+  }
 
-  res.json({ ok: true });
+  const robloxId = ri || 'unknown';
+  /* Check if a kick was requested BEFORE upserting (so we can return it) */
+  const existing = await db.one(
+    'SELECT kick_requested FROM live_sessions WHERE user_id=$1 AND roblox_user_id=$2',
+    [dbUser.id, robloxId || 'unknown']
+  );
+  const shouldKick = !!(existing && existing.kick_requested);
+
+  await db.query(`
+    INSERT INTO live_sessions (user_id, roblox_user_id, roblox_username, place_id, place_name, job_id, inventory, kick_requested, last_seen)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,false,NOW())
+    ON CONFLICT (user_id, roblox_user_id) DO UPDATE SET
+      roblox_username=$3, place_id=$4, place_name=$5, job_id=$6,
+      inventory=$7, kick_requested=false, last_seen=NOW()
+  `, [dbUser.id, robloxId, rn, pi, pn, ji, JSON.stringify(inventory)]);
+
+  res.json({ ok: true, kick: shouldKick });
 });
 
 app.get('/health', (req, res) => res.json({ ok:true, ts: Date.now() }));

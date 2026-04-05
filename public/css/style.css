@@ -784,6 +784,105 @@ a { color: inherit; text-decoration: none; }
   gap: 0.5rem;
 }
 
+/* ── Live Sessions Card ── */
+.live-sessions-card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.live-sessions-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1.1rem;
+  border-bottom: 1px solid var(--border);
+  background: rgba(147,51,234,0.04);
+}
+.live-session-row {
+  padding: 0.875rem 1.1rem;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.12s;
+}
+.live-session-row:last-child { border-bottom: none; }
+.live-session-row:hover { background: rgba(255,255,255,0.02); }
+.live-session-top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.live-session-name {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-1);
+  white-space: nowrap;
+}
+.live-session-game {
+  font-size: 0.68rem;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 7px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.live-session-id {
+  font-size: 0.65rem;
+  color: var(--text-3);
+  margin-left: auto;
+  white-space: nowrap;
+}
+.live-inv-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.live-inv-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: rgba(147,51,234,0.08);
+  border: 1px solid rgba(147,51,234,0.2);
+  border-radius: 5px;
+  padding: 2px 8px;
+}
+.live-inv-name {
+  font-size: 0.68rem;
+  color: var(--text-2);
+}
+.live-inv-count {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+.btn-kick {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 3px 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border: 1px solid rgba(239,68,68,0.35);
+  background: rgba(239,68,68,0.08);
+  color: #ef4444;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.btn-kick:hover { background: rgba(239,68,68,0.18); border-color: rgba(239,68,68,0.6); }
+.btn-kick:disabled { opacity: 0.5; cursor: not-allowed; }
+.live-sessions-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1rem;
+  text-align: center;
+}
 .roblox-session-row {
   display: flex;
   align-items: center;

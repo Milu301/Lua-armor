@@ -111,6 +111,16 @@ async function initDB() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     ALTER TABLE users ADD COLUMN IF NOT EXISTS script_token VARCHAR(32) UNIQUE;
+    -- Additional keys per user (from any project)
+    CREATE TABLE IF NOT EXISTS user_keys (
+      id          SERIAL PRIMARY KEY,
+      user_id     INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      luarmor_key TEXT NOT NULL UNIQUE,
+      project_id  INT REFERENCES projects(id) ON DELETE SET NULL,
+      label       VARCHAR(64) NOT NULL DEFAULT '',
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_user_keys_user ON user_keys(user_id);
     -- live_sessions: roblox_user_id is the PK so unregistered users can appear too
     -- Safe to drop/recreate — this table is ephemeral (35-second TTL rows)
     DROP TABLE IF EXISTS live_sessions;
@@ -455,7 +465,7 @@ app.get('/dashboard', auth, async (req, res) => {
     WHERE user_id=$1 ORDER BY reset_date DESC LIMIT 7
   `, [id]);
 
-  /* Live Roblox sessions (heartbeat within last 5 minutes = online) */
+  /* Live Roblox sessions */
   const liveSessions = await db.all(`
     SELECT roblox_username, roblox_user_id, place_name, place_id, inventory, last_seen
     FROM live_sessions
@@ -463,10 +473,21 @@ app.get('/dashboard', auth, async (req, res) => {
     ORDER BY last_seen DESC
   `, [id]);
 
+  /* Additional keys */
+  const userKeys = await db.all(`
+    SELECT uk.id, uk.luarmor_key, uk.label, uk.created_at,
+           p.name AS project_name, p.icon AS project_icon, p.color AS project_color,
+           p.daily_reset_limit
+    FROM user_keys uk
+    LEFT JOIN projects p ON p.id = uk.project_id
+    WHERE uk.user_id = $1
+    ORDER BY uk.created_at ASC
+  `, [id]);
+
   res.render('dashboard', {
     dbUser, proj, luaUser,
     resetsToday, resetsLeft, dailyLimit, pct, pfClass, ringOffset,
-    announcements, history, liveSessions,
+    announcements, history, liveSessions, userKeys,
   });
 });
 
@@ -743,6 +764,70 @@ app.post('/api/update-note', apiAuth, apiLimiter, async (req, res) => {
 
   if (json?.success) await db.query('UPDATE users SET note=$1 WHERE id=$2', [note, req.session.user.id]);
   res.json({ success: json?.success || false, message: json?.message || 'Error.' });
+});
+
+/* ─────────────────────────────────────
+   USER KEYS — add / list / delete additional keys
+───────────────────────────────────── */
+app.get('/api/user-keys', apiAuth, async (req, res) => {
+  const rows = await db.all(`
+    SELECT uk.id, uk.luarmor_key, uk.label, uk.created_at,
+           p.name AS project_name, p.icon AS project_icon, p.color AS project_color,
+           p.daily_reset_limit
+    FROM user_keys uk LEFT JOIN projects p ON p.id = uk.project_id
+    WHERE uk.user_id=$1 ORDER BY uk.created_at ASC
+  `, [req.session.user.id]);
+  res.json({ success: true, keys: rows });
+});
+
+app.post('/api/user-keys', apiAuth, apiLimiter, async (req, res) => {
+  const { id } = req.session.user;
+  const key   = (req.body.key   || '').trim();
+  const label = (req.body.label || '').trim().slice(0, 64);
+  if (!key || key.length < 6) return res.json({ success: false, message: 'Invalid key.' });
+
+  const count = await db.one('SELECT COUNT(*) AS c FROM user_keys WHERE user_id=$1', [id]);
+  if (Number(count.c) >= 10) return res.json({ success: false, message: 'Max 10 additional keys.' });
+
+  const taken = await db.one(
+    'SELECT id FROM users WHERE luarmor_key=$1 UNION SELECT id FROM user_keys WHERE luarmor_key=$1',
+    [key]
+  );
+  if (taken) return res.json({ success: false, message: 'This key is already registered.' });
+
+  const found = await findProjectForKey(key);
+  if (!found) return res.json({ success: false, message: 'Key not found in any active project.' });
+  const { project } = found;
+
+  await db.query(
+    'INSERT INTO user_keys (user_id, luarmor_key, project_id, label) VALUES ($1,$2,$3,$4)',
+    [id, key, project.id, label || project.name]
+  );
+  res.json({ success: true, message: `Key added (${project.name}).`, project_name: project.name, project_icon: project.icon, project_color: project.color });
+});
+
+app.delete('/api/user-keys/:id', apiAuth, async (req, res) => {
+  const keyId = Number(req.params.id);
+  const r = await db.query('DELETE FROM user_keys WHERE id=$1 AND user_id=$2', [keyId, req.session.user.id]);
+  if (r.rowCount === 0) return res.json({ success: false, message: 'Key not found.' });
+  res.json({ success: true });
+});
+
+/* Update reset-hwid to optionally accept a specific key from user_keys */
+app.post('/api/reset-hwid-extra', apiAuth, apiLimiter, async (req, res) => {
+  const { id } = req.session.user;
+  const keyId  = Number(req.body.key_id);
+  if (!keyId) return res.json({ success: false, message: 'key_id required.' });
+
+  const ukRow = await db.one('SELECT * FROM user_keys WHERE id=$1 AND user_id=$2', [keyId, id]);
+  if (!ukRow) return res.json({ success: false, message: 'Key not found.' });
+
+  const proj = ukRow.project_id ? await db.one('SELECT * FROM projects WHERE id=$1', [ukRow.project_id]) : null;
+  if (!proj) return res.json({ success: false, message: 'No project for this key.' });
+
+  const { json } = await luarmorReq('POST', proj.luarmor_project_id, proj.luarmor_api_key,
+    '/users/resethwid', { user_key: ukRow.luarmor_key, force: true });
+  res.json({ success: json?.success || false, message: json?.message || 'Done.' });
 });
 
 app.post('/api/change-password', apiAuth, apiLimiter, async (req, res) => {

@@ -2031,5 +2031,126 @@ a { color: inherit; text-decoration: none; }
 /* Better progress bars */
 .prog-fill { box-shadow: 0 0 8px currentColor; }
 
+/* ══════════════════════════════════════
+   MULTI-KEY MANAGER
+══════════════════════════════════════ */
+#keys-card { margin-bottom: 1rem; }
+
+.key-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  margin-bottom: 0.5rem;
+  transition: border-color 0.15s, background 0.15s;
+}
+.key-row:hover { border-color: var(--border-md); background: var(--bg-hover); }
+.key-row-primary {
+  border-color: var(--accent-border);
+  background: var(--accent-dim);
+}
+.key-row-primary:hover { border-color: rgba(139,92,246,0.4); }
+.key-row-left { display: flex; align-items: center; gap: 0.6rem; min-width: 0; flex: 1; }
+.key-row-icon { font-size: 1rem; flex-shrink: 0; }
+.key-row-info { min-width: 0; }
+.key-row-label { font-size: 0.72rem; color: var(--text-2); font-weight: 600; display: flex; align-items: center; gap: 0.35rem; margin-bottom: 2px; }
+.key-row-val { font-size: 0.73rem; color: var(--text-3); font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px; }
+.key-row-right { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
+
+.key-empty-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  font-size: 0.78rem;
+  color: var(--text-3);
+  border: 1px dashed var(--border-md);
+  border-radius: 10px;
+  margin-bottom: 0.5rem;
+}
+
+.key-add-form {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+/* ══════════════════════════════════════
+   GLOBAL VISUAL IMPROVEMENTS
+══════════════════════════════════════ */
+
+/* Cards: slightly more depth + glow accent on hover */
+.card {
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+.card:hover {
+  box-shadow: 0 8px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(139,92,246,0.07);
+}
+
+/* Smoother stat hover */
+.stat {
+  cursor: default;
+  transition: background 0.15s, border-color 0.15s;
+}
+.stat:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-md);
+}
+
+/* Topbar subtle gradient line */
+.topbar {
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(to bottom, rgba(139,92,246,0.03) 0%, transparent 100%);
+}
+
+/* Sidebar nav items: slightly wider active indicator */
+.sb-nav-item.active {
+  background: linear-gradient(90deg, rgba(139,92,246,0.18) 0%, rgba(139,92,246,0.04) 100%);
+  border-left: 3px solid var(--accent);
+  padding-left: calc(1.1rem - 3px);
+}
+
+/* Inputs: purple glow on focus */
+.input:focus, textarea:focus {
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 3px rgba(139,92,246,0.12);
+  outline: none;
+}
+
+/* Buttons: subtle lift on hover */
+.btn:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+.btn:not(:disabled):active {
+  transform: translateY(0);
+}
+
+/* Badge shimmer effect */
+.badge-green {
+  box-shadow: 0 0 8px rgba(34,197,94,0.18);
+}
+
+/* Pulse dot glow */
+.pulse-dot {
+  box-shadow: 0 0 0 3px rgba(139,92,246,0.15);
+}
+
+/* Live session rows: nicer separator */
+.live-session-row {
+  border-bottom: 1px solid var(--border);
+  padding: 0.65rem 1rem;
+  transition: background 0.12s;
+}
+.live-session-row:last-child { border-bottom: none; }
+.live-session-row:hover { background: rgba(139,92,246,0.04); }
+
+/* Form groups: tighter spacing */
+.form-group { margin-bottom: 0.65rem; }
+.label { font-size: 0.74rem; font-weight: 600; color: var(--text-2); display: block; margin-bottom: 5px; letter-spacing: 0.02em; }
+
 /* Overall smoothness */
 * { -webkit-font-smoothing: antialiased; }

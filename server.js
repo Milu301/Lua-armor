@@ -275,11 +275,24 @@ app.use(helmet({
     },
   },
   crossOriginEmbedderPolicy: false,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
+
+/* Prevent search engine indexing of the entire panel */
+app.use((req, res, next) => {
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
+  next();
+});
+
 app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res) => {
+    // Public assets (CSS/JS) can be indexed separately but let's keep them private too
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+  }
+}));
 app.set('trust proxy', 1);
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -444,7 +457,9 @@ app.post('/logout', (req, res) => req.session.destroy(() => res.redirect('/login
 /* Dashboard */
 app.get('/dashboard', auth, async (req, res) => {
   const { id, projectId } = req.session.user;
-  const dbUser = await db.one('SELECT * FROM users WHERE id=$1', [id]);
+  const dbUserRaw = await db.one('SELECT * FROM users WHERE id=$1', [id]);
+  /* Strip sensitive server-only fields before passing to template */
+  const { password_hash, script_token, ...dbUser } = dbUserRaw; // eslint-disable-line no-unused-vars
   const proj   = projectId ? await db.one('SELECT * FROM projects WHERE id=$1', [projectId]) : null;
   const luaUser = await getLuaUser(dbUser);
 
@@ -494,14 +509,28 @@ app.get('/dashboard', auth, async (req, res) => {
 
 /* Admin panel */
 app.get('/admin', auth, adminOnly, async (req, res) => {
-  const [projects, users, announcements, totalUsers, activeToday, totalResets] = await Promise.all([
+  const [projectsRaw, usersRaw, announcements, totalUsers, activeToday, totalResets] = await Promise.all([
     db.all('SELECT p.*, COUNT(u.id) AS user_count FROM projects p LEFT JOIN users u ON u.project_id=p.id GROUP BY p.id ORDER BY p.sort_order'),
-    db.all('SELECT u.*, p.name AS project_name, p.color AS project_color, p.icon AS project_icon FROM users u LEFT JOIN projects p ON p.id=u.project_id ORDER BY u.created_at DESC LIMIT 100'),
+    db.all('SELECT u.id, u.username, u.luarmor_key, u.role, u.project_id, u.discord_id, u.note, u.is_active, u.total_resets, u.created_at, u.last_login, p.name AS project_name, p.color AS project_color, p.icon AS project_icon FROM users u LEFT JOIN projects p ON p.id=u.project_id ORDER BY u.created_at DESC LIMIT 100'),
     db.all('SELECT a.*, u.username AS author_name FROM announcements a LEFT JOIN users u ON u.id=a.author_id ORDER BY a.pinned DESC, a.created_at DESC LIMIT 30'),
     db.one('SELECT COUNT(*) AS c FROM users'),
     db.one('SELECT COUNT(DISTINCT user_id) AS c FROM reset_log WHERE reset_date=CURRENT_DATE'),
     db.one('SELECT SUM(total_resets) AS c FROM users'),
   ]);
+
+  /* Strip luarmor_api_key from project objects — fetched on-demand via API when editing */
+  const projects = projectsRaw.map(p => {
+    const { luarmor_api_key, ...safe } = p; // eslint-disable-line no-unused-vars
+    return safe;
+  });
+
+  /* Strip luarmor_key from user list — fetched on-demand via API when editing */
+  const users = usersRaw.map(u => {
+    const { luarmor_key, ...safe } = u; // eslint-disable-line no-unused-vars
+    safe.key_prefix = u.luarmor_key ? u.luarmor_key.slice(0, 16) + '…' : '—';
+    return safe;
+  });
+
   res.render('admin', {
     projects, users, announcements,
     stats: { totalUsers: totalUsers.c, activeToday: activeToday.c, totalResets: totalResets.c || 0 },
@@ -512,6 +541,27 @@ app.get('/admin', auth, adminOnly, async (req, res) => {
 /* ─────────────────────────────────────
    ADMIN API — Projects CRUD
 ───────────────────────────────────── */
+/* Fetch a single project (including API key) — only served to authenticated admins */
+app.get('/api/admin/project/:id', apiAuth, adminApiOnly, async (req, res) => {
+  const proj = await db.one('SELECT * FROM projects WHERE id=$1', [Number(req.params.id)]);
+  if (!proj) return res.status(404).json({ success: false, message: 'Project not found.' });
+  res.json({ success: true, project: proj });
+});
+
+/* Fetch a single user (including luarmor_key) — only served to authenticated admins */
+app.get('/api/admin/user/:id', apiAuth, adminApiOnly, async (req, res) => {
+  const user = await db.one(
+    `SELECT u.id, u.username, u.luarmor_key, u.role, u.project_id, u.discord_id,
+            u.note, u.is_active, u.total_resets, u.created_at, u.last_login,
+            p.name AS project_name
+     FROM users u LEFT JOIN projects p ON p.id=u.project_id
+     WHERE u.id=$1`,
+    [Number(req.params.id)]
+  );
+  if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+  res.json({ success: true, user });
+});
+
 app.post('/api/admin/project', apiAuth, adminApiOnly, async (req, res) => {
   const name  = (req.body.name  || '').trim();
   const pid   = (req.body.luarmor_project_id || '').trim();

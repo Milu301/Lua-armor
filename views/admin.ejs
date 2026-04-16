@@ -155,7 +155,7 @@
               </div>
               <div class="t-xs mono dimmed" style="flex-shrink:0;max-width:140px;overflow:hidden;text-overflow:ellipsis;" title="<%= p.luarmor_project_id %>"><%= p.luarmor_project_id %></div>
               <div style="display:flex;gap:0.4rem;flex-shrink:0;">
-                <button class="btn btn-sm btn-secondary" onclick='openProjectModal(<%- JSON.stringify(p) %>)'>Edit</button>
+                <button class="btn btn-sm btn-secondary" onclick='openProjectModal(<%= p.id %>)'>Edit</button>
                 <button class="btn btn-sm" style="background:var(--red-dim);border:1px solid var(--red-border);color:#f87171;" onclick="disableProject(<%= p.id %>, '<%= p.name %>')">Disable</button>
               </div>
             </div>
@@ -195,13 +195,13 @@
               </thead>
               <tbody id="users-tbody">
                 <% users.forEach(u => { %>
-                <tr id="urow-<%= u.id %>" data-search="<%= (u.username + ' ' + u.luarmor_key + ' ' + u.discord_id).toLowerCase() %>">
+                <tr id="urow-<%= u.id %>" data-search="<%= (u.username + ' ' + u.key_prefix + ' ' + u.discord_id).toLowerCase() %>">
                   <td class="dimmed t-xs"><%= u.id %></td>
                   <td><div style="font-weight:600;font-size:0.82rem;"><%= u.username %></div></td>
                   <td>
-                    <div class="chip" style="font-size:0.68rem;max-width:140px;" onclick="copyText('<%= u.luarmor_key %>')" title="Click to copy full key">
+                    <div class="chip" style="font-size:0.68rem;max-width:140px;" onclick="copyUserKey(<%= u.id %>, this)" title="Click to copy full key">
                       <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2"/><path stroke-width="2" d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-                      <%= u.luarmor_key.slice(0,16) %>…
+                      <%= u.key_prefix %>
                     </div>
                   </td>
                   <td>
@@ -224,7 +224,7 @@
                   </td>
                   <td>
                     <div style="display:flex;gap:0.3rem;">
-                      <button class="btn btn-sm btn-secondary" style="padding:3px 7px;font-size:0.7rem;" onclick='openUserModal(<%- JSON.stringify({id:u.id,username:u.username,role:u.role,project_id:u.project_id,discord_id:u.discord_id,note:u.note,is_active:u.is_active,luarmor_key:u.luarmor_key}) %>)' title="Edit">✏️</button>
+                      <button class="btn btn-sm btn-secondary" style="padding:3px 7px;font-size:0.7rem;" onclick='openUserModal(<%= u.id %>)' title="Edit">✏️</button>
                       <button class="btn btn-sm" id="ubtn-<%= u.id %>" style="padding:3px 7px;font-size:0.7rem;background:<%= u.is_active ? 'var(--red-dim)' : 'var(--green-dim)' %>;border:1px solid <%= u.is_active ? 'var(--red-border)' : 'var(--green-border)' %>;color:<%= u.is_active ? '#f87171' : '#4ade80' %>;" onclick="toggleUser(<%= u.id %>, this)" title="<%= u.is_active ? 'Ban' : 'Unban' %>"><%= u.is_active ? '🚫' : '✅' %></button>
                       <button class="btn btn-sm" style="padding:3px 7px;font-size:0.7rem;background:var(--red-dim);border:1px solid var(--red-border);color:#f87171;" onclick="deleteUser(<%= u.id %>, '<%= u.username %>')" title="Delete">🗑️</button>
                     </div>
@@ -496,19 +496,41 @@ function copyText(txt) {
 }
 
 /* ── Projects ── */
-function openProjectModal(proj) {
-  document.getElementById('pm-id').value      = proj ? proj.id : '';
-  document.getElementById('pm-title').textContent = proj ? 'Edit Project' : 'Add Project';
-  document.getElementById('pm-name').value    = proj ? proj.name : '';
-  document.getElementById('pm-icon').value    = proj ? proj.icon : '⚡';
-  document.getElementById('pm-pid').value     = proj ? proj.luarmor_project_id : '';
-  document.getElementById('pm-pkey').value    = proj ? proj.luarmor_api_key : '';
-  document.getElementById('pm-limit').value   = proj ? proj.daily_reset_limit : 3;
-  document.getElementById('pm-color').value   = proj ? (proj.color || '#8b5cf6') : '#8b5cf6';
-  document.getElementById('pm-gradient').value= proj ? proj.gradient : 'linear-gradient(135deg,#8b5cf6,#6366f1)';
-  document.getElementById('pm-desc').value    = proj ? (proj.description || '') : '';
-  document.getElementById('pm-result').innerHTML = '';
+async function openProjectModal(projId) {
+  // Reset modal first and open immediately for snappy UX
+  document.getElementById('pm-id').value       = projId || '';
+  document.getElementById('pm-title').textContent = projId ? 'Edit Project' : 'Add Project';
+  document.getElementById('pm-name').value     = '';
+  document.getElementById('pm-icon').value     = '⚡';
+  document.getElementById('pm-pid').value      = '';
+  document.getElementById('pm-pkey').value     = '';
+  document.getElementById('pm-limit').value    = 3;
+  document.getElementById('pm-color').value    = '#8b5cf6';
+  document.getElementById('pm-gradient').value = 'linear-gradient(135deg,#8b5cf6,#6366f1)';
+  document.getElementById('pm-desc').value     = '';
+  document.getElementById('pm-result').innerHTML = projId
+    ? '<div class="alert alert-info" style="margin-bottom:.5rem;font-size:.75rem;">Loading…</div>' : '';
   openModal('project-modal');
+
+  if (!projId) return; // New project — nothing to fetch
+
+  try {
+    const r = await fetch(`/api/admin/project/${projId}`);
+    const d = await r.json();
+    if (!d.success) { document.getElementById('pm-result').innerHTML = `<div class="alert alert-danger" style="font-size:.75rem;">Failed to load project data.</div>`; return; }
+    const proj = d.project;
+    document.getElementById('pm-name').value     = proj.name || '';
+    document.getElementById('pm-icon').value     = proj.icon || '⚡';
+    document.getElementById('pm-pid').value      = proj.luarmor_project_id || '';
+    document.getElementById('pm-pkey').value     = proj.luarmor_api_key || '';
+    document.getElementById('pm-limit').value    = proj.daily_reset_limit || 3;
+    document.getElementById('pm-color').value    = proj.color || '#8b5cf6';
+    document.getElementById('pm-gradient').value = proj.gradient || 'linear-gradient(135deg,#8b5cf6,#6366f1)';
+    document.getElementById('pm-desc').value     = proj.description || '';
+    document.getElementById('pm-result').innerHTML = '';
+  } catch {
+    document.getElementById('pm-result').innerHTML = '<div class="alert alert-danger" style="font-size:.75rem;">Network error loading project.</div>';
+  }
 }
 
 function updateGradientPreview() {
@@ -559,22 +581,54 @@ function searchUsers() {
   });
 }
 
-function openUserModal(u) {
-  document.getElementById('um-id').value          = u.id;
-  document.getElementById('um-name').textContent  = u.username;
-  document.getElementById('um-username').value    = u.username;
-  document.getElementById('um-role').value        = u.role || 'user';
-  document.getElementById('um-project').value     = u.project_id || '';
-  document.getElementById('um-discord').value     = u.discord_id || '';
-  document.getElementById('um-note').value        = u.note || '';
-  document.getElementById('um-active').checked    = !!u.is_active;
-  const keyEl = document.getElementById('um-key');
-  keyEl.textContent = u.luarmor_key;
-  keyEl.dataset.key = u.luarmor_key;
-  document.getElementById('um-result').innerHTML  = '';
+async function openUserModal(userId) {
+  // Reset and open immediately
+  document.getElementById('um-id').value           = userId;
+  document.getElementById('um-name').textContent   = '…';
+  document.getElementById('um-username').value     = '';
+  document.getElementById('um-role').value         = 'user';
+  document.getElementById('um-project').value      = '';
+  document.getElementById('um-discord').value      = '';
+  document.getElementById('um-note').value         = '';
+  document.getElementById('um-active').checked     = true;
+  document.getElementById('um-result').innerHTML   = '<div class="alert alert-info" style="margin-bottom:.5rem;font-size:.75rem;">Loading…</div>';
   document.getElementById('um-pw-result').innerHTML = '';
-  document.getElementById('um-new-pw').value      = '';
+  document.getElementById('um-new-pw').value       = '';
+  const keyEl = document.getElementById('um-key');
+  keyEl.textContent = '…'; keyEl.dataset.key = '';
   openModal('user-modal');
+
+  try {
+    const r = await fetch(`/api/admin/user/${userId}`);
+    const d = await r.json();
+    if (!d.success) { document.getElementById('um-result').innerHTML = '<div class="alert alert-danger" style="font-size:.75rem;">Failed to load user.</div>'; return; }
+    const u = d.user;
+    document.getElementById('um-id').value          = u.id;
+    document.getElementById('um-name').textContent  = u.username;
+    document.getElementById('um-username').value    = u.username;
+    document.getElementById('um-role').value        = u.role || 'user';
+    document.getElementById('um-project').value     = u.project_id || '';
+    document.getElementById('um-discord').value     = u.discord_id || '';
+    document.getElementById('um-note').value        = u.note || '';
+    document.getElementById('um-active').checked    = !!u.is_active;
+    keyEl.textContent = u.luarmor_key || '—';
+    keyEl.dataset.key = u.luarmor_key || '';
+    document.getElementById('um-result').innerHTML  = '';
+  } catch {
+    document.getElementById('um-result').innerHTML = '<div class="alert alert-danger" style="font-size:.75rem;">Network error loading user.</div>';
+  }
+}
+
+/* Copy user key securely via API fetch */
+async function copyUserKey(userId, el) {
+  try {
+    const r = await fetch(`/api/admin/user/${userId}`);
+    const d = await r.json();
+    if (d.success && d.user.luarmor_key) {
+      await navigator.clipboard.writeText(d.user.luarmor_key);
+      toast('Key copied!', 'ok');
+    } else { toast('Could not fetch key.', 'err'); }
+  } catch { toast('Copy failed.', 'err'); }
 }
 
 async function saveUser() {

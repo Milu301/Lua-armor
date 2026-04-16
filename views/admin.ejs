@@ -34,6 +34,7 @@
       </div>
       <div class="topbar-right">
         <span class="t-xs dimmed" id="stats-live"></span>
+        <span id="topbar-clock" style="font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--text-3);background:var(--bg-raised);border:1px solid var(--border-md);border-radius:7px;padding:3px 10px;"></span>
         <a href="/dashboard" class="btn btn-sm btn-ghost">
           <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
           Dashboard
@@ -835,6 +836,61 @@ async function refreshAdminLive() {
 
 setInterval(refreshAdminLive, 8000);
 refreshAdminLive(); // populate on load
+
+/* ─── Live Clock ─── */
+(function() {
+  const cl = document.getElementById('topbar-clock');
+  function tick() {
+    if (!cl) return;
+    const n = new Date();
+    const pad = v => String(v).padStart(2,'0');
+    cl.textContent = pad(n.getUTCHours())+':'+pad(n.getUTCMinutes())+':'+pad(n.getUTCSeconds())+' UTC';
+  }
+  tick(); setInterval(tick, 1000);
+})();
+
+/* ─── Count-up for admin stats ─── */
+(function() {
+  const targets = [
+    { id: 'ov-users',  val: <%= stats.totalUsers %> },
+    { id: 'ov-active', val: <%= stats.activeToday %> },
+    { id: 'ov-resets', val: <%= Number(stats.totalResets) %> },
+  ];
+  targets.forEach(({ id, val }) => {
+    const el = document.getElementById(id);
+    if (!el || !window.countUp) return;
+    countUp(el, val, 1200);
+  });
+})();
+
+/* ─── Subtle Particle Canvas for Admin ─── */
+(function() {
+  const canvas = document.createElement('canvas');
+  canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:-1;opacity:0.3;';
+  document.body.insertBefore(canvas, document.body.firstChild);
+  const ctx = canvas.getContext('2d');
+  let W, H;
+  function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+  resize();
+  window.addEventListener('resize', resize, { passive: true });
+  const COLS = ['rgba(147,51,234,', 'rgba(99,102,241,', 'rgba(255,255,255,'];
+  const pts = Array.from({ length: 40 }, () => ({
+    x: Math.random() * 1920, y: Math.random() * 1080,
+    r: 0.3 + Math.random() * 1.2,
+    vx: (Math.random() - 0.5) * 0.2, vy: -0.06 - Math.random() * 0.15,
+    a: 0.05 + Math.random() * 0.22, c: COLS[Math.floor(Math.random() * COLS.length)]
+  }));
+  (function loop() {
+    ctx.clearRect(0, 0, W, H);
+    pts.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      if (p.y < -4 || p.x < -4 || p.x > W + 4) { p.x = Math.random() * W; p.y = H + 4; }
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = p.c + p.a + ')'; ctx.fill();
+    });
+    requestAnimationFrame(loop);
+  })();
+})();
 </script>
 </body>
 </html>

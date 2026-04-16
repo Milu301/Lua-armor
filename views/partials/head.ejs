@@ -43,8 +43,10 @@ document.addEventListener('click', e => {
   setTimeout(() => wave.remove(), 700);
 });
 
-/* Scroll Reveal with IntersectionObserver */
+/* Scroll Reveal with IntersectionObserver — safe, never leaves content invisible */
 (function initReveal() {
+  if (!window.IntersectionObserver) return; // fallback: just show everything
+
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
@@ -52,20 +54,28 @@ document.addEventListener('click', e => {
         observer.unobserve(entry.target);
       }
     });
-  }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+  }, { threshold: 0.05, rootMargin: '0px 0px -20px 0px' });
 
   function observeAll() {
-    document.querySelectorAll('.card, .stat, .welcome-banner, .hwid-card, .announce-item, .key-row, .account-card').forEach((el, i) => {
-      el.classList.add('reveal');
-      el.style.transitionDelay = Math.min(i * 0.06, 0.4) + 's';
+    const els = document.querySelectorAll('.card, .stat, .welcome-banner, .hwid-card, .announce-item, .key-row, .account-card, .auth-card');
+    els.forEach((el, i) => {
+      // Add hidden class AFTER we know we can reveal it
+      el.classList.add('reveal-hidden');
+      el.style.transitionDelay = Math.min(i * 0.055, 0.35) + 's';
       observer.observe(el);
     });
+    // Fallback: reveal everything after 800ms in case observer never fires
+    setTimeout(() => {
+      els.forEach(el => el.classList.add('revealed'));
+    }, 800);
   }
 
+  // Wait for DOM to be fully ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', observeAll);
   } else {
-    observeAll();
+    // Already loaded — wait a tick so layout is painted first
+    requestAnimationFrame(() => requestAnimationFrame(observeAll));
   }
 })();
 

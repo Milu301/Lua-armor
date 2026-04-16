@@ -2176,7 +2176,7 @@ a { color: inherit; text-decoration: none; }
 body::before {
   content: '';
   position: fixed; inset: 0;
-  pointer-events: none; z-index: 0;
+  pointer-events: none; z-index: -2;
   background-image:
     linear-gradient(rgba(147,51,234,0.03) 1px, transparent 1px),
     linear-gradient(90deg, rgba(147,51,234,0.03) 1px, transparent 1px);
@@ -2186,7 +2186,7 @@ body::before {
 body::after {
   content: '';
   position: fixed; inset: 0;
-  pointer-events: none; z-index: 0;
+  pointer-events: none; z-index: -1;
   background:
     radial-gradient(ellipse 80% 60% at 10% 20%, rgba(147,51,234,0.08) 0%, transparent 60%),
     radial-gradient(ellipse 60% 50% at 90% 80%, rgba(99,102,241,0.06) 0%, transparent 60%),
@@ -2198,19 +2198,20 @@ body::after {
 }
 
 /* ─── Scroll Reveal System ─── */
-.reveal {
+/* Safe: items start visible; only animate when JS adds .reveal AFTER DOMContentLoaded */
+.reveal-hidden {
   opacity: 0;
-  transform: translateY(20px);
-  transition: opacity 0.6s var(--transition-smooth), transform 0.6s var(--transition-smooth);
+  transform: translateY(18px);
+  transition: opacity 0.55s var(--transition-smooth), transform 0.55s var(--transition-smooth);
 }
-.reveal.revealed {
+.reveal-hidden.revealed {
   opacity: 1;
   transform: translateY(0);
 }
-.reveal-delay-1 { transition-delay: 0.1s; }
-.reveal-delay-2 { transition-delay: 0.2s; }
-.reveal-delay-3 { transition-delay: 0.3s; }
-.reveal-delay-4 { transition-delay: 0.4s; }
+.reveal-delay-1 { transition-delay: 0.08s; }
+.reveal-delay-2 { transition-delay: 0.16s; }
+.reveal-delay-3 { transition-delay: 0.24s; }
+.reveal-delay-4 { transition-delay: 0.32s; }
 
 /* ─── Ripple Effect ─── */
 .btn { position: relative; overflow: hidden; }
@@ -2408,7 +2409,8 @@ body::after {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.layout { animation: pageLoad 0.45s var(--transition-smooth) both; }
+/* NOTE: no 'both' fill — items are visible by default, animation only adds polish */
+.layout { animation: pageLoad 0.4s var(--transition-smooth); }
 
 /* ─── Scroll Progress Bar ─── */
 .scroll-progress {
@@ -2432,7 +2434,7 @@ body::after {
   overflow: hidden;
   background: var(--bg);
 }
-.auth-bg { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+.auth-bg { position: fixed; inset: 0; pointer-events: none; z-index: -1; }
 .auth-orb {
   position: absolute;
   border-radius: 50%;
@@ -2496,8 +2498,7 @@ body::after {
     0 0 80px rgba(147,51,234,0.12);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  animation: cardEntrance 0.7s var(--transition-bounce) both;
-  animation-delay: 0.1s;
+  animation: cardEntrance 0.6s var(--transition-bounce);
 }
 .auth-card-wide { max-width: 580px; }
 @keyframes cardEntrance {
@@ -2726,4 +2727,295 @@ kbd { display: inline-flex; align-items: center; background: var(--bg-raised); b
   .stat-grid { grid-template-columns: 1fr !important; }
   .welcome-banner { flex-direction: column; text-align: center; }
   .welcome-exec { text-align: center; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   ADMIN PANEL VISUAL UPGRADE v4
+   ══════════════════════════════════════════════════════════ */
+
+/* ─── Tab Bar ─── */
+.tab-bar {
+  background: linear-gradient(to bottom, rgba(10,10,20,0.98), rgba(7,7,15,0.95));
+  border-bottom: 1px solid rgba(147,51,234,0.12);
+  padding: 0 1.5rem;
+  gap: 0;
+  backdrop-filter: blur(16px);
+}
+.tab-btn {
+  padding: 0.8rem 1.1rem;
+  font-size: 0.79rem;
+  font-weight: 600;
+  color: var(--text-2);
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+  position: relative;
+  letter-spacing: 0.01em;
+}
+.tab-btn::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #9333ea, #7c3aed);
+  border-radius: 99px;
+  transform: scaleX(0);
+  transition: transform 0.25s var(--transition-bounce, cubic-bezier(0.34,1.56,0.64,1));
+}
+.tab-btn:hover { color: var(--text); background: rgba(147,51,234,0.05); }
+.tab-btn.active { color: var(--accent); border-bottom-color: transparent; }
+.tab-btn.active::after { transform: scaleX(1); }
+.tab-panel { animation: tabFadeIn 0.2s ease; }
+@keyframes tabFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Admin Stats Grid ─── */
+.admin-stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.25rem;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s;
+}
+.admin-stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(147,51,234,0.12);
+}
+.admin-stat-card .stat-val {
+  font-size: 2rem;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+
+/* ─── Enhanced Admin Table ─── */
+.admin-table-wrap {
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: var(--bg-card);
+}
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+.admin-table thead {
+  background: linear-gradient(to right, rgba(147,51,234,0.08), rgba(99,102,241,0.05));
+  border-bottom: 1px solid rgba(147,51,234,0.14);
+}
+.admin-table th {
+  padding: 0.7rem 0.875rem;
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  white-space: nowrap;
+}
+.admin-table td {
+  padding: 0.65rem 0.875rem;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  vertical-align: middle;
+  line-height: 1.4;
+}
+.admin-table tbody tr:last-child td { border-bottom: none; }
+.admin-table tbody tr {
+  transition: background 0.15s;
+}
+.admin-table tbody tr:hover {
+  background: rgba(147,51,234,0.06);
+}
+
+/* ─── Admin Project Row ─── */
+.admin-project-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.875rem 1rem;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition: all 0.22s;
+}
+.admin-project-row:hover {
+  border-color: rgba(147,51,234,0.25);
+  background: var(--bg-hover);
+  transform: translateX(3px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+.admin-proj-icon {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+/* ─── Admin Quick Stats (overview) ─── */
+.overview-stats {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.875rem;
+  margin-bottom: 1.5rem;
+}
+.overview-stat {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.25rem;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s;
+  cursor: default;
+}
+.overview-stat::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 2px;
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+.overview-stat:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.45);
+}
+.overview-stat:hover::before { opacity: 1; }
+
+/* ─── Live Session Pulse ─── */
+#admin-live-badge .badge-green {
+  animation: livePulse 2s ease-in-out infinite;
+}
+@keyframes livePulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(34,197,94,0.3); }
+  50%       { box-shadow: 0 0 18px rgba(34,197,94,0.7), 0 0 6px rgba(34,197,94,0.5); }
+}
+
+/* ─── Admin User Actions ─── */
+.admin-action-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  border: 1px solid var(--border-md);
+  background: var(--bg-raised);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 0.75rem;
+}
+.admin-action-btn:hover { background: var(--bg-hover); border-color: var(--border-acc); }
+.admin-action-btn.danger:hover { background: var(--red-dim); border-color: var(--red-border); color: #f87171; }
+.admin-action-btn.warn:hover   { background: var(--yellow-dim); border-color: var(--yellow-border); }
+.admin-action-btn.success:hover { background: var(--green-dim); border-color: var(--green-border); }
+
+/* ─── Search Input Enhancement ─── */
+#user-search {
+  background: var(--bg-raised);
+  border: 1px solid var(--border-md);
+  transition: all 0.25s;
+}
+#user-search:focus {
+  border-color: rgba(147,51,234,0.5);
+  box-shadow: 0 0 0 3px rgba(147,51,234,0.1);
+  background: var(--bg-hover);
+  width: 280px !important;
+}
+
+/* ─── Admin Topbar badge ─── */
+.topbar .badge-purple {
+  animation: none;
+  box-shadow: 0 0 10px rgba(147,51,234,0.3);
+}
+
+/* ─── Announcement cards in admin ─── */
+.admin-announce-card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.875rem 1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  transition: all 0.2s;
+  margin-bottom: 0.5rem;
+}
+.admin-announce-card:hover {
+  border-color: rgba(147,51,234,0.22);
+  background: var(--bg-hover);
+}
+
+/* ─── Modal improvements for admin ─── */
+.modal-overlay {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.modal-box {
+  animation: slideUp 0.25s var(--transition-bounce, cubic-bezier(0.34,1.56,0.64,1));
+  border: 1px solid rgba(147,51,234,0.22);
+}
+
+/* ─── Stats number gradient ─── */
+#ov-users  { background: linear-gradient(135deg, #c084fc, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+#ov-active { background: linear-gradient(135deg, #4ade80, #22c55e); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+#ov-resets { background: linear-gradient(135deg, #60a5fa, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+#ov-live   { background: linear-gradient(135deg, #4ade80, #22c55e); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+/* ─── Better Settings form in admin ─── */
+.settings-section {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  transition: border-color 0.2s;
+}
+.settings-section:hover { border-color: rgba(147,51,234,0.2); }
+.settings-section-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* ─── Field Grid ─── */
+.field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+/* ─── Admin Live sessions container ─── */
+#admin-live-list {
+  max-height: 600px;
+  overflow-y: auto;
+}
+#admin-live-list .live-sessions-empty {
+  padding: 3rem 1rem;
+}
+
+/* ─── Admin responsive ─── */
+@media (max-width: 1000px) {
+  .overview-stats { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 700px) {
+  .overview-stats { grid-template-columns: repeat(2, 1fr); }
+  .tab-bar { flex-wrap: nowrap; overflow-x: auto; }
+  .field-grid { grid-template-columns: 1fr; }
 }

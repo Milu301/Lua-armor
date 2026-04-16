@@ -38,7 +38,8 @@ const hasHwid      = !!(luaUser && luaUser.identifier);
       </div>
       <div class="topbar-right">
         <span class="t-xs muted" id="lastUpdated">Updated just now</span>
-        <button class="btn btn-sm btn-ghost" onclick="refresh()">
+        <span id="topbar-clock" data-tip="Current UTC time"></span>
+        <button class="btn btn-sm btn-ghost" onclick="refresh()" data-tip="Refresh data">
           <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
           </svg>
@@ -88,26 +89,27 @@ const hasHwid      = !!(luaUser && luaUser.identifier);
       <% } %>
 
       <!-- Welcome banner -->
-      <div class="welcome-banner">
-        <img 
+      <div class="welcome-banner" style="position:relative;overflow:hidden;">
+        <img
           src="https://cdn.discordapp.com/icons/1398423987817807934/a_6f62815e5aee24b4964bd4113626e3fe.webp?size=64"
           class="welcome-avatar" alt="logo"
+          style="animation:iconFloat 4s ease-in-out infinite;"
         />
         <div class="welcome-text">
-          <div class="welcome-title">Welcome back, <span style="color:var(--accent)"><%= user ? user.username : 'User' %></span></div>
-          <div class="welcome-sub">
-            Key: <span class="mono" style="color:var(--accent)"><%= user ? (user.luarmorKey || '').slice(0,20) + '…' : '—' %></span>
-            &nbsp;·&nbsp;
-            <span class="<%= !expired ? 'c-green' : 'c-red' %>">
+          <div class="welcome-title">Welcome back, <span style="background:linear-gradient(135deg,#c084fc,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><%= user ? user.username : 'User' %></span> 👋</div>
+          <div class="welcome-sub" style="margin-top:5px;">
+            <span class="mono" style="color:var(--text-3);font-size:0.72rem;"><%= user ? (user.luarmorKey || '').slice(0,20) + '…' : '—' %></span>
+            &nbsp;<span style="color:var(--border-md)">|</span>&nbsp;
+            <span class="<%= !expired ? 'c-green' : 'c-red' %>" style="font-weight:600;">
               <%= !expired ? '● Active' : '● Expired' %>
             </span>
             <% if (proj) { %>
-            &nbsp;·&nbsp;<span class="badge badge-purple" style="font-size:0.7rem;"><%= proj.icon %> <%= proj.name %></span>
+            &nbsp;<span class="badge badge-purple" style="font-size:0.68rem;"><%= proj.icon %> <%= proj.name %></span>
             <% } %>
           </div>
         </div>
-        <div class="welcome-exec">
-          <div class="welcome-exec-num" id="exec-count"><%= executions.toLocaleString() %></div>
+        <div class="welcome-exec" style="text-align:right;">
+          <div class="welcome-exec-num" id="exec-count" style="font-size:2rem;"><%= executions.toLocaleString() %></div>
           <div class="welcome-exec-label">total executions</div>
         </div>
       </div>
@@ -1117,6 +1119,86 @@ document.querySelectorAll('a[href*="#"]').forEach(a => {
 });
 
 setInterval(refresh, 2 * 60 * 1000);
+
+/* ─── Live Clock ─── */
+(function() {
+  const clockEl = document.getElementById('topbar-clock');
+  function tick() {
+    if (!clockEl) return;
+    const now = new Date();
+    const hh  = String(now.getUTCHours()).padStart(2, '0');
+    const mm  = String(now.getUTCMinutes()).padStart(2, '0');
+    const ss  = String(now.getUTCSeconds()).padStart(2, '0');
+    clockEl.textContent = hh + ':' + mm + ':' + ss + ' UTC';
+  }
+  tick();
+  setInterval(tick, 1000);
+})();
+
+/* ─── Count-up on stat values ─── */
+(function() {
+  const targets = [
+    { id: 's-exec',     val: <%= executions %> },
+    { id: 's-exec-row', val: <%= executions %> },
+    { id: 'exec-count', val: <%= executions %> },
+  ];
+  window.addEventListener('DOMContentLoaded', () => {
+    targets.forEach(({ id, val }) => {
+      const el = document.getElementById(id);
+      if (el && window.countUp) countUp(el, val, 1400);
+    });
+  });
+})();
+
+/* ─── Floating Particle Canvas (dashboard ambient) ─── */
+(function() {
+  const canvas = document.createElement('canvas');
+  canvas.id = 'particle-canvas';
+  document.body.insertBefore(canvas, document.body.firstChild);
+  const ctx = canvas.getContext('2d');
+  let W, H, particles = [];
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize, { passive: true });
+
+  const COLORS = ['rgba(147,51,234,', 'rgba(99,102,241,', 'rgba(6,182,212,', 'rgba(255,255,255,'];
+
+  class Particle {
+    constructor() { this.reset(); }
+    reset() {
+      this.x  = Math.random() * W;
+      this.y  = Math.random() * H;
+      this.r  = 0.5 + Math.random() * 1.8;
+      this.vx = (Math.random() - 0.5) * 0.25;
+      this.vy = -0.1 - Math.random() * 0.25;
+      this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
+      this.alpha = 0.1 + Math.random() * 0.35;
+    }
+    step() {
+      this.x += this.vx;
+      this.y += this.vy;
+      if (this.y < -4 || this.x < -4 || this.x > W + 4) this.reset();
+    }
+    draw() {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+      ctx.fillStyle = this.color + this.alpha + ')';
+      ctx.fill();
+    }
+  }
+
+  for (let i = 0; i < 60; i++) particles.push(new Particle());
+
+  (function loop() {
+    ctx.clearRect(0, 0, W, H);
+    particles.forEach(p => { p.step(); p.draw(); });
+    requestAnimationFrame(loop);
+  })();
+})();
 </script>
 </body>
 </html>

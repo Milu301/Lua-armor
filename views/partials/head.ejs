@@ -6,8 +6,84 @@
   <title><%= title || panelName %></title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" />
   <link rel="stylesheet" href="/css/style.css" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔑</text></svg>" />
 </head>
 <body>
+
+<!-- Scroll progress bar -->
+<div class="scroll-progress" id="scrollProgress"></div>
+
+<script>
+/* ═══════════════════════════════════════════════
+   GLOBAL ENHANCEMENTS — Ripple, Reveal, Clock
+   ═══════════════════════════════════════════════ */
+
+/* Scroll progress */
+window.addEventListener('scroll', () => {
+  const el = document.getElementById('scrollProgress');
+  if (!el) return;
+  const pct = (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100;
+  el.style.width = Math.min(100, pct) + '%';
+}, { passive: true });
+
+/* Ripple effect on all buttons */
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.btn, .hwid-btn, .btn-kick');
+  if (!btn || btn.disabled) return;
+  const rect  = btn.getBoundingClientRect();
+  const size  = Math.max(rect.width, rect.height) * 2;
+  const x     = e.clientX - rect.left - size / 2;
+  const y     = e.clientY - rect.top  - size / 2;
+  const wave  = document.createElement('span');
+  wave.className = 'ripple-wave';
+  wave.style.cssText = `width:${size}px;height:${size}px;left:${x}px;top:${y}px;`;
+  btn.appendChild(wave);
+  setTimeout(() => wave.remove(), 700);
+});
+
+/* Scroll Reveal with IntersectionObserver */
+(function initReveal() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('revealed');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+
+  function observeAll() {
+    document.querySelectorAll('.card, .stat, .welcome-banner, .hwid-card, .announce-item, .key-row, .account-card').forEach((el, i) => {
+      el.classList.add('reveal');
+      el.style.transitionDelay = Math.min(i * 0.06, 0.4) + 's';
+      observer.observe(el);
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', observeAll);
+  } else {
+    observeAll();
+  }
+})();
+
+/* Count-up animation for numeric elements */
+function countUp(el, target, duration = 1200) {
+  const start = performance.now();
+  const from  = parseInt(el.textContent.replace(/,/g, '')) || 0;
+  function step(now) {
+    const progress = Math.min((now - start) / duration, 1);
+    const ease = 1 - Math.pow(1 - progress, 3);
+    const val  = Math.round(from + (target - from) * ease);
+    el.textContent = val.toLocaleString();
+    if (progress < 1) requestAnimationFrame(step);
+    else el.classList.add('bump');
+  }
+  requestAnimationFrame(step);
+}
+
+/* Expose globally */
+window.countUp = countUp;
+</script>

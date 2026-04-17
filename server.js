@@ -557,6 +557,18 @@ app.get('/dashboard', auth, async (req, res) => {
   });
 });
 
+app.get('/chat', auth, async (req, res) => {
+  const messages = await db.all(`
+    SELECT m.id, m.username, m.role, m.content, m.image_url, m.created_at
+    FROM chat_messages m
+    WHERE m.deleted = false
+    ORDER BY m.created_at DESC LIMIT 80
+  `);
+  messages.reverse();
+  const onlineCount = onlineUsers.size;
+  res.render('chat', { messages, onlineCount, page: 'chat' });
+});
+
 app.get('/admin', auth, adminOnly, async (req, res) => {
   const [projectsRaw, usersRaw, announcements, totalUsers, activeToday, totalResets, chatCount] = await Promise.all([
     db.all('SELECT p.*, COUNT(u.id) AS user_count FROM projects p LEFT JOIN users u ON u.project_id=p.id GROUP BY p.id ORDER BY p.sort_order'),

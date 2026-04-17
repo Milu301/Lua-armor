@@ -66,6 +66,11 @@
         <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
         Announcements
       </button>
+      <button class="tab-btn" onclick="switchTab('chat',this)">
+        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+        Chat
+        <span class="sb-badge" style="background:rgba(6,182,212,0.15);color:#22d3ee;border-color:rgba(6,182,212,0.25);">MOD</span>
+      </button>
       <button class="tab-btn" onclick="switchTab('settings',this)">
         <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
         Settings
@@ -75,7 +80,7 @@
     <!-- ═══════ TAB: OVERVIEW ═══════ -->
     <div class="tab-panel active" id="tab-overview">
       <div class="content" style="max-width:1100px;">
-        <div class="stat-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:1.5rem;">
+        <div class="stat-grid" style="grid-template-columns:repeat(6,1fr);margin-bottom:1.5rem;">
           <div class="stat" style="border-top:2px solid var(--accent);">
             <div class="stat-label">Total Users</div>
             <div class="stat-val c-purple" id="ov-users"><%= stats.totalUsers %></div>
@@ -95,6 +100,11 @@
             <div class="stat-label">Projects</div>
             <div class="stat-val c-yellow"><%= projects.length %></div>
             <div class="stat-sub">tiers configured</div>
+          </div>
+          <div class="stat" style="border-top:2px solid var(--cyan);cursor:pointer;" onclick="switchTab('chat',document.querySelector('[onclick*=\'chat\']'));refreshChatMod();" title="View chat">
+            <div class="stat-label">Chat Messages</div>
+            <div class="stat-val c-cyan" id="ov-chat"><%= stats.chatMessages || 0 %></div>
+            <div class="stat-sub">total messages</div>
           </div>
           <div class="stat" style="border-top:2px solid var(--green);cursor:pointer;" onclick="switchTab('live',document.querySelector('[onclick*=\'live\']'));refreshAdminLive();" title="View live sessions">
             <div class="stat-label">Live Now</div>
@@ -309,6 +319,52 @@
               </div>
               <% }) %>
             </div>
+            <% } %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════ TAB: CHAT MODERATION ═══════ -->
+    <div class="tab-panel" id="tab-chat">
+      <div class="content" style="max-width:800px;">
+        <div class="card">
+          <div class="card-head">
+            <div class="card-icon" style="background:rgba(6,182,212,0.1);border:1px solid rgba(6,182,212,0.2);">💬</div>
+            <div>
+              <div class="card-title">Chat Moderation</div>
+              <div class="card-desc">View and delete global chat messages. Real-time via Socket.io.</div>
+            </div>
+            <button class="btn btn-sm btn-ghost" style="margin-left:auto;" onclick="refreshChatMod()">
+              <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              Refresh
+            </button>
+          </div>
+          <div id="chat-mod-list" style="max-height:60vh;overflow-y:auto;">
+            <% if (chatMessages && chatMessages.length > 0) { %>
+              <% chatMessages.forEach(function(m) { %>
+              <div class="chat-mod-msg" id="adminmsg-<%= m.id %>">
+                <div class="chat-mod-avatar"><%= m.username.slice(0,2).toUpperCase() %></div>
+                <div class="chat-mod-body">
+                  <div class="chat-mod-meta">
+                    <span class="chat-mod-name" style="<%= m.role === 'admin' ? 'color:#f87171;' : m.role === 'mod' ? 'color:#fbbf24;' : '' %>"><%= m.username %></span>
+                    <% if (m.role === 'admin') { %><span class="chat-role-tag chat-role-admin">admin</span><% } %>
+                    <% if (m.role === 'mod')   { %><span class="chat-role-tag chat-role-mod">mod</span><% } %>
+                    <span style="color:var(--text-3)"><%= new Date(m.created_at).toLocaleString('en',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) %></span>
+                  </div>
+                  <% if (m.image_url) { %>
+                    <img src="<%= m.image_url %>" class="chat-mod-img" alt="img" />
+                  <% } else { %>
+                    <div class="chat-mod-content"><%= m.content %></div>
+                  <% } %>
+                </div>
+                <button class="chat-mod-del" onclick="adminDeleteMsg(<%= m.id %>,this)" title="Delete message">
+                  <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+              </div>
+              <% }) %>
+            <% } else { %>
+              <div style="text-align:center;padding:2rem;color:var(--text-3);font-size:0.82rem;">No chat messages yet.</div>
             <% } %>
           </div>
         </div>
@@ -945,6 +1001,79 @@ refreshAdminLive(); // populate on load
     requestAnimationFrame(loop);
   })();
 })();
+
+/* ── Chat Moderation (admin) ── */
+const adminSocket = io({ transports: ['websocket','polling'] });
+
+adminSocket.on('chat_message', (msg) => {
+  const list = document.getElementById('chat-mod-list');
+  if (!list) return;
+  const empty = list.querySelector('[style*="No chat messages"]');
+  if (empty) empty.remove();
+  const el = buildAdminMsgEl(msg);
+  list.appendChild(el);
+  list.scrollTop = list.scrollHeight;
+});
+
+adminSocket.on('chat_delete', ({ id }) => {
+  const el = document.getElementById('adminmsg-' + id);
+  if (el) { el.style.opacity = '0'; el.style.transition = 'opacity 0.3s'; setTimeout(() => el.remove(), 320); }
+});
+
+function escHtmlA(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function buildAdminMsgEl(msg) {
+  const div = document.createElement('div');
+  div.className = 'chat-mod-msg';
+  div.id = 'adminmsg-' + msg.id;
+  const time = new Date(msg.created_at).toLocaleString('en',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+  const roleTag = msg.role === 'admin'
+    ? '<span class="chat-role-tag chat-role-admin">admin</span>'
+    : msg.role === 'mod'
+    ? '<span class="chat-role-tag chat-role-mod">mod</span>'
+    : '';
+  const nameColor = msg.role === 'admin' ? 'color:#f87171;' : msg.role === 'mod' ? 'color:#fbbf24;' : '';
+  const body = msg.image_url
+    ? `<img src="${escHtmlA(msg.image_url)}" class="chat-mod-img" alt="img" />`
+    : `<div class="chat-mod-content">${escHtmlA(msg.content)}</div>`;
+  div.innerHTML = `
+    <div class="chat-mod-avatar">${(msg.username||'?').slice(0,2).toUpperCase()}</div>
+    <div class="chat-mod-body">
+      <div class="chat-mod-meta">
+        <span class="chat-mod-name" style="${nameColor}">${escHtmlA(msg.username)}</span>
+        ${roleTag}
+        <span style="color:var(--text-3)">${time}</span>
+      </div>
+      ${body}
+    </div>
+    <button class="chat-mod-del" onclick="adminDeleteMsg(${msg.id},this)" title="Delete">
+      <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+    </button>`;
+  return div;
+}
+
+async function adminDeleteMsg(id, btn) {
+  btn.disabled = true;
+  const r = await fetch(`/api/chat/message/${id}`, { method: 'DELETE' }).catch(() => null);
+  if (!r) { btn.disabled = false; return; }
+  const d = await r.json();
+  if (!d.success) { btn.disabled = false; showToast(d.message || 'Error.', 'err'); }
+}
+
+async function refreshChatMod() {
+  const list = document.getElementById('chat-mod-list');
+  if (!list) return;
+  list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-3);">Loading…</div>';
+  const r = await fetch('/api/chat/messages').catch(() => null);
+  if (!r || !r.ok) { list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red);">Failed to load.</div>'; return; }
+  const d = await r.json();
+  if (!d.messages.length) { list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-3);">No messages.</div>'; return; }
+  list.innerHTML = '';
+  d.messages.forEach(m => list.appendChild(buildAdminMsgEl(m)));
+}
 </script>
 </body>
 </html>

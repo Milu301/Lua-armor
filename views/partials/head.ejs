@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title><%= title || panelName %></title>
-  <!-- Prevent search engine indexing of the entire panel -->
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
   <meta name="googlebot" content="noindex, nofollow" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -15,15 +14,42 @@
 </head>
 <body>
 
-<!-- Scroll progress bar -->
 <div class="scroll-progress" id="scrollProgress"></div>
 
-<script>
-/* ═══════════════════════════════════════════════
-   GLOBAL ENHANCEMENTS — Ripple, Reveal, Clock
-   ═══════════════════════════════════════════════ */
+<script src="/socket.io/socket.io.js"></script>
 
-/* Scroll progress */
+<script>
+/* ═══════════════════════════════════════════
+   SOURCE PROTECTION — disable common inspect shortcuts
+   ═══════════════════════════════════════════ */
+(function() {
+  // Disable right-click context menu
+  document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+
+  // Disable keyboard shortcuts: F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U, Ctrl+Shift+C
+  document.addEventListener('keydown', function(e) {
+    // F12
+    if (e.key === 'F12') { e.preventDefault(); return false; }
+    // Ctrl+Shift+I / Ctrl+Shift+J / Ctrl+Shift+C
+    if (e.ctrlKey && e.shiftKey && ['I','i','J','j','C','c'].includes(e.key)) {
+      e.preventDefault(); return false;
+    }
+    // Ctrl+U (view source)
+    if (e.ctrlKey && (e.key === 'U' || e.key === 'u')) {
+      e.preventDefault(); return false;
+    }
+    // Ctrl+S (save page)
+    if (e.ctrlKey && (e.key === 'S' || e.key === 's')) {
+      e.preventDefault(); return false;
+    }
+  });
+})();
+
+/* ═══════════════════════════════════════════
+   GLOBAL ENHANCEMENTS — Scroll, Ripple, Reveal, Clock
+   ═══════════════════════════════════════════ */
+
+/* Scroll progress bar */
 window.addEventListener('scroll', () => {
   const el = document.getElementById('scrollProgress');
   if (!el) return;
@@ -31,9 +57,9 @@ window.addEventListener('scroll', () => {
   el.style.width = Math.min(100, pct) + '%';
 }, { passive: true });
 
-/* Ripple effect on all buttons */
+/* Ripple effect */
 document.addEventListener('click', e => {
-  const btn = e.target.closest('.btn, .hwid-btn, .btn-kick');
+  const btn = e.target.closest('.btn, .hwid-btn, .btn-kick, .chat-send-btn');
   if (!btn || btn.disabled) return;
   const rect  = btn.getBoundingClientRect();
   const size  = Math.max(rect.width, rect.height) * 2;
@@ -46,10 +72,9 @@ document.addEventListener('click', e => {
   setTimeout(() => wave.remove(), 700);
 });
 
-/* Scroll Reveal with IntersectionObserver — safe, never leaves content invisible */
+/* Scroll Reveal */
 (function initReveal() {
-  if (!window.IntersectionObserver) return; // fallback: just show everything
-
+  if (!window.IntersectionObserver) return;
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
@@ -57,35 +82,30 @@ document.addEventListener('click', e => {
         observer.unobserve(entry.target);
       }
     });
-  }, { threshold: 0.05, rootMargin: '0px 0px -20px 0px' });
+  }, { threshold: 0.04, rootMargin: '0px 0px -20px 0px' });
 
   function observeAll() {
-    const els = document.querySelectorAll('.card, .stat, .welcome-banner, .hwid-card, .announce-item, .key-row, .account-card, .auth-card');
+    const els = document.querySelectorAll('.card, .stat, .welcome-banner, .hwid-card, .announce-item, .account-card, .auth-card, .login-card, .settings-card');
     els.forEach((el, i) => {
-      // Add hidden class AFTER we know we can reveal it
       el.classList.add('reveal-hidden');
-      el.style.transitionDelay = Math.min(i * 0.055, 0.35) + 's';
+      el.style.transitionDelay = Math.min(i * 0.05, 0.3) + 's';
       observer.observe(el);
     });
-    // Fallback: reveal everything after 800ms in case observer never fires
-    setTimeout(() => {
-      els.forEach(el => el.classList.add('revealed'));
-    }, 800);
+    setTimeout(() => { els.forEach(el => el.classList.add('revealed')); }, 900);
   }
 
-  // Wait for DOM to be fully ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', observeAll);
   } else {
-    // Already loaded — wait a tick so layout is painted first
     requestAnimationFrame(() => requestAnimationFrame(observeAll));
   }
 })();
 
-/* Count-up animation for numeric elements */
-function countUp(el, target, duration = 1200) {
+/* Count-up animation */
+function countUp(el, target, duration) {
+  duration = duration || 1200;
   const start = performance.now();
-  const from  = parseInt(el.textContent.replace(/,/g, '')) || 0;
+  const from  = parseInt((el.textContent || '').replace(/,/g, '')) || 0;
   function step(now) {
     const progress = Math.min((now - start) / duration, 1);
     const ease = 1 - Math.pow(1 - progress, 3);
@@ -96,7 +116,40 @@ function countUp(el, target, duration = 1200) {
   }
   requestAnimationFrame(step);
 }
-
-/* Expose globally */
 window.countUp = countUp;
+
+/* Clock */
+function updateClock() {
+  const el = document.getElementById('topbar-clock');
+  if (!el) return;
+  const now = new Date();
+  const h = String(now.getUTCHours()).padStart(2,'0');
+  const m = String(now.getUTCMinutes()).padStart(2,'0');
+  const s = String(now.getUTCSeconds()).padStart(2,'0');
+  el.textContent = h + ':' + m + ':' + s + ' UTC';
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+/* Toast helper */
+function toast(msg, type) {
+  type = type || 'ok';
+  const wrap = document.getElementById('toast-wrap') || (function() {
+    const w = document.createElement('div');
+    w.id = 'toast-wrap';
+    w.className = 'toast-wrap';
+    document.body.appendChild(w);
+    return w;
+  })();
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  const icons = { ok: '✓', err: '✕', warn: '⚠' };
+  t.innerHTML = '<span style="font-weight:700;font-size:0.9rem;">' + (icons[type]||'ℹ') + '</span><span>' + msg + '</span>';
+  wrap.appendChild(t);
+  setTimeout(() => {
+    t.style.animation = 'toastOut 0.25s ease forwards';
+    setTimeout(() => t.remove(), 260);
+  }, 3200);
+}
+window.toast = toast;
 </script>

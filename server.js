@@ -12,8 +12,17 @@ const { Pool }    = require('pg');
 const path        = require('path');
 const fetch       = require('node-fetch');
 const crypto      = require('crypto');
+const fs          = require('fs');
+const http        = require('http');
+const { Server }  = require('socket.io');
+const multer      = require('multer');
 
-const app = express();
+const app    = express();
+const server = http.createServer(app);
+const io     = new Server(server, {
+  cors: { origin: false },
+  maxHttpBufferSize: 5 * 1024 * 1024, // 5MB max
+});
 
 /* ─── Config ─── */
 const PORT          = process.env.PORT || 3000;
@@ -27,6 +36,10 @@ const PANEL_LOGO    = process.env.PANEL_LOGO || 'https://cdn.discordapp.com/icon
 let dynSettings = { panel_name: PANEL_NAME, discord_url: DISCORD_URL, panel_logo: PANEL_LOGO };
 
 if (!DATABASE_URL) { console.error('DATABASE_URL required'); process.exit(1); }
+
+/* ─── Ensure upload directories exist ─── */
+const UPLOAD_DIR = path.join(__dirname, 'public', 'uploads', 'chat');
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 /* ─── PostgreSQL Pool ─── */
 const pool = new Pool({
@@ -111,7 +124,6 @@ async function initDB() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     ALTER TABLE users ADD COLUMN IF NOT EXISTS script_token VARCHAR(32) UNIQUE;
-    -- Additional keys per user (from any project)
     CREATE TABLE IF NOT EXISTS user_keys (
       id          SERIAL PRIMARY KEY,
       user_id     INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -121,8 +133,6 @@ async function initDB() {
       created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS idx_user_keys_user ON user_keys(user_id);
-    -- live_sessions: roblox_user_id is the PK so unregistered users can appear too
-    -- Safe to drop/recreate — this table is ephemeral (35-second TTL rows)
     DROP TABLE IF EXISTS live_sessions;
     CREATE TABLE live_sessions (
       roblox_user_id  VARCHAR(32) NOT NULL PRIMARY KEY,
@@ -135,6 +145,17 @@ async function initDB() {
       kick_requested  BOOL NOT NULL DEFAULT false,
       last_seen       TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id          SERIAL PRIMARY KEY,
+      user_id     INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      username    VARCHAR(32) NOT NULL,
+      role        VARCHAR(16) NOT NULL DEFAULT 'user',
+      content     TEXT,
+      image_url   TEXT,
+      deleted     BOOL NOT NULL DEFAULT false,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_chat_created ON chat_messages(created_at DESC);
   `);
 
   /* Seed projects from env vars PROJECT_N_* */
@@ -165,21 +186,19 @@ async function initDB() {
     console.log(`  ✓ Project seeded: ${name}`);
   }
 
-  /* Seed admin from env — fully idempotent, never crashes */
+  /* Seed admin from env — fully idempotent */
   const adminUser = (process.env.ADMIN_USERNAME || '').toLowerCase().trim();
   const adminPass = process.env.ADMIN_PASSWORD || '';
   if (adminUser && adminPass) {
     const hash = await bcrypt.hash(adminPass, 12);
     const existing = await db.one('SELECT id FROM users WHERE username=$1', [adminUser]);
     if (existing) {
-      /* User already exists — just update password + role */
       await db.query(
         'UPDATE users SET password_hash=$1, role=$2, is_active=true WHERE id=$3',
         [hash, 'admin', existing.id]
       );
       console.log(`  ✓ Admin updated: ${adminUser}`);
     } else {
-      /* New admin — generate a unique internal key */
       let adminKey = process.env.ADMIN_LUARMOR_KEY || '';
       if (!adminKey || adminKey === 'admin-key-placeholder') {
         adminKey = `admin-${adminUser}-${Date.now()}`;
@@ -216,7 +235,6 @@ async function luarmorReq(method, projectId, apiKey, urlPath, body) {
   }
 }
 
-/* Find which project a key belongs to — checks all active projects */
 async function findProjectForKey(userKey) {
   const projects = await db.all('SELECT * FROM projects WHERE is_active=true ORDER BY sort_order');
   for (const proj of projects) {
@@ -228,7 +246,6 @@ async function findProjectForKey(userKey) {
   return null;
 }
 
-/* Get Luarmor user for a DB user */
 async function getLuaUser(dbUser) {
   if (!dbUser?.luarmor_key || !dbUser?.project_id) return null;
   const proj = await db.one('SELECT * FROM projects WHERE id=$1', [dbUser.project_id]);
@@ -239,7 +256,7 @@ async function getLuaUser(dbUser) {
   return users[0] || null;
 }
 
-/* ─── Reset quota (PostgreSQL-backed, survives restarts) ─── */
+/* ─── Reset quota ─── */
 function todayUTC() {
   return new Date().toISOString().slice(0,10);
 }
@@ -261,44 +278,25 @@ async function incResetCount(userId) {
   return getResetCount(userId);
 }
 
-/* ─── Middleware ─── */
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc:    ["'self'"],
-      styleSrc:      ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
-      fontSrc:       ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "data:"],
-      scriptSrc:     ["'self'", "'unsafe-inline'"],
-      scriptSrcAttr: ["'unsafe-inline'"],
-      imgSrc:        ["'self'", "data:", "https://cdn.discordapp.com", "https://i.imgur.com", "https:"],
-      connectSrc:    ["'self'", "https://api.luarmor.net", "https://api.ipify.org"],
-    },
+/* ─── Multer — chat image uploads ─── */
+const chatStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
+  filename:    (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase().replace(/[^.a-z0-9]/g, '');
+    cb(null, `${Date.now()}-${crypto.randomBytes(8).toString('hex')}${ext}`);
   },
-  crossOriginEmbedderPolicy: false,
-  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-}));
-
-/* Prevent search engine indexing of the entire panel */
-app.use((req, res, next) => {
-  res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
-  next();
+});
+const chatUpload = multer({
+  storage: chatStorage,
+  limits:  { fileSize: 4 * 1024 * 1024 }, // 4 MB
+  fileFilter: (_req, file, cb) => {
+    const allowed = ['image/jpeg','image/png','image/gif','image/webp'];
+    cb(null, allowed.includes(file.mimetype));
+  },
 });
 
-app.use(compression());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public'), {
-  setHeaders: (res) => {
-    // Public assets (CSS/JS) can be indexed separately but let's keep them private too
-    res.setHeader('X-Robots-Tag', 'noindex, nofollow');
-  }
-}));
-app.set('trust proxy', 1);
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
-
-/* PostgreSQL session store — sessions persist across Railway restarts */
-app.use(session({
+/* ─── Middleware ─── */
+const sessionMiddleware = session({
   store: new pgSession({ pool, tableName: 'session', createTableIfMissing: false }),
   secret: SESSION_SECRET,
   resave: false,
@@ -309,7 +307,42 @@ app.use(session({
     maxAge: 7 * 24 * 60 * 60 * 1000,
     sameSite: 'lax',
   },
+});
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc:    ["'self'"],
+      styleSrc:      ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
+      fontSrc:       ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "data:"],
+      scriptSrc:     ["'self'", "'unsafe-inline'"],
+      scriptSrcAttr: ["'unsafe-inline'"],
+      imgSrc:        ["'self'", "data:", "blob:", "https://cdn.discordapp.com", "https://i.imgur.com", "https:"],
+      connectSrc:    ["'self'", "https://api.luarmor.net", "https://api.ipify.org", "ws:", "wss:"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
+
+app.use((req, res, next) => {
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
+  next();
+});
+
+app.use(compression());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res) => {
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+  }
+}));
+app.set('trust proxy', 1);
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+
+app.use(sessionMiddleware);
 
 app.use((req, res, next) => {
   res.locals.panelName  = dynSettings.panel_name  || PANEL_NAME;
@@ -326,6 +359,8 @@ const registerLimiter = rateLimit({ windowMs: 60*60*1000, max: 10,
   handler: (req,res) => res.status(429).render('register', { error: 'Too many registrations. Try later.', projects: [] }) });
 const apiLimiter = rateLimit({ windowMs: 60*1000, max: 40,
   handler: (req,res) => res.status(429).json({ success:false, message:'Rate limit exceeded.' }) });
+const chatLimiter = rateLimit({ windowMs: 5*1000, max: 3,
+  handler: (req,res) => res.status(429).json({ success:false, message:'Sending too fast. Slow down.' }) });
 
 /* Auth guards */
 function auth(req, res, next) {
@@ -345,12 +380,38 @@ function adminApiOnly(req, res, next) {
   res.status(403).json({ success:false, message:'Admin only.' });
 }
 
+/* ─── Socket.io — shared session + chat ─── */
+io.use((socket, next) => {
+  sessionMiddleware(socket.request, socket.request.res || {}, next);
+});
+
+/* Track online users: Map<userId, { username, role, socketId }> */
+const onlineUsers = new Map();
+
+io.on('connection', (socket) => {
+  const sess = socket.request.session?.user;
+  if (!sess) { socket.disconnect(true); return; }
+
+  const { id: userId, username, role } = sess;
+  onlineUsers.set(userId, { username, role, socketId: socket.id });
+  io.emit('online_count', onlineUsers.size);
+
+  socket.on('disconnect', () => {
+    onlineUsers.delete(userId);
+    io.emit('online_count', onlineUsers.size);
+  });
+
+  /* Client requests online users list */
+  socket.on('get_online', () => {
+    socket.emit('online_list', Array.from(onlineUsers.values()).map(u => ({ username: u.username, role: u.role })));
+  });
+});
+
 /* ─────────────────────────────────────
    PAGE ROUTES
 ───────────────────────────────────── */
 app.get('/', (req, res) => res.redirect(req.session.user ? '/dashboard' : '/login'));
 
-/* Login */
 app.get('/login', (req, res) => {
   if (req.session.user) return res.redirect('/dashboard');
   res.render('login', { error: null });
@@ -373,7 +434,6 @@ app.post('/login', loginLimiter, async (req, res) => {
     ? await db.one('SELECT * FROM projects WHERE id=$1', [user.project_id])
     : null;
 
-  /* Ensure script_token exists — generate lazily for older accounts */
   let scriptToken = user.script_token;
   if (!scriptToken) {
     scriptToken = crypto.randomBytes(16).toString('hex');
@@ -391,7 +451,6 @@ app.post('/login', loginLimiter, async (req, res) => {
   res.redirect('/dashboard');
 });
 
-/* Register */
 app.get('/register', async (req, res) => {
   if (req.session.user) return res.redirect('/dashboard');
   const projects = await db.all('SELECT id,name,slug,color,gradient,icon,description,daily_reset_limit FROM projects WHERE is_active=true ORDER BY sort_order');
@@ -419,7 +478,6 @@ app.post('/register', registerLimiter, async (req, res) => {
   const existsKey = await db.one('SELECT id FROM users WHERE luarmor_key=$1', [key]);
   if (existsKey) return fail('This Luarmor key is already registered to an account.');
 
-  /* Find the project this key belongs to */
   const found = await findProjectForKey(key);
   if (!found) return fail('Key not found in any active project. Make sure you purchased or requested access, then try again.');
 
@@ -436,7 +494,6 @@ app.post('/register', registerLimiter, async (req, res) => {
     [username, hash, key, project.id, luaUser.discord_id || '', scriptToken]
   );
 
-  /* Auto-link Discord in Luarmor if not already */
   if (!luaUser.discord_id) {
     await luarmorReq('POST', project.luarmor_project_id, project.luarmor_api_key,
       '/users/linkdiscord', { user_key: key, discord_id: '', force: false }).catch(() => {});
@@ -451,15 +508,12 @@ app.post('/register', registerLimiter, async (req, res) => {
   res.redirect('/dashboard');
 });
 
-/* Logout */
 app.post('/logout', (req, res) => req.session.destroy(() => res.redirect('/login')));
 
-/* Dashboard */
 app.get('/dashboard', auth, async (req, res) => {
   const { id, projectId } = req.session.user;
   const dbUserRaw = await db.one('SELECT * FROM users WHERE id=$1', [id]);
-  /* Strip sensitive server-only fields before passing to template */
-  const { password_hash, script_token, ...dbUser } = dbUserRaw; // eslint-disable-line no-unused-vars
+  const { password_hash, script_token, ...dbUser } = dbUserRaw;
   const proj   = projectId ? await db.one('SELECT * FROM projects WHERE id=$1', [projectId]) : null;
   const luaUser = await getLuaUser(dbUser);
 
@@ -474,13 +528,11 @@ app.get('/dashboard', auth, async (req, res) => {
     SELECT * FROM announcements WHERE is_active=true ORDER BY pinned DESC, created_at DESC LIMIT 5
   `);
 
-  /* Reset history for sparkline */
   const history = await db.all(`
     SELECT reset_date, reset_count FROM reset_log
     WHERE user_id=$1 ORDER BY reset_date DESC LIMIT 7
   `, [id]);
 
-  /* Live Roblox sessions */
   const liveSessions = await db.all(`
     SELECT roblox_username, roblox_user_id, place_name, place_id, inventory, last_seen
     FROM live_sessions
@@ -488,7 +540,6 @@ app.get('/dashboard', auth, async (req, res) => {
     ORDER BY last_seen DESC
   `, [id]);
 
-  /* Additional keys */
   const userKeys = await db.all(`
     SELECT uk.id, uk.luarmor_key, uk.label, uk.created_at,
            p.name AS project_name, p.icon AS project_icon, p.color AS project_color,
@@ -506,49 +557,54 @@ app.get('/dashboard', auth, async (req, res) => {
   });
 });
 
-
-/* Admin panel */
 app.get('/admin', auth, adminOnly, async (req, res) => {
-  const [projectsRaw, usersRaw, announcements, totalUsers, activeToday, totalResets] = await Promise.all([
+  const [projectsRaw, usersRaw, announcements, totalUsers, activeToday, totalResets, chatCount] = await Promise.all([
     db.all('SELECT p.*, COUNT(u.id) AS user_count FROM projects p LEFT JOIN users u ON u.project_id=p.id GROUP BY p.id ORDER BY p.sort_order'),
     db.all('SELECT u.id, u.username, u.luarmor_key, u.role, u.project_id, u.discord_id, u.note, u.is_active, u.total_resets, u.created_at, u.last_login, p.name AS project_name, p.color AS project_color, p.icon AS project_icon FROM users u LEFT JOIN projects p ON p.id=u.project_id ORDER BY u.created_at DESC LIMIT 100'),
     db.all('SELECT a.*, u.username AS author_name FROM announcements a LEFT JOIN users u ON u.id=a.author_id ORDER BY a.pinned DESC, a.created_at DESC LIMIT 30'),
     db.one('SELECT COUNT(*) AS c FROM users'),
     db.one('SELECT COUNT(DISTINCT user_id) AS c FROM reset_log WHERE reset_date=CURRENT_DATE'),
     db.one('SELECT SUM(total_resets) AS c FROM users'),
+    db.one('SELECT COUNT(*) AS c FROM chat_messages WHERE deleted=false'),
   ]);
 
-  /* Strip luarmor_api_key from project objects — fetched on-demand via API when editing */
   const projects = projectsRaw.map(p => {
-    const { luarmor_api_key, ...safe } = p; // eslint-disable-line no-unused-vars
+    const { luarmor_api_key, ...safe } = p;
     return safe;
   });
 
-  /* Strip luarmor_key from user list — fetched on-demand via API when editing */
   const users = usersRaw.map(u => {
-    const { luarmor_key, ...safe } = u; // eslint-disable-line no-unused-vars
+    const { luarmor_key, ...safe } = u;
     safe.key_prefix = u.luarmor_key ? u.luarmor_key.slice(0, 16) + '…' : '—';
     return safe;
   });
 
+  /* Recent chat messages for admin view */
+  const chatMessages = await db.all(`
+    SELECT cm.id, cm.username, cm.role, cm.content, cm.image_url, cm.deleted, cm.created_at
+    FROM chat_messages cm
+    WHERE cm.deleted = false
+    ORDER BY cm.created_at DESC
+    LIMIT 50
+  `);
+
   res.render('admin', {
     projects, users, announcements,
-    stats: { totalUsers: totalUsers.c, activeToday: activeToday.c, totalResets: totalResets.c || 0 },
+    stats: { totalUsers: totalUsers.c, activeToday: activeToday.c, totalResets: totalResets.c || 0, chatMessages: chatCount.c },
     settings: { ...dynSettings },
+    chatMessages: chatMessages.reverse(),
   });
 });
 
 /* ─────────────────────────────────────
    ADMIN API — Projects CRUD
 ───────────────────────────────────── */
-/* Fetch a single project (including API key) — only served to authenticated admins */
 app.get('/api/admin/project/:id', apiAuth, adminApiOnly, async (req, res) => {
   const proj = await db.one('SELECT * FROM projects WHERE id=$1', [Number(req.params.id)]);
   if (!proj) return res.status(404).json({ success: false, message: 'Project not found.' });
   res.json({ success: true, project: proj });
 });
 
-/* Fetch a single user (including luarmor_key) — only served to authenticated admins */
 app.get('/api/admin/user/:id', apiAuth, adminApiOnly, async (req, res) => {
   const user = await db.one(
     `SELECT u.id, u.username, u.luarmor_key, u.role, u.project_id, u.discord_id,
@@ -741,6 +797,90 @@ app.get('/api/admin/stats', apiAuth, adminApiOnly, async (_req, res) => {
 });
 
 /* ─────────────────────────────────────
+   CHAT API
+───────────────────────────────────── */
+
+/* GET /api/chat/messages — last 80 messages */
+app.get('/api/chat/messages', apiAuth, async (req, res) => {
+  const before = req.query.before ? Number(req.query.before) : null;
+  const sql = before
+    ? `SELECT id, user_id, username, role, content, image_url, created_at
+       FROM chat_messages WHERE deleted=false AND id < $1
+       ORDER BY created_at DESC LIMIT 40`
+    : `SELECT id, user_id, username, role, content, image_url, created_at
+       FROM chat_messages WHERE deleted=false
+       ORDER BY created_at DESC LIMIT 80`;
+  const params = before ? [before] : [];
+  const msgs = await db.all(sql, params);
+  res.json({ success: true, messages: msgs.reverse() });
+});
+
+/* POST /api/chat/message — text message */
+app.post('/api/chat/message', apiAuth, chatLimiter, async (req, res) => {
+  const { id: userId, username, role } = req.session.user;
+  const content = (req.body.content || '').trim().slice(0, 500);
+  if (!content) return res.json({ success: false, message: 'Empty message.' });
+
+  /* Basic XSS prevention — strip HTML tags */
+  const safe = content.replace(/<[^>]*>/g, '');
+
+  const msg = await db.one(
+    `INSERT INTO chat_messages (user_id, username, role, content)
+     VALUES ($1,$2,$3,$4) RETURNING id, user_id, username, role, content, image_url, created_at`,
+    [userId, username, role, safe]
+  );
+
+  io.emit('chat_message', msg);
+  res.json({ success: true, message: msg });
+});
+
+/* POST /api/chat/image — image upload */
+app.post('/api/chat/image', apiAuth, chatLimiter, chatUpload.single('image'), async (req, res) => {
+  if (!req.file) return res.json({ success: false, message: 'No valid image provided (max 4MB, jpg/png/gif/webp).' });
+
+  const { id: userId, username, role } = req.session.user;
+  const imageUrl = `/uploads/chat/${req.file.filename}`;
+
+  const msg = await db.one(
+    `INSERT INTO chat_messages (user_id, username, role, image_url)
+     VALUES ($1,$2,$3,$4) RETURNING id, user_id, username, role, content, image_url, created_at`,
+    [userId, username, role, imageUrl]
+  );
+
+  io.emit('chat_message', msg);
+  res.json({ success: true, message: msg });
+});
+
+/* DELETE /api/chat/message/:id — admin or own message */
+app.delete('/api/chat/message/:id', apiAuth, async (req, res) => {
+  const msgId = Number(req.params.id);
+  const { id: userId, role } = req.session.user;
+
+  const msg = await db.one('SELECT user_id FROM chat_messages WHERE id=$1', [msgId]);
+  if (!msg) return res.json({ success: false, message: 'Message not found.' });
+
+  if (role !== 'admin' && msg.user_id !== userId)
+    return res.json({ success: false, message: 'Not allowed.' });
+
+  await db.query('UPDATE chat_messages SET deleted=true WHERE id=$1', [msgId]);
+
+  /* Delete image file if present */
+  const fullMsg = await db.one('SELECT image_url FROM chat_messages WHERE id=$1', [msgId]);
+  if (fullMsg?.image_url) {
+    const filePath = path.join(__dirname, 'public', fullMsg.image_url);
+    fs.unlink(filePath, () => {});
+  }
+
+  io.emit('chat_delete', { id: msgId });
+  res.json({ success: true });
+});
+
+/* GET /api/chat/online — online users count */
+app.get('/api/chat/online', apiAuth, (_req, res) => {
+  res.json({ count: onlineUsers.size });
+});
+
+/* ─────────────────────────────────────
    API ROUTES
 ───────────────────────────────────── */
 app.get('/api/userinfo', apiAuth, apiLimiter, async (req, res) => {
@@ -817,7 +957,7 @@ app.post('/api/update-note', apiAuth, apiLimiter, async (req, res) => {
 });
 
 /* ─────────────────────────────────────
-   USER KEYS — add / list / delete additional keys
+   USER KEYS
 ───────────────────────────────────── */
 app.get('/api/user-keys', apiAuth, async (req, res) => {
   const rows = await db.all(`
@@ -863,7 +1003,6 @@ app.delete('/api/user-keys/:id', apiAuth, async (req, res) => {
   res.json({ success: true });
 });
 
-/* Update reset-hwid to optionally accept a specific key from user_keys */
 app.post('/api/reset-hwid-extra', apiAuth, apiLimiter, async (req, res) => {
   const { id } = req.session.user;
   const keyId  = Number(req.body.key_id);
@@ -899,7 +1038,6 @@ app.post('/api/change-password', apiAuth, apiLimiter, async (req, res) => {
   res.json({ success:true, message:'Password updated successfully.' });
 });
 
-/* Admin API */
 app.post('/api/admin/announcement', apiAuth, adminApiOnly, async (req, res) => {
   const title   = (req.body.title   || '').trim().slice(0,128);
   const content = (req.body.content || '').trim().slice(0,2000);
@@ -926,12 +1064,10 @@ app.post('/api/admin/toggle-user', apiAuth, adminApiOnly, async (req, res) => {
   res.json({ success:true, active: !user.is_active });
 });
 
-/* Kick a live session */
 app.post('/api/kick-session', apiAuth, async (req, res) => {
   const robloxUserId = (req.body.roblox_user_id || '').trim();
   if (!robloxUserId) return res.json({ success: false, message: 'Missing roblox_user_id.' });
   const { id, role } = req.session.user;
-  /* Users can only kick their own sessions; admins can kick any */
   const where = role === 'admin'
     ? 'roblox_user_id=$1'
     : 'roblox_user_id=$1 AND user_id=$2';
@@ -941,7 +1077,6 @@ app.post('/api/kick-session', apiAuth, async (req, res) => {
   res.json({ success: true });
 });
 
-/* Live session status — called from dashboard JS */
 app.get('/api/live-status', apiAuth, async (req, res) => {
   const sessions = await db.all(`
     SELECT roblox_username, roblox_user_id, place_name, place_id, inventory, last_seen
@@ -952,25 +1087,22 @@ app.get('/api/live-status', apiAuth, async (req, res) => {
   res.json({ online: sessions.length > 0, sessions });
 });
 
-/* Admin stats: include live session count */
-
 /* ─────────────────────────────────────
-   HEARTBEAT — called from Roblox executor (no session auth)
+   HEARTBEAT — called from Roblox executor
 ───────────────────────────────────── */
 const heartbeatLimiter = rateLimit({ windowMs: 60*1000, max: 240,
   handler: (_req, res) => res.status(429).json({ ok: false }) });
 
 app.get('/api/heartbeat', heartbeatLimiter, async (req, res) => {
-  const rn = (req.query.rn || '').slice(0, 64);   // roblox username
-  const ri = (req.query.ri || '').slice(0, 32);   // roblox user id
-  const pi = (req.query.pi || '').slice(0, 32);   // place id
-  const pn = (req.query.pn || '').slice(0, 128);  // place name
-  const ji = (req.query.ji || '').slice(0, 64);   // job id
+  const rn = (req.query.rn || '').slice(0, 64);
+  const ri = (req.query.ri || '').slice(0, 32);
+  const pi = (req.query.pi || '').slice(0, 32);
+  const pn = (req.query.pn || '').slice(0, 128);
+  const ji = (req.query.ji || '').slice(0, 64);
 
   const robloxId = (ri || '').trim();
   if (!robloxId) return res.status(400).json({ ok: false });
 
-  /* Try to link to a registered user via key (optional — guests have no key) */
   const key = (req.query.key || '').trim();
   let userId = null;
   if (key && key.length >= 6) {
@@ -978,7 +1110,6 @@ app.get('/api/heartbeat', heartbeatLimiter, async (req, res) => {
     if (dbUser) userId = dbUser.id;
   }
 
-  /* Parse inventory: "Wood:10,Stone:5,Gold:2" → { Wood:10, Stone:5, Gold:2 } */
   const invRaw = (req.query.inv || '').slice(0, 2000);
   const inventory = {};
   if (invRaw) {
@@ -992,7 +1123,6 @@ app.get('/api/heartbeat', heartbeatLimiter, async (req, res) => {
     });
   }
 
-  /* Check if a kick was requested BEFORE upserting (so we can return it) */
   const existing = await db.one(
     'SELECT kick_requested FROM live_sessions WHERE roblox_user_id=$1',
     [robloxId]
@@ -1012,7 +1142,6 @@ app.get('/api/heartbeat', heartbeatLimiter, async (req, res) => {
   res.json({ ok: true, kick: shouldKick });
 });
 
-/* OFFLINE — called when player disconnects (no session auth) */
 app.get('/api/offline', heartbeatLimiter, async (req, res) => {
   const ri = (req.query.ri || '').slice(0, 32).trim();
   if (!ri) return res.status(400).json({ ok: false });
@@ -1028,10 +1157,11 @@ app.use((err, req, res, next) => { console.error(err); res.status(500).render('e
 async function main() {
   await initDB();
   await loadSettings();
-  app.listen(PORT, async () => {
+  server.listen(PORT, async () => {
     console.log(`\n✅ ${dynSettings.panel_name || PANEL_NAME} running on port ${PORT}`);
     console.log(`🔗 Discord: ${dynSettings.discord_url || DISCORD_URL}`);
     console.log(`💾 Sessions: PostgreSQL (persistent)`);
+    console.log(`💬 Chat: Socket.io enabled`);
     try {
       const r = await fetch('https://api.ipify.org?format=json', { timeout: 6000 });
       const d = await r.json();

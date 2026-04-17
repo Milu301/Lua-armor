@@ -1135,6 +1135,7 @@ setInterval(refresh, 2 * 60 * 1000);
   setInterval(tick, 1000);
 })();
 
+
 /* ─── Count-up on stat values ─── */
 (function() {
   const targets = [
@@ -1150,11 +1151,420 @@ setInterval(refresh, 2 * 60 * 1000);
   });
 })();
 
+/* Particle canvas is rendered in the separate script block below */
+
+/* Auto-open chat if navigated with #chat */
+if (window.location.hash === '#chat') {
+  window.addEventListener('DOMContentLoaded', () => { setTimeout(toggleChat, 300); });
+}
+</script>
+
+<!-- ═══════════ GLOBAL CHAT WIDGET ═══════════ -->
+
+<!-- Floating toggle button -->
+<button class="chat-toggle" id="chat-toggle" onclick="toggleChat()" title="Global Chat" aria-label="Open chat">
+  <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" id="chat-icon-open">
+    <path stroke-linecap="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+  </svg>
+  <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" id="chat-icon-close" style="display:none;">
+    <path stroke-linecap="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+  </svg>
+  <span class="chat-unread-dot" id="chat-unread-dot"></span>
+</button>
+
+<!-- Chat panel -->
+<div class="chat-panel" id="chat-panel">
+
+  <!-- Header -->
+  <div class="chat-header">
+    <div class="chat-header-left">
+      <div class="pulse-dot" style="width:7px;height:7px;"></div>
+      <span class="chat-header-title">Global Chat</span>
+      <span class="chat-online-count" id="chat-online-count">
+        <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);"></span>
+        <span id="online-num">—</span> online
+      </span>
+    </div>
+    <div class="chat-header-actions">
+      <button class="chat-icon-btn" onclick="toggleOnlineUsers()" title="Online users">
+        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"/>
+        </svg>
+      </button>
+      <button class="chat-icon-btn" onclick="toggleChat()" title="Close">
+        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Online users panel (collapsible) -->
+  <div class="chat-users-panel" id="chat-users-panel">
+    <div class="chat-users-title">Online Members</div>
+    <div id="chat-users-list"></div>
+  </div>
+
+  <!-- Messages -->
+  <div class="chat-messages" id="chat-messages">
+    <div class="chat-sys-msg">Loading messages…</div>
+  </div>
+
+  <!-- Load more -->
+  <div class="chat-load-more" id="chat-load-more" onclick="loadMore()" style="display:none;">↑ Load older messages</div>
+
+  <!-- Footer: input -->
+  <div class="chat-footer">
+    <div class="chat-img-preview" id="chat-img-preview">
+      <img src="" alt="preview" id="chat-preview-img" />
+      <span class="chat-img-preview-rm" onclick="clearImgPreview()">✕</span>
+    </div>
+    <div class="chat-input-row">
+      <textarea
+        class="chat-input" id="chat-input"
+        placeholder="Type a message…" rows="1"
+        maxlength="500"
+        onkeydown="chatKeyDown(event)"
+        oninput="autoGrow(this)"
+      ></textarea>
+      <input type="file" id="chat-file-input" accept="image/*" style="display:none;" onchange="onFileSelected(event)" />
+      <button class="chat-attach-btn" onclick="document.getElementById('chat-file-input').click()" title="Attach image">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+        </svg>
+      </button>
+      <button class="chat-send-btn" id="chat-send-btn" onclick="sendMessage()" title="Send">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+        </svg>
+      </button>
+    </div>
+    <div style="font-size:0.62rem;color:var(--text-3);margin-top:0.3rem;text-align:right;">
+      Enter to send · Shift+Enter for new line
+    </div>
+  </div>
+</div>
+
+<!-- Image lightbox -->
+<div class="chat-lightbox" id="chat-lightbox" onclick="closeLightbox()">
+  <img src="" alt="Image" id="lightbox-img" />
+</div>
+
+<script>
+/* ═══════════════════════════════════════════
+   CHAT — Socket.io + REST
+═══════════════════════════════════════════ */
+const CURRENT_USER = <%- JSON.stringify(user ? { id: user.id, username: user.username, role: user.role } : null) %>;
+const socket = io({ transports: ['websocket','polling'] });
+
+let chatOpen      = false;
+let unreadCount   = 0;
+let oldestMsgId   = null;
+let hasMore       = true;
+let pendingFile   = null;
+let onlineVisible = false;
+
+/* ── Toggle ── */
+function toggleChat() {
+  chatOpen = !chatOpen;
+  const panel = document.getElementById('chat-panel');
+  const toggle = document.getElementById('chat-toggle');
+  const iconOpen  = document.getElementById('chat-icon-open');
+  const iconClose = document.getElementById('chat-icon-close');
+
+  if (chatOpen) {
+    panel.classList.add('open');
+    toggle.classList.add('open');
+    iconOpen.style.display  = 'none';
+    iconClose.style.display = '';
+    clearUnread();
+    scrollBottom();
+    // Load messages if not yet loaded
+    if (document.getElementById('chat-messages').querySelector('.chat-sys-msg')) {
+      loadMessages();
+    }
+    socket.emit('get_online');
+  } else {
+    panel.classList.remove('open');
+    toggle.classList.remove('open');
+    iconOpen.style.display  = '';
+    iconClose.style.display = 'none';
+  }
+}
+
+function openChat() {
+  if (!chatOpen) toggleChat();
+}
+
+/* ── Unread ── */
+function addUnread() {
+  if (chatOpen) return;
+  unreadCount++;
+  const dot  = document.getElementById('chat-unread-dot');
+  const sbdg = document.getElementById('sb-unread-badge');
+  if (dot) { dot.textContent = unreadCount > 9 ? '9+' : unreadCount; dot.classList.add('visible'); }
+  if (sbdg) { sbdg.textContent = unreadCount > 9 ? '9+' : unreadCount; sbdg.classList.add('visible'); }
+}
+function clearUnread() {
+  unreadCount = 0;
+  const dot  = document.getElementById('chat-unread-dot');
+  const sbdg = document.getElementById('sb-unread-badge');
+  if (dot)  { dot.classList.remove('visible'); }
+  if (sbdg) { sbdg.classList.remove('visible'); }
+}
+
+/* ── Socket events ── */
+socket.on('connect', () => {
+  if (chatOpen) socket.emit('get_online');
+});
+
+socket.on('online_count', (count) => {
+  const el = document.getElementById('online-num');
+  if (el) el.textContent = count;
+});
+
+socket.on('online_list', (users) => {
+  const list = document.getElementById('chat-users-list');
+  if (!list) return;
+  if (!users.length) { list.innerHTML = '<div class="chat-user-item" style="color:var(--text-3);">Nobody else online</div>'; return; }
+  list.innerHTML = users.map(u =>
+    `<div class="chat-user-item">
+      <span class="chat-user-dot"></span>
+      <span class="chat-user-name ${u.role === 'admin' ? 'is-admin' : u.role === 'mod' ? 'is-mod' : ''}">${escHtml(u.username)}</span>
+      ${u.role === 'admin' ? '<span style="font-size:0.6rem;color:#f87171;">[Admin]</span>' : u.role === 'mod' ? '<span style="font-size:0.6rem;color:#fbbf24;">[Mod]</span>' : ''}
+    </div>`
+  ).join('');
+});
+
+socket.on('chat_message', (msg) => {
+  appendMessage(msg, true);
+  if (!chatOpen) addUnread();
+});
+
+socket.on('chat_delete', ({ id }) => {
+  const el = document.getElementById('chatmsg-' + id);
+  if (el) { el.style.opacity = '0'; el.style.transition = 'opacity 0.3s'; setTimeout(() => el.remove(), 320); }
+});
+
+/* ── Load messages ── */
+async function loadMessages() {
+  const area = document.getElementById('chat-messages');
+  area.innerHTML = '';
+  const r = await fetch('/api/chat/messages').catch(() => null);
+  if (!r || !r.ok) { area.innerHTML = '<div class="chat-sys-msg">Failed to load messages.</div>'; return; }
+  const d = await r.json();
+  if (!d.success || !d.messages.length) {
+    area.innerHTML = '<div class="chat-sys-msg">No messages yet. Say hello!</div>';
+    return;
+  }
+  d.messages.forEach(m => appendMessage(m, false));
+  if (d.messages.length >= 80) {
+    oldestMsgId = d.messages[0].id;
+    document.getElementById('chat-load-more').style.display = '';
+    hasMore = true;
+  }
+  scrollBottom();
+}
+
+async function loadMore() {
+  if (!hasMore || !oldestMsgId) return;
+  const r = await fetch(`/api/chat/messages?before=${oldestMsgId}`).catch(() => null);
+  if (!r || !r.ok) return;
+  const d = await r.json();
+  if (!d.success || !d.messages.length) {
+    hasMore = false;
+    document.getElementById('chat-load-more').style.display = 'none';
+    return;
+  }
+  const area = document.getElementById('chat-messages');
+  const frag = document.createDocumentFragment();
+  d.messages.forEach(m => {
+    const el = buildMsgEl(m);
+    frag.appendChild(el);
+  });
+  area.insertBefore(frag, area.firstChild);
+  oldestMsgId = d.messages[0].id;
+  if (d.messages.length < 40) {
+    hasMore = false;
+    document.getElementById('chat-load-more').style.display = 'none';
+  }
+}
+
+/* ── Build message DOM element ── */
+function buildMsgEl(msg) {
+  const isOwn   = CURRENT_USER && msg.user_id === CURRENT_USER.id;
+  const isAdmin = CURRENT_USER && (CURRENT_USER.role === 'admin');
+  const canDel  = isOwn || isAdmin;
+  const initials = (msg.username || '?').slice(0, 2).toUpperCase();
+  const time = new Date(msg.created_at).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' });
+
+  const roleTag = msg.role === 'admin'
+    ? '<span class="chat-role-tag chat-role-admin">admin</span>'
+    : msg.role === 'mod'
+    ? '<span class="chat-role-tag chat-role-mod">mod</span>'
+    : '';
+
+  const nameClass = msg.role === 'admin' ? 'chat-msg-name admin-name' : msg.role === 'mod' ? 'chat-msg-name mod-name' : 'chat-msg-name';
+
+  let bodyHtml = '';
+  if (msg.image_url) {
+    bodyHtml = `<img src="${escHtml(msg.image_url)}" class="chat-img" alt="image" loading="lazy" onclick="openLightbox('${escHtml(msg.image_url)}')" />`;
+  } else if (msg.content) {
+    bodyHtml = `<div class="chat-bubble">${escHtml(msg.content).replace(/\n/g,'<br>')}</div>`;
+  }
+
+  const delBtn = canDel
+    ? `<button class="chat-delete-btn" onclick="deleteMsg(${msg.id},this)" title="Delete">✕</button>`
+    : '';
+
+  const div = document.createElement('div');
+  div.className = 'chat-msg' + (isOwn ? ' own' : '');
+  div.id = 'chatmsg-' + msg.id;
+  div.innerHTML = `
+    <div class="chat-avatar">${initials}</div>
+    <div class="chat-msg-body">
+      <div class="chat-msg-meta">
+        <span class="${nameClass}">${escHtml(msg.username)}</span>
+        ${roleTag}
+        <span class="chat-msg-time">${time}</span>
+        ${delBtn}
+      </div>
+      ${bodyHtml}
+    </div>`;
+  return div;
+}
+
+function appendMessage(msg, doScroll) {
+  const area = document.getElementById('chat-messages');
+  const sysMsg = area.querySelector('.chat-sys-msg');
+  if (sysMsg) sysMsg.remove();
+  const el = buildMsgEl(msg);
+  area.appendChild(el);
+  if (doScroll) scrollBottom();
+}
+
+/* ── Send text ── */
+async function sendMessage() {
+  if (pendingFile) { await sendImage(); return; }
+  const input = document.getElementById('chat-input');
+  const content = (input.value || '').trim();
+  if (!content) return;
+  input.value = '';
+  autoGrow(input);
+  const btn = document.getElementById('chat-send-btn');
+  btn.disabled = true;
+  const r = await fetch('/api/chat/message', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content }),
+  }).catch(() => null);
+  btn.disabled = false;
+  if (!r || !r.ok) { toast('Failed to send message.', 'err'); return; }
+  const d = await r.json();
+  if (!d.success) toast(d.message || 'Error.', 'err');
+}
+
+/* ── Send image ── */
+async function sendImage() {
+  if (!pendingFile) return;
+  const btn = document.getElementById('chat-send-btn');
+  btn.disabled = true;
+  const fd = new FormData();
+  fd.append('image', pendingFile);
+  const r = await fetch('/api/chat/image', { method: 'POST', body: fd }).catch(() => null);
+  btn.disabled = false;
+  clearImgPreview();
+  if (!r || !r.ok) { toast('Image upload failed.', 'err'); return; }
+  const d = await r.json();
+  if (!d.success) toast(d.message || 'Upload error.', 'err');
+}
+
+/* ── Delete ── */
+async function deleteMsg(id, btn) {
+  btn.disabled = true;
+  const r = await fetch(`/api/chat/message/${id}`, { method: 'DELETE' }).catch(() => null);
+  if (!r || !r.ok) { btn.disabled = false; return; }
+  const d = await r.json();
+  if (!d.success) { btn.disabled = false; toast(d.message || 'Error.', 'err'); }
+}
+
+/* ── Helpers ── */
+function scrollBottom() {
+  const area = document.getElementById('chat-messages');
+  if (area) area.scrollTop = area.scrollHeight;
+}
+
+function autoGrow(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+function chatKeyDown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function onFileSelected(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 4 * 1024 * 1024) { toast('Image too large (max 4MB).', 'warn'); return; }
+  pendingFile = file;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const preview = document.getElementById('chat-img-preview');
+    const img     = document.getElementById('chat-preview-img');
+    img.src = ev.target.result;
+    preview.classList.add('visible');
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+function clearImgPreview() {
+  pendingFile = null;
+  document.getElementById('chat-img-preview').classList.remove('visible');
+  document.getElementById('chat-preview-img').src = '';
+}
+
+function openLightbox(src) {
+  const lb = document.getElementById('chat-lightbox');
+  document.getElementById('lightbox-img').src = src;
+  lb.classList.add('open');
+}
+function closeLightbox() {
+  document.getElementById('chat-lightbox').classList.remove('open');
+}
+
+function toggleOnlineUsers() {
+  onlineVisible = !onlineVisible;
+  const panel = document.getElementById('chat-users-panel');
+  if (onlineVisible) {
+    panel.classList.add('open');
+    socket.emit('get_online');
+  } else {
+    panel.classList.remove('open');
+  }
+}
+
+function escHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+</script>
+
+<!-- ── Ambient particle canvas ── -->
+<script>
 /* ─── Floating Particle Canvas (dashboard ambient) ─── */
 (function() {
   const canvas = document.createElement('canvas');
-  canvas.id = 'particle-canvas';
-  canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:-1;opacity:0.5;';
+  canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:-1;opacity:0.45;';
   document.body.insertBefore(canvas, document.body.firstChild);
   const ctx = canvas.getContext('2d');
   let W, H, particles = [];
@@ -1171,17 +1581,16 @@ setInterval(refresh, 2 * 60 * 1000);
   class Particle {
     constructor() { this.reset(); }
     reset() {
-      this.x  = Math.random() * W;
-      this.y  = Math.random() * H;
-      this.r  = 0.5 + Math.random() * 1.8;
-      this.vx = (Math.random() - 0.5) * 0.25;
-      this.vy = -0.1 - Math.random() * 0.25;
+      this.x = Math.random() * W;
+      this.y = Math.random() * H;
+      this.r = 0.4 + Math.random() * 1.6;
+      this.vx = (Math.random() - 0.5) * 0.2;
+      this.vy = -0.08 - Math.random() * 0.2;
       this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
-      this.alpha = 0.1 + Math.random() * 0.35;
+      this.alpha = 0.08 + Math.random() * 0.28;
     }
     step() {
-      this.x += this.vx;
-      this.y += this.vy;
+      this.x += this.vx; this.y += this.vy;
       if (this.y < -4 || this.x < -4 || this.x > W + 4) this.reset();
     }
     draw() {
@@ -1192,8 +1601,7 @@ setInterval(refresh, 2 * 60 * 1000);
     }
   }
 
-  for (let i = 0; i < 60; i++) particles.push(new Particle());
-
+  for (let i = 0; i < 55; i++) particles.push(new Particle());
   (function loop() {
     ctx.clearRect(0, 0, W, H);
     particles.forEach(p => { p.step(); p.draw(); });
@@ -1201,5 +1609,6 @@ setInterval(refresh, 2 * 60 * 1000);
   })();
 })();
 </script>
+
 </body>
 </html>

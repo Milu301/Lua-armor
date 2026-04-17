@@ -1,0 +1,113 @@
+<%- include('partials/head', { title: 'Bug Reports — ' + panelName }) %>
+
+<div class="layout">
+  <%- include('partials/sidebar', { page: 'bugs' }) %>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="pulse-dot" style="background:var(--yellow);box-shadow:0 0 0 2px rgba(245,158,11,0.2);"></div>
+        <div class="topbar-title">Bug Reports</div>
+      </div>
+      <div class="topbar-right">
+        <a href="/dashboard" class="btn btn-sm btn-ghost">
+          <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+          Dashboard
+        </a>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- Report form -->
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div class="card-header">
+          <div class="card-title">
+            <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            Submit a Bug Report
+          </div>
+        </div>
+
+        <% if (success) { %>
+        <div class="alert alert-success" style="margin-bottom:1rem;">
+          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink:0"><path stroke-linecap="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span><%= success %></span>
+        </div>
+        <% } %>
+        <% if (error) { %>
+        <div class="alert alert-danger" style="margin-bottom:1rem;">
+          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink:0"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-linecap="round" stroke-width="2" d="M12 8v4m0 4h.01"/></svg>
+          <span><%= error %></span>
+        </div>
+        <% } %>
+
+        <form action="/bugs" method="POST" id="bugForm">
+          <div class="form-group">
+            <label class="label">Bug Title</label>
+            <input type="text" name="title" class="input" placeholder="Short description of the issue"
+              required maxlength="128" />
+          </div>
+          <div class="form-group">
+            <label class="label">Description</label>
+            <textarea name="description" class="input" rows="5"
+              placeholder="Describe the bug in detail — what happened, what you expected, and how to reproduce it."
+              required maxlength="2000" style="resize:vertical;"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary" id="bugSubmitBtn">
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+            Submit Report
+          </button>
+        </form>
+      </div>
+
+      <!-- Past reports -->
+      <% if (reports.length > 0) { %>
+      <div class="section-label" style="margin-bottom:0.75rem;">Your Reports</div>
+
+      <% reports.forEach(function(r) { %>
+      <div class="bug-report-card">
+        <div class="bug-report-top">
+          <span class="bug-report-title"><%= r.title %></span>
+          <span class="bug-status-badge bug-status-<%= r.status %>">
+            <% if (r.status === 'open') { %>Open
+            <% } else if (r.status === 'in_progress') { %>In Progress
+            <% } else if (r.status === 'resolved') { %>Resolved
+            <% } else { %>Won't Fix<% } %>
+          </span>
+        </div>
+        <div class="bug-report-desc"><%= r.description %></div>
+        <% if (r.admin_note) { %>
+        <div class="bug-report-note">
+          <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
+          Staff note: <%= r.admin_note %>
+        </div>
+        <% } %>
+        <div class="bug-report-meta">
+          Submitted <%= new Date(r.created_at).toLocaleDateString('en', {day:'2-digit',month:'short',year:'numeric'}) %>
+        </div>
+      </div>
+      <% }); %>
+      <% } else { %>
+      <div class="empty-state" style="padding:2rem 0;">
+        <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:var(--text-3);margin-bottom:0.5rem;">
+          <path stroke-linecap="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+        </svg>
+        <p class="dimmed t-sm">No reports yet. If you find a bug, let us know!</p>
+      </div>
+      <% } %>
+
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('bugForm').addEventListener('submit', function() {
+  const btn = document.getElementById('bugSubmitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Submitting…';
+});
+</script>
+</body>
+</html>

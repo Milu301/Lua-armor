@@ -71,6 +71,13 @@
         Chat
         <span class="sb-badge" style="background:rgba(6,182,212,0.15);color:#22d3ee;border-color:rgba(6,182,212,0.25);">MOD</span>
       </button>
+      <button class="tab-btn" onclick="switchTab('bugs',this)">
+        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        Bug Reports
+        <% if (Number(stats.openBugs) > 0) { %>
+        <span class="sb-badge" style="background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.3);color:#fbbf24;"><%= stats.openBugs %></span>
+        <% } %>
+      </button>
       <button class="tab-btn" onclick="switchTab('settings',this)">
         <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
         Settings
@@ -371,6 +378,52 @@
       </div>
     </div>
 
+    <!-- ═══════ TAB: BUG REPORTS ═══════ -->
+    <div class="tab-panel" id="tab-bugs">
+      <div class="content">
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div style="padding:0.875rem 1.125rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:0.5rem;">
+            <div class="card-title" style="font-size:0.82rem;">
+              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+              Bug Reports
+            </div>
+          </div>
+
+          <% if (bugReports.length === 0) { %>
+          <div style="padding:2.5rem;text-align:center;color:var(--text-3);font-size:0.82rem;">No bug reports yet.</div>
+          <% } else { %>
+          <% bugReports.forEach(function(r) { %>
+          <div class="admin-bug-row" id="bug-<%= r.id %>">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+              <div style="flex:1;min-width:0;">
+                <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;flex-wrap:wrap;">
+                  <span style="font-weight:600;font-size:0.82rem;"><%= r.title %></span>
+                  <span class="bug-status-badge bug-status-<%= r.status %>">
+                    <%= r.status === 'open' ? 'Open' : r.status === 'in_progress' ? 'In Progress' : r.status === 'resolved' ? 'Resolved' : "Won't Fix" %>
+                  </span>
+                </div>
+                <div style="font-size:0.78rem;color:var(--text-2);margin-bottom:0.35rem;white-space:pre-wrap;word-break:break-word;"><%= r.description %></div>
+                <div style="font-size:0.68rem;color:var(--text-3);">By <strong><%= r.username %></strong> · <%= new Date(r.created_at).toLocaleDateString('en', {day:'2-digit',month:'short',year:'numeric'}) %></div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:0.4rem;min-width:160px;">
+                <select class="input" style="font-size:0.75rem;padding:0.35rem 0.6rem;" onchange="updateBug(<%= r.id %>, {status:this.value})">
+                  <option value="open"        <%= r.status==='open'        ? 'selected':'' %>>Open</option>
+                  <option value="in_progress" <%= r.status==='in_progress' ? 'selected':'' %>>In Progress</option>
+                  <option value="resolved"    <%= r.status==='resolved'    ? 'selected':'' %>>Resolved</option>
+                  <option value="wontfix"     <%= r.status==='wontfix'     ? 'selected':'' %>>Won't Fix</option>
+                </select>
+                <input type="text" class="input" style="font-size:0.75rem;padding:0.35rem 0.6rem;" placeholder="Add staff note…"
+                  value="<%= r.admin_note %>"
+                  onchange="updateBug(<%= r.id %>, {admin_note:this.value})" />
+              </div>
+            </div>
+          </div>
+          <% }); %>
+          <% } %>
+        </div>
+      </div>
+    </div>
+
     <!-- ═══════ TAB: SETTINGS ═══════ -->
     <div class="tab-panel" id="tab-settings">
       <div class="content" style="max-width:640px;">
@@ -530,6 +583,14 @@ function switchTab(name, btn) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   btn.classList.add('active');
+}
+
+async function updateBug(id, data) {
+  const res  = await fetch('/api/admin/bug-reports/' + id, {
+    method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)
+  });
+  const json = await res.json();
+  if (!json.success) toast(json.message, 'err');
 }
 
 /* ── Toast ── */

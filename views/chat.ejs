@@ -1,123 +1,105 @@
 <%- include('partials/head', { title: 'Global Chat — ' + panelName }) %>
-<%- include('partials/sidebar', { page: 'chat' }) %>
 
-<div class="main-content">
-  <!-- Topbar -->
-  <div class="topbar">
-    <div class="topbar-left">
-      <div class="page-title">Global Chat</div>
-      <div class="page-sub">Real-time community chat for all members</div>
-    </div>
-    <div class="topbar-right">
-      <div class="pill pill-green">
+<div class="layout">
+  <%- include('partials/sidebar', { page: 'chat' }) %>
+
+  <div class="main">
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="topbar-left">
         <div class="pulse-dot"></div>
-        <span id="top-online-count"><%= onlineCount %> online</span>
+        <div class="topbar-title">Global Chat</div>
+        <span class="badge badge-green" style="font-size:0.65rem;">LIVE</span>
+      </div>
+      <div class="topbar-right">
+        <span class="pill pill-green" id="online-pill">
+          <span class="pulse-dot" style="width:6px;height:6px;"></span>
+          <span id="online-count-top"><%= onlineCount %> online</span>
+        </span>
       </div>
     </div>
-  </div>
 
-  <!-- Chat layout -->
-  <div class="chat-page-layout">
+    <!-- Chat full layout -->
+    <div class="cp-layout">
 
-    <!-- Main chat column -->
-    <div class="chat-page-main">
-      <div class="card chat-page-card">
-        <div class="chat-page-header">
-          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-          </svg>
-          <span>Members Chat</span>
-          <span class="chat-page-badge" id="page-online-dot">
-            <span class="pulse-dot" style="width:6px;height:6px;"></span>
-            <span id="page-online-count"><%= onlineCount %> online</span>
-          </span>
-        </div>
-
-        <!-- Messages area -->
-        <div class="chat-page-messages" id="chatMessages">
+      <!-- Messages panel -->
+      <div class="cp-main">
+        <div class="cp-messages" id="chatMessages">
           <% if (messages.length === 0) { %>
-          <div class="chat-page-empty">
-            <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:var(--text-3);opacity:0.5;">
+          <div class="cp-empty">
+            <svg width="36" height="36" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
             </svg>
-            <p>No messages yet. Be the first to say something!</p>
+            <p>No messages yet. Say something!</p>
           </div>
-          <% } else { %>
+          <% } %>
           <% messages.forEach(function(msg) { %>
-          <div class="chat-page-msg" data-id="<%= msg.id %>">
-            <div class="chat-page-avatar <%= msg.role === 'admin' ? 'avatar-admin' : msg.role === 'mod' ? 'avatar-mod' : '' %>">
+          <div class="cp-msg" data-id="<%= msg.id %>">
+            <div class="cp-avatar <%= msg.role === 'admin' ? 'cp-avatar-admin' : msg.role === 'mod' ? 'cp-avatar-mod' : '' %>">
               <%= msg.username.charAt(0).toUpperCase() %>
             </div>
-            <div class="chat-page-bubble">
-              <div class="chat-page-meta">
-                <span class="chat-page-name <%= msg.role === 'admin' ? 'name-admin' : msg.role === 'mod' ? 'name-mod' : '' %>">
+            <div class="cp-bubble">
+              <div class="cp-meta">
+                <span class="cp-name <%= msg.role === 'admin' ? 'cp-name-admin' : msg.role === 'mod' ? 'cp-name-mod' : '' %>">
                   <%= msg.username %>
-                  <% if (msg.role === 'admin') { %><span class="chat-role-tag role-admin">ADMIN</span><% } %>
-                  <% if (msg.role === 'mod') { %><span class="chat-role-tag role-mod">MOD</span><% } %>
+                  <% if (msg.role === 'admin') { %><span class="cp-tag cp-tag-admin">ADMIN</span><% } %>
+                  <% if (msg.role === 'mod') { %><span class="cp-tag cp-tag-mod">MOD</span><% } %>
                 </span>
-                <span class="chat-page-time"><%= new Date(msg.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) %></span>
-                <% if (user && user.role === 'admin') { %>
-                <button class="chat-page-del" onclick="delMsg(<%= msg.id %>, this)" title="Delete">
-                  <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                  </svg>
+                <span class="cp-time"><%= new Date(msg.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) %></span>
+                <% if (user && (user.role === 'admin' || user.role === 'mod')) { %>
+                <button class="cp-del" onclick="delMsg(<%= msg.id %>, this)" title="Delete">
+                  <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                 </button>
                 <% } %>
               </div>
               <% if (msg.content) { %>
-              <div class="chat-page-text"><%= msg.content %></div>
+              <div class="cp-text"><%= msg.content %></div>
               <% } %>
               <% if (msg.image_url) { %>
-              <img src="<%= msg.image_url %>" class="chat-page-img" onclick="openLb('<%= msg.image_url %>')" loading="lazy" />
+              <img src="<%= msg.image_url %>" class="cp-img" onclick="openLb('<%= msg.image_url %>')" loading="lazy" />
               <% } %>
             </div>
           </div>
           <% }); %>
-          <% } %>
           <div id="chatBottom"></div>
         </div>
 
-        <!-- Input footer -->
-        <div class="chat-page-footer">
-          <div class="chat-page-preview" id="imgPreviewRow" style="display:none;">
-            <img id="imgPreviewThumb" style="max-height:60px;border-radius:6px;" />
-            <button onclick="clearImg()" class="chat-page-clear-img" title="Remove image">✕</button>
-          </div>
-          <div class="chat-page-input-row">
-            <label class="chat-page-attach" title="Attach image">
-              <svg width="17" height="17" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-              </svg>
-              <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="onFile(this)" />
-            </label>
-            <textarea
-              id="msgInput"
-              class="chat-page-textarea"
-              placeholder="Send a message…"
-              maxlength="1000"
-              rows="1"
-              onkeydown="onKey(event)"
-              oninput="autoGrow(this)"
-            ></textarea>
-            <button class="chat-page-send" id="sendBtn" onclick="sendMsg()">
-              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
-              </svg>
-            </button>
-          </div>
+        <!-- Image preview row -->
+        <div class="cp-img-preview" id="imgPreviewRow" style="display:none;">
+          <img id="imgPreviewThumb" />
+          <button class="cp-img-clear" onclick="clearImg()">✕</button>
+          <span class="cp-img-label t-xs dimmed">Image ready to send</span>
+        </div>
+
+        <!-- Input bar -->
+        <div class="cp-input-bar">
+          <label class="cp-attach-btn" title="Attach image">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="onFile(this)" />
+          </label>
+          <textarea
+            id="msgInput"
+            class="cp-textarea"
+            placeholder="Type a message… (Enter to send, Shift+Enter for newline)"
+            maxlength="1000"
+            rows="1"
+            onkeydown="onKey(event)"
+            oninput="autoGrow(this)"
+          ></textarea>
+          <button class="cp-send-btn" id="sendBtn" onclick="sendMsg()">
+            <svg width="17" height="17" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+          </button>
         </div>
       </div>
-    </div>
 
-    <!-- Sidebar: online users -->
-    <div class="chat-page-side">
-      <div class="card chat-page-users-card">
-        <div class="chat-page-users-header">
-          <span>Online Now</span>
-          <span class="badge badge-green" id="users-count-badge"><%= onlineCount %></span>
+      <!-- Online users sidebar -->
+      <div class="cp-side">
+        <div class="cp-side-header">
+          Online
+          <span class="badge badge-green" id="online-count-side"><%= onlineCount %></span>
         </div>
-        <div class="chat-page-users-list" id="onlineUsersList">
-          <div class="dimmed t-sm" style="padding:0.75rem 0;">Loading…</div>
+        <div class="cp-users-list" id="onlineUsersList">
+          <div class="dimmed t-xs" style="padding:0.5rem 0;">Loading…</div>
         </div>
       </div>
     </div>
@@ -130,7 +112,6 @@
 </div>
 
 <script>
-const ME = '<%= user ? user.username : "" %>';
 const MY_ROLE = '<%= user ? user.role : "" %>';
 let pendingFile = null;
 
@@ -142,88 +123,78 @@ const sendBtn      = document.getElementById('sendBtn');
 const socket = io({ transports: ['websocket','polling'] });
 
 socket.on('online_count', n => {
-  document.getElementById('top-online-count').textContent = n + ' online';
-  document.getElementById('page-online-count').textContent = n + ' online';
-  document.getElementById('users-count-badge').textContent = n;
+  document.getElementById('online-count-top').textContent  = n + ' online';
+  document.getElementById('online-count-side').textContent = n;
 });
 
 socket.on('online_list', list => {
   const el = document.getElementById('onlineUsersList');
-  if (!list.length) { el.innerHTML = '<div class="dimmed t-sm" style="padding:0.5rem 0;">No one else here</div>'; return; }
+  if (!list.length) {
+    el.innerHTML = '<div class="dimmed t-xs" style="padding:0.5rem 0;">No one else here</div>';
+    return;
+  }
   el.innerHTML = list.map(u => `
-    <div class="chat-online-user">
-      <div class="chat-online-avatar ${u.role === 'admin' ? 'avatar-admin' : u.role === 'mod' ? 'avatar-mod' : ''}">
-        ${escHtml(u.username.charAt(0).toUpperCase())}
+    <div class="cp-user-row">
+      <div class="cp-user-av ${u.role === 'admin' ? 'cp-avatar-admin' : u.role === 'mod' ? 'cp-avatar-mod' : ''}">
+        ${escH(u.username.charAt(0).toUpperCase())}
       </div>
-      <span class="chat-online-name">${escHtml(u.username)}</span>
-      ${u.role === 'admin' ? '<span class="chat-role-tag role-admin">ADMIN</span>' : u.role === 'mod' ? '<span class="chat-role-tag role-mod">MOD</span>' : ''}
-    </div>
-  `).join('');
+      <span class="cp-user-name">${escH(u.username)}</span>
+      ${u.role === 'admin' ? '<span class="cp-tag cp-tag-admin">ADMIN</span>' : u.role === 'mod' ? '<span class="cp-tag cp-tag-mod">MOD</span>' : ''}
+    </div>`).join('');
 });
 
 socket.on('chat_message', msg => {
-  const empty = document.querySelector('.chat-page-empty');
+  const empty = document.querySelector('.cp-empty');
   if (empty) empty.remove();
   appendMsg(msg);
   scrollBottom();
 });
 
 socket.on('chat_delete', id => {
-  const el = document.querySelector(`.chat-page-msg[data-id="${id}"]`);
+  const el = document.querySelector(`.cp-msg[data-id="${id}"]`);
   if (el) el.remove();
 });
 
 socket.emit('get_online');
 
-/* ── Build message element ── */
+/* ── Build & append messages ── */
 function buildMsg(msg) {
-  const wrap = document.createElement('div');
-  wrap.className = 'chat-page-msg';
-  wrap.dataset.id = msg.id;
-
-  const isAdmin = msg.role === 'admin';
-  const isMod   = msg.role === 'mod';
-  const roleTag = isAdmin
-    ? '<span class="chat-role-tag role-admin">ADMIN</span>'
-    : isMod ? '<span class="chat-role-tag role-mod">MOD</span>' : '';
-  const delBtn = (MY_ROLE === 'admin')
-    ? `<button class="chat-page-del" onclick="delMsg(${msg.id}, this)" title="Delete">
-         <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-           <path stroke-linecap="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-         </svg>
+  const isAdmin = msg.role === 'admin', isMod = msg.role === 'mod';
+  const tag = isAdmin
+    ? '<span class="cp-tag cp-tag-admin">ADMIN</span>'
+    : isMod ? '<span class="cp-tag cp-tag-mod">MOD</span>' : '';
+  const delBtn = (MY_ROLE === 'admin' || MY_ROLE === 'mod')
+    ? `<button class="cp-del" onclick="delMsg(${msg.id},this)" title="Delete">
+         <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
        </button>` : '';
-
-  const t = new Date(msg.created_at);
-  const time = t.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-
-  wrap.innerHTML = `
-    <div class="chat-page-avatar ${isAdmin ? 'avatar-admin' : isMod ? 'avatar-mod' : ''}">
-      ${escHtml(msg.username.charAt(0).toUpperCase())}
+  const time = new Date(msg.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  const div  = document.createElement('div');
+  div.className = 'cp-msg'; div.dataset.id = msg.id;
+  div.innerHTML = `
+    <div class="cp-avatar ${isAdmin ? 'cp-avatar-admin' : isMod ? 'cp-avatar-mod' : ''}">
+      ${escH(msg.username.charAt(0).toUpperCase())}
     </div>
-    <div class="chat-page-bubble">
-      <div class="chat-page-meta">
-        <span class="chat-page-name ${isAdmin ? 'name-admin' : isMod ? 'name-mod' : ''}">
-          ${escHtml(msg.username)} ${roleTag}
-        </span>
-        <span class="chat-page-time">${time}</span>
+    <div class="cp-bubble">
+      <div class="cp-meta">
+        <span class="cp-name ${isAdmin ? 'cp-name-admin' : isMod ? 'cp-name-mod' : ''}">${escH(msg.username)} ${tag}</span>
+        <span class="cp-time">${time}</span>
         ${delBtn}
       </div>
-      ${msg.content ? `<div class="chat-page-text">${escHtml(msg.content)}</div>` : ''}
-      ${msg.image_url ? `<img src="${msg.image_url}" class="chat-page-img" onclick="openLb('${msg.image_url}')" loading="lazy"/>` : ''}
+      ${msg.content  ? `<div class="cp-text">${escH(msg.content)}</div>` : ''}
+      ${msg.image_url ? `<img src="${msg.image_url}" class="cp-img" onclick="openLb('${msg.image_url}')" loading="lazy"/>` : ''}
     </div>`;
-  return wrap;
+  return div;
 }
 
 function appendMsg(msg) {
-  const bottom = document.getElementById('chatBottom');
-  msgContainer.insertBefore(buildMsg(msg), bottom);
+  msgContainer.insertBefore(buildMsg(msg), document.getElementById('chatBottom'));
 }
 
 function scrollBottom() {
   msgContainer.scrollTop = msgContainer.scrollHeight;
 }
 
-/* ── Send text ── */
+/* ── Send ── */
 async function sendMsg() {
   const text = msgInput.value.trim();
   if (!text && !pendingFile) return;
@@ -237,8 +208,7 @@ async function sendMsg() {
     clearImg();
   } else {
     await fetch('/api/chat/message', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
+      method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ content: text })
     });
   }
@@ -252,13 +222,12 @@ async function sendMsg() {
 function onKey(e) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
 }
-
 function autoGrow(el) {
   el.style.height = '';
   el.style.height = Math.min(el.scrollHeight, 120) + 'px';
 }
 
-/* ── Image attach ── */
+/* ── Image ── */
 function onFile(inp) {
   if (!inp.files[0]) return;
   pendingFile = inp.files[0];
@@ -269,7 +238,6 @@ function onFile(inp) {
   };
   reader.readAsDataURL(pendingFile);
 }
-
 function clearImg() {
   pendingFile = null;
   document.getElementById('imgPreviewRow').style.display = 'none';
@@ -288,17 +256,14 @@ function openLb(src) {
   document.getElementById('lbImg').src = src;
   document.getElementById('lightbox').classList.add('active');
 }
-function closeLb() {
-  document.getElementById('lightbox').classList.remove('active');
-}
+function closeLb() { document.getElementById('lightbox').classList.remove('active'); }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLb(); });
 
-/* ── Escape HTML ── */
-function escHtml(s) {
+/* ── Utils ── */
+function escH(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-/* ── Scroll to bottom on load ── */
 scrollBottom();
 </script>
 </body>

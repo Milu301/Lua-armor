@@ -156,6 +156,18 @@ async function initDB() {
       created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS idx_chat_created ON chat_messages(created_at DESC);
+    CREATE TABLE IF NOT EXISTS bug_reports (
+      id          SERIAL PRIMARY KEY,
+      user_id     INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      username    VARCHAR(32) NOT NULL,
+      title       VARCHAR(128) NOT NULL,
+      description TEXT NOT NULL,
+      status      VARCHAR(16) NOT NULL DEFAULT 'open',
+      admin_note  VARCHAR(512) NOT NULL DEFAULT '',
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_bug_reports_user   ON bug_reports(user_id);
+    CREATE INDEX IF NOT EXISTS idx_bug_reports_status ON bug_reports(status);
   `);
 
   /* Seed projects from env vars PROJECT_N_* */
@@ -379,6 +391,16 @@ function adminApiOnly(req, res, next) {
   if (req.session.user?.role === 'admin') return next();
   res.status(403).json({ success:false, message:'Admin only.' });
 }
+function modOrAdmin(req, res, next) {
+  const r = req.session.user?.role;
+  if (r === 'admin' || r === 'mod') return next();
+  res.status(403).render('error', { message: 'Access denied.' });
+}
+function modOrAdminApi(req, res, next) {
+  const r = req.session.user?.role;
+  if (r === 'admin' || r === 'mod') return next();
+  res.status(403).json({ success:false, message:'Insufficient permissions.' });
+}
 
 /* ─── Socket.io — shared session + chat ─── */
 io.use((socket, next) => {
@@ -569,8 +591,75 @@ app.get('/chat', auth, async (req, res) => {
   res.render('chat', { messages, onlineCount, page: 'chat' });
 });
 
+/* ── Bug Reports ─────────────────────────────────── */
+app.get('/bugs', auth, async (req, res) => {
+  const { id } = req.session.user;
+  const reports = await db.all(
+    'SELECT id, title, description, status, admin_note, created_at FROM bug_reports WHERE user_id=$1 ORDER BY created_at DESC LIMIT 30',
+    [id]
+  );
+  res.render('bugs', { reports, page: 'bugs', success: null, error: null });
+});
+
+app.post('/bugs', auth, async (req, res) => {
+  const { id, username } = req.session.user;
+  const title       = (req.body.title       || '').trim().slice(0, 128);
+  const description = (req.body.description || '').trim().slice(0, 2000);
+  const fetchReports = () => db.all(
+    'SELECT id, title, description, status, admin_note, created_at FROM bug_reports WHERE user_id=$1 ORDER BY created_at DESC LIMIT 30',
+    [id]
+  );
+  if (!title || !description) {
+    return res.render('bugs', { reports: await fetchReports(), page: 'bugs', success: null, error: 'Title and description are required.' });
+  }
+  await db.query('INSERT INTO bug_reports (user_id, username, title, description) VALUES ($1,$2,$3,$4)', [id, username, title, description]);
+  res.render('bugs', { reports: await fetchReports(), page: 'bugs', success: 'Report submitted! Staff will review it shortly.', error: null });
+});
+
+/* ── Mod Panel ───────────────────────────────────── */
+app.get('/mod', auth, modOrAdmin, async (req, res) => {
+  const users = await db.all(`
+    SELECT u.id, u.username, u.role, u.is_active, u.total_resets, u.created_at,
+           p.name AS project_name, p.icon AS project_icon
+    FROM users u
+    LEFT JOIN projects p ON p.id = u.project_id
+    ORDER BY u.created_at DESC LIMIT 200
+  `);
+  res.render('mod', { users, page: 'mod' });
+});
+
+/* ── Mod API ─────────────────────────────────────── */
+app.post('/api/mod/user/:id/reset-hwid', apiAuth, modOrAdminApi, async (req, res) => {
+  const id   = Number(req.params.id);
+  const user = await db.one('SELECT * FROM users WHERE id=$1', [id]);
+  if (!user) return res.json({ success: false, message: 'User not found.' });
+  const proj = user.project_id ? await db.one('SELECT * FROM projects WHERE id=$1', [user.project_id]) : null;
+  if (!proj) return res.json({ success: false, message: 'User has no project assigned.' });
+  const { json } = await luarmorReq('POST', proj.luarmor_project_id, proj.luarmor_api_key,
+    '/users/resethwid', { user_key: user.luarmor_key, force: true });
+  res.json({ success: json?.success || false, message: json?.message || 'Done.' });
+});
+
+app.post('/api/mod/user/:id/blacklist', apiAuth, modOrAdminApi, async (req, res) => {
+  const id = Number(req.params.id);
+  if (req.session.user.id === id) return res.json({ success: false, message: "Can't blacklist yourself." });
+  const target = await db.one('SELECT role FROM users WHERE id=$1', [id]);
+  if (!target) return res.json({ success: false, message: 'User not found.' });
+  if (target.role === 'admin') return res.json({ success: false, message: "Can't blacklist an admin." });
+  await db.query('UPDATE users SET is_active=false WHERE id=$1', [id]);
+  res.json({ success: true, message: 'User blacklisted.' });
+});
+
+app.post('/api/mod/user/:id/unblacklist', apiAuth, modOrAdminApi, async (req, res) => {
+  const id     = Number(req.params.id);
+  const target = await db.one('SELECT role FROM users WHERE id=$1', [id]);
+  if (!target) return res.json({ success: false, message: 'User not found.' });
+  await db.query('UPDATE users SET is_active=true WHERE id=$1', [id]);
+  res.json({ success: true, message: 'User reinstated.' });
+});
+
 app.get('/admin', auth, adminOnly, async (req, res) => {
-  const [projectsRaw, usersRaw, announcements, totalUsers, activeToday, totalResets, chatCount] = await Promise.all([
+  const [projectsRaw, usersRaw, announcements, totalUsers, activeToday, totalResets, chatCount, openBugs] = await Promise.all([
     db.all('SELECT p.*, COUNT(u.id) AS user_count FROM projects p LEFT JOIN users u ON u.project_id=p.id GROUP BY p.id ORDER BY p.sort_order'),
     db.all('SELECT u.id, u.username, u.luarmor_key, u.role, u.project_id, u.discord_id, u.note, u.is_active, u.total_resets, u.created_at, u.last_login, p.name AS project_name, p.color AS project_color, p.icon AS project_icon FROM users u LEFT JOIN projects p ON p.id=u.project_id ORDER BY u.created_at DESC LIMIT 100'),
     db.all('SELECT a.*, u.username AS author_name FROM announcements a LEFT JOIN users u ON u.id=a.author_id ORDER BY a.pinned DESC, a.created_at DESC LIMIT 30'),
@@ -578,33 +667,29 @@ app.get('/admin', auth, adminOnly, async (req, res) => {
     db.one('SELECT COUNT(DISTINCT user_id) AS c FROM reset_log WHERE reset_date=CURRENT_DATE'),
     db.one('SELECT SUM(total_resets) AS c FROM users'),
     db.one('SELECT COUNT(*) AS c FROM chat_messages WHERE deleted=false'),
+    db.one("SELECT COUNT(*) AS c FROM bug_reports WHERE status='open'"),
   ]);
 
-  const projects = projectsRaw.map(p => {
-    const { luarmor_api_key, ...safe } = p;
-    return safe;
-  });
-
+  const projects = projectsRaw.map(p => { const { luarmor_api_key, ...safe } = p; return safe; });
   const users = usersRaw.map(u => {
     const { luarmor_key, ...safe } = u;
     safe.key_prefix = u.luarmor_key ? u.luarmor_key.slice(0, 16) + '…' : '—';
     return safe;
   });
 
-  /* Recent chat messages for admin view */
   const chatMessages = await db.all(`
     SELECT cm.id, cm.username, cm.role, cm.content, cm.image_url, cm.deleted, cm.created_at
-    FROM chat_messages cm
-    WHERE cm.deleted = false
-    ORDER BY cm.created_at DESC
-    LIMIT 50
+    FROM chat_messages cm WHERE cm.deleted = false ORDER BY cm.created_at DESC LIMIT 50
   `);
+
+  const bugReports = await db.all('SELECT * FROM bug_reports ORDER BY created_at DESC LIMIT 100');
 
   res.render('admin', {
     projects, users, announcements,
-    stats: { totalUsers: totalUsers.c, activeToday: activeToday.c, totalResets: totalResets.c || 0, chatMessages: chatCount.c },
+    stats: { totalUsers: totalUsers.c, activeToday: activeToday.c, totalResets: totalResets.c || 0, chatMessages: chatCount.c, openBugs: openBugs.c },
     settings: { ...dynSettings },
     chatMessages: chatMessages.reverse(),
+    bugReports,
   });
 });
 
@@ -806,6 +891,22 @@ app.get('/api/admin/stats', apiAuth, adminApiOnly, async (_req, res) => {
     newToday:     Number(newToday.c),
     liveNow:      Number(liveSessions.c),
   }});
+});
+
+/* ─────────────────────────────────────
+   ADMIN API — Bug Reports
+───────────────────────────────────── */
+app.patch('/api/admin/bug-reports/:id', apiAuth, adminApiOnly, async (req, res) => {
+  const id = Number(req.params.id);
+  const allowed = ['open','in_progress','resolved','wontfix'];
+  const { status, admin_note } = req.body;
+  const fields = []; const vals = []; let i = 1;
+  if (status && allowed.includes(status)) { fields.push(`status=$${i++}`); vals.push(status); }
+  if (admin_note !== undefined) { fields.push(`admin_note=$${i++}`); vals.push(String(admin_note).slice(0,512)); }
+  if (!fields.length) return res.json({ success: false, message: 'Nothing to update.' });
+  vals.push(id);
+  await db.query(`UPDATE bug_reports SET ${fields.join(',')} WHERE id=$${i}`, vals);
+  res.json({ success: true, message: 'Updated.' });
 });
 
 /* ─────────────────────────────────────

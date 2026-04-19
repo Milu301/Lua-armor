@@ -549,6 +549,13 @@
         Account Active (uncheck to ban)
       </label>
     </div>
+    
+    <div class="form-row">
+      <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.82rem;">
+        <input type="checkbox" id="um-verified" style="accent-color:#3b82f6;width:16px;height:16px;"/>
+        Verified Seller
+      </label>
+    </div>
 
     <!-- Change password -->
     <details style="margin-top:0.5rem;">
@@ -708,6 +715,7 @@ async function openUserModal(userId) {
   document.getElementById('um-discord').value      = '';
   document.getElementById('um-note').value         = '';
   document.getElementById('um-active').checked     = true;
+  document.getElementById('um-verified').checked   = false;
   document.getElementById('um-result').innerHTML   = '<div class="alert alert-info" style="margin-bottom:.5rem;font-size:.75rem;">Loading…</div>';
   document.getElementById('um-pw-result').innerHTML = '';
   document.getElementById('um-new-pw').value       = '';
@@ -728,6 +736,7 @@ async function openUserModal(userId) {
     document.getElementById('um-discord').value     = u.discord_id || '';
     document.getElementById('um-note').value        = u.note || '';
     document.getElementById('um-active').checked    = !!u.is_active;
+    document.getElementById('um-verified').checked  = !!u.is_verified_seller;
     keyEl.textContent = u.luarmor_key || '—';
     keyEl.dataset.key = u.luarmor_key || '';
     document.getElementById('um-result').innerHTML  = '';
@@ -757,6 +766,7 @@ async function saveUser() {
     discord_id: document.getElementById('um-discord').value.trim(),
     note:       document.getElementById('um-note').value.trim(),
     is_active:  document.getElementById('um-active').checked,
+    is_verified_seller: document.getElementById('um-verified').checked,
   };
   const r = await fetch(`/api/admin/user/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
   const d = await r.json();

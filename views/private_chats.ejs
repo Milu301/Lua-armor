@@ -1,0 +1,65 @@
+<%- include('partials/head', { title: 'Private Chats' }) %>
+
+<div class="layout">
+  <%- include('partials/sidebar', { page: 'private_chats' }) %>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="pulse-dot" style="background:var(--blue);"></div>
+        <div class="topbar-title">Private Chats</div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="card" style="max-width: 800px; margin: 0 auto;">
+        <div class="card-head">
+          <div class="card-icon ci-blue">💬</div>
+          <div>
+            <div class="card-title">Your Private Conversations</div>
+            <div class="card-desc">Messages related to shop inquiries or support.</div>
+          </div>
+        </div>
+        
+        <div style="margin-top: 1rem;">
+          <% if (chats && chats.length > 0) { %>
+            <% chats.forEach(c => { %>
+              <a href="/private-chat/<%= c.id %>" style="display:block; padding: 1rem; border-radius: var(--rl); background: var(--bg-raised); border: 1px solid var(--border); margin-bottom: 0.5rem; text-decoration: none; color: inherit; transition: border-color 0.2s, transform 0.2s;" onmouseover="this.style.borderColor='var(--accent-border)'" onmouseout="this.style.borderColor='var(--border)'">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <div style="display:flex; align-items:center; gap:0.75rem;">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-card); display:flex; align-items:center; justify-content:center; border:1px solid var(--border-md); color: var(--text-2); font-weight:bold;">
+                      <%= user.role === 'admin' ? c.u1_name.charAt(0).toUpperCase() : c.other_user_name.charAt(0).toUpperCase() %>
+                    </div>
+                    <div>
+                      <div style="font-weight:700; color:var(--text);">
+                        <% if (user.role === 'admin') { %>
+                          <%= c.u1_name %> &amp; <%= c.u2_name %>
+                        <% } else { %>
+                          <%= c.other_user_name %>
+                        <% } %>
+                      </div>
+                      <div style="font-size:0.75rem; color:var(--text-3); margin-top:2px;">Chat ID: #<%= c.id %></div>
+                    </div>
+                  </div>
+                  <div style="font-size:0.75rem; color:var(--text-3);">
+                    <%= new Date(c.created_at).toLocaleDateString() %>
+                  </div>
+                </div>
+              </a>
+            <% }) %>
+          <% } else { %>
+            <div style="text-align:center; padding: 3rem 1rem; color:var(--text-3);">
+              <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-bottom:1rem; opacity:0.5;">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+              </svg>
+              <div>You don't have any private chats yet.</div>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

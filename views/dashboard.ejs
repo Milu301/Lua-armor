@@ -24,6 +24,7 @@ const pfClass      = pct >= 100 ? 'pf-red' : pct >= 70 ? 'pf-yellow' : 'pf-green
 const executions   = (luaUser && luaUser.total_executions != null) ? luaUser.total_executions : 0;
 const hasDiscord   = !!(user && user.discordId) || !!(luaUser && luaUser.discord_id);
 const hasHwid      = !!(luaUser && luaUser.identifier);
+const isFreeUser   = !!(user && user.luarmorKey && user.luarmorKey.startsWith('FREE-'));
 %>
 
 <div class="layout">
@@ -51,14 +52,14 @@ const hasHwid      = !!(luaUser && luaUser.identifier);
     <div class="content">
 
       <!-- Expiry banners -->
-      <% if (expired) { %>
+      <% if (!isFreeUser && expired) { %>
       <div class="danger-banner">
         <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink:0">
           <path stroke-linecap="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
         </svg>
         <span>Your key has <strong>expired</strong>. Contact staff to renew access.</span>
       </div>
-      <% } else if (expiringSoon) { %>
+      <% } else if (!isFreeUser && expiringSoon) { %>
       <div class="warn-banner">
         <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink:0">
           <path stroke-linecap="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
@@ -97,19 +98,23 @@ const hasHwid      = !!(luaUser && luaUser.identifier);
         <div class="welcome-text">
           <div class="welcome-title">Welcome back, <span><%= user ? user.username : 'User' %></span> 👋</div>
           <div class="welcome-sub" style="margin-top:5px;">
-            <span class="mono" style="color:var(--text-3);font-size:0.72rem;"><%= user ? (user.luarmorKey || '').slice(0,20) + '…' : '—' %></span>
+            <span class="mono" style="color:var(--text-3);font-size:0.72rem;"><%= isFreeUser ? 'Free Account' : (user ? (user.luarmorKey || '').slice(0,20) + '…' : '—') %></span>
             &nbsp;<span style="color:var(--border-md)">|</span>&nbsp;
+            <% if (isFreeUser) { %>
+            <span class="c-cyan" style="font-weight:600;">● Free Tier</span>
+            <% } else { %>
             <span class="<%= !expired ? 'c-green' : 'c-red' %>" style="font-weight:600;">
               <%= !expired ? '● Active' : '● Expired' %>
             </span>
-            <% if (proj) { %>
+            <% } %>
+            <% if (proj && !isFreeUser) { %>
             &nbsp;<span class="badge badge-purple" style="font-size:0.68rem;"><%= proj.icon %> <%= proj.name %></span>
             <% } %>
           </div>
         </div>
         <div class="welcome-exec" style="text-align:right;">
-          <div class="welcome-exec-num" id="exec-count" style="font-size:2rem;"><%= executions.toLocaleString() %></div>
-          <div class="welcome-exec-label">total executions</div>
+          <div class="welcome-exec-num" id="exec-count" style="font-size:2rem;"><%= isFreeUser ? '∞' : executions.toLocaleString() %></div>
+          <div class="welcome-exec-label"><%= isFreeUser ? 'free scripts' : 'total executions' %></div>
         </div>
       </div>
 
@@ -118,32 +123,38 @@ const hasHwid      = !!(luaUser && luaUser.identifier);
         <div class="stat">
           <div class="stat-label">Key Status</div>
           <div style="margin-top:8px;">
-            <% const s = luaUser ? luaUser.status : 'unknown'; %>
-            <% if (s === 'active')  { %><span class="badge badge-green">● Active</span><% } %>
-            <% if (s === 'reset')   { %><span class="badge badge-yellow">● Reset</span><% } %>
-            <% if (s === 'banned')  { %><span class="badge badge-red">● Banned</span><% } %>
-            <% if (!['active','reset','banned'].includes(s)) { %><span class="badge badge-gray"><%= s %></span><% } %>
+            <% if (isFreeUser) { %>
+              <span class="badge badge-cyan">● Free Tier</span>
+            <% } else { %>
+              <% const s = luaUser ? luaUser.status : 'unknown'; %>
+              <% if (s === 'active')  { %><span class="badge badge-green">● Active</span><% } %>
+              <% if (s === 'reset')   { %><span class="badge badge-yellow">● Reset</span><% } %>
+              <% if (s === 'banned')  { %><span class="badge badge-red">● Banned</span><% } %>
+              <% if (!['active','reset','banned'].includes(s)) { %><span class="badge badge-gray"><%= s %></span><% } %>
+            <% } %>
           </div>
-          <div class="stat-sub"><% if (luaUser && luaUser.banned) { %>Key is banned<% } else { %>No restrictions<% } %></div>
+          <div class="stat-sub">
+            <% if (isFreeUser) { %>Free script access<% } else if (luaUser && luaUser.banned) { %>Key is banned<% } else { %>No restrictions<% } %>
+          </div>
         </div>
 
         <div class="stat">
           <div class="stat-label">Resets Today</div>
-          <div class="stat-val <%= resetsLeft > 0 ? 'c-green' : 'c-yellow' %>" id="s-today"><%= resetsToday %></div>
-          <div class="stat-sub" id="s-left"><%= resetsLeft %> of <%= dailyLimit %> remaining</div>
+          <div class="stat-val <%= isFreeUser ? 'c-cyan' : (resetsLeft > 0 ? 'c-green' : 'c-yellow') %>" id="s-today"><%= isFreeUser ? '∞' : resetsToday %></div>
+          <div class="stat-sub" id="s-left"><%= isFreeUser ? 'Unlimited resets' : (resetsLeft + ' of ' + dailyLimit + ' remaining') %></div>
         </div>
 
         <div class="stat">
           <div class="stat-label">Expiry</div>
           <div class="stat-val c-blue" style="font-size:0.875rem;margin-top:4px;">
-            <%= exp && exp > 0 ? fmtExpiry(exp) : 'Never' %>
+            <%= isFreeUser ? 'Unlimited' : (exp && exp > 0 ? fmtExpiry(exp) : 'Never') %>
           </div>
-          <div class="stat-sub"><%= exp && exp > 0 ? fmtTs(exp) : 'Permanent key' %></div>
+          <div class="stat-sub"><%= isFreeUser ? 'Free Tier' : (exp && exp > 0 ? fmtTs(exp) : 'Permanent key') %></div>
         </div>
 
         <div class="stat">
           <div class="stat-label">Executions</div>
-          <div class="stat-val c-purple" id="s-exec"><%= executions.toLocaleString() %></div>
+          <div class="stat-val c-purple" id="s-exec"><%= isFreeUser ? '∞' : executions.toLocaleString() %></div>
           <div class="stat-sub">total runs</div>
         </div>
       </div>
@@ -201,6 +212,7 @@ const hasHwid      = !!(luaUser && luaUser.identifier);
         </div>
       </div>
 
+      <% if (!isFreeUser) { %>
       <!-- Connected Accounts -->
       <div class="card" id="stats">
         <div class="card-head">
@@ -693,6 +705,7 @@ const hasHwid      = !!(luaUser && luaUser.identifier);
         </div>
 
       </div>
+      <% } %>
 
     </div>
   </div>

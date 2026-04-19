@@ -1,5 +1,49 @@
 <%- include('partials/head', { title: 'Global Chat — ' + panelName }) %>
 
+<style>
+/* Chat Aesthetics */
+.cp-layout { display: flex; height: calc(100vh - 70px); gap: 1rem; padding: 1rem; overflow: hidden; background: linear-gradient(to bottom right, var(--bg-body), var(--bg-card)); }
+.cp-main { flex: 1; display: flex; flex-direction: column; background: var(--bg-card); border-radius: var(--rl); box-shadow: var(--shadow-lg); border: 1px solid var(--border-acc); overflow: hidden; position: relative; }
+.cp-main::before { content: ''; position: absolute; top:0; left:0; width:100%; height:4px; background: linear-gradient(90deg, var(--blue), var(--purple)); z-index: 10;}
+.cp-messages { flex: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; scroll-behavior: smooth; }
+.cp-msg { display: flex; gap: 1rem; animation: slideInUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; opacity: 0; transform: translateY(10px); }
+@keyframes slideInUp { to { opacity: 1; transform: translateY(0); } }
+.cp-avatar { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; background: linear-gradient(135deg, var(--border-md), var(--border)); color: var(--text-2); box-shadow: 0 4px 10px rgba(0,0,0,0.1); border: 2px solid var(--bg-card); }
+.cp-avatar-admin { background: linear-gradient(135deg, #ef4444, #b91c1c); color: white; border-color: rgba(239, 68, 68, 0.3); }
+.cp-avatar-mod { background: linear-gradient(135deg, #f59e0b, #b45309); color: white; border-color: rgba(245, 158, 11, 0.3); }
+.cp-bubble { flex: 1; max-width: 85%; }
+.cp-meta { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.4rem; }
+.cp-name { font-weight: 700; color: var(--text); font-size: 0.9rem; }
+.cp-name-admin { color: #f87171; text-shadow: 0 0 10px rgba(248, 113, 113, 0.3); }
+.cp-name-mod { color: #fbbf24; text-shadow: 0 0 10px rgba(251, 191, 36, 0.3); }
+.cp-time { font-size: 0.7rem; color: var(--text-3); font-weight: 500; }
+.cp-text { background: var(--bg-raised); padding: 0.85rem 1.15rem; border-radius: 0 16px 16px 16px; color: var(--text); line-height: 1.5; font-size: 0.9rem; border: 1px solid var(--border); box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; display: inline-block; word-break: break-word;}
+.cp-text:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-color: var(--border-acc); }
+.cp-img { max-width: 300px; border-radius: 12px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; border: 2px solid var(--border); box-shadow: 0 4px 15px rgba(0,0,0,0.15); }
+.cp-img:hover { transform: scale(1.02); border-color: var(--accent); box-shadow: 0 8px 25px rgba(var(--accent-rgb), 0.2); }
+.cp-input-bar { display: flex; gap: 0.75rem; padding: 1.25rem; background: var(--bg-card); border-top: 1px solid var(--border); align-items: flex-end; }
+.cp-textarea { flex: 1; background: var(--bg-body); border: 1px solid var(--border-md); border-radius: 20px; padding: 0.8rem 1.25rem; color: var(--text); font-family: inherit; font-size: 0.95rem; resize: none; overflow-y: auto; max-height: 150px; transition: border-color 0.2s, box-shadow 0.2s; }
+.cp-textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15); }
+.cp-send-btn { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #6366f1); color: white; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; flex-shrink: 0; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3); }
+.cp-send-btn:hover { transform: scale(1.08) rotate(-5deg); box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4); }
+.cp-send-btn:active { transform: scale(0.95); }
+.cp-attach-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--bg-raised); color: var(--text-2); border: 1px solid var(--border-md); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
+.cp-attach-btn:hover { background: var(--bg-hover); color: var(--accent); border-color: var(--accent); transform: translateY(-2px); }
+.cp-side { width: 280px; background: var(--bg-card); border-radius: var(--rl); box-shadow: var(--shadow-lg); border: 1px solid var(--border-acc); display: flex; flex-direction: column; overflow: hidden; }
+.cp-side-header { padding: 1.25rem; border-bottom: 1px solid var(--border); font-weight: 700; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(to right, rgba(34, 197, 94, 0.05), transparent); }
+.cp-users-list { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.cp-user-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; border-radius: 12px; transition: background 0.2s, transform 0.2s; cursor: pointer; border: 1px solid transparent; }
+.cp-user-row:hover { background: var(--bg-raised); transform: translateX(5px); border-color: var(--border-md); }
+.cp-user-av { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; background: var(--bg-body); color: var(--text-2); border: 1px solid var(--border); }
+.cp-user-name { font-weight: 600; font-size: 0.85rem; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cp-del { background: none; border: none; color: var(--red); opacity: 0.4; cursor: pointer; transition: all 0.2s; padding: 4px; border-radius: 4px; }
+.cp-del:hover { opacity: 1; background: var(--red-dim); }
+.cp-img-preview { padding: 1rem 1.5rem; background: var(--bg-raised); border-top: 1px solid var(--border); display: flex; align-items: center; gap: 1rem; }
+.cp-img-preview img { height: 60px; border-radius: 8px; border: 2px solid var(--accent); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+.cp-img-clear { background: var(--red-dim); color: var(--red); border: none; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.8rem; transition: transform 0.2s; }
+.cp-img-clear:hover { transform: scale(1.1); background: var(--red); color: white; }
+</style>
+
 <div class="layout">
   <%- include('partials/sidebar', { page: 'chat' }) %>
 
@@ -9,12 +53,12 @@
       <div class="topbar-left">
         <div class="pulse-dot"></div>
         <div class="topbar-title">Global Chat</div>
-        <span class="badge badge-green" style="font-size:0.65rem;">LIVE</span>
+        <span class="badge badge-green" style="font-size:0.65rem; background: linear-gradient(135deg, var(--green), #059669); border: none; color: white;">LIVE</span>
       </div>
       <div class="topbar-right">
-        <span class="pill pill-green" id="online-pill">
-          <span class="pulse-dot" style="width:6px;height:6px;"></span>
-          <span id="online-count-top"><%= onlineCount %> online</span>
+        <span class="pill pill-green" id="online-pill" style="background: rgba(34, 197, 94, 0.1); border-color: rgba(34, 197, 94, 0.2);">
+          <span class="pulse-dot" style="width:6px;height:6px; background: var(--green);"></span>
+          <span id="online-count-top" style="color: var(--green); font-weight: 600;"><%= onlineCount %> online</span>
         </span>
       </div>
     </div>
@@ -26,15 +70,18 @@
       <div class="cp-main">
         <div class="cp-messages" id="chatMessages">
           <% if (messages.length === 0) { %>
-          <div class="cp-empty">
-            <svg width="36" height="36" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-            </svg>
-            <p>No messages yet. Say something!</p>
+          <div class="cp-empty" style="text-align: center; margin: auto; color: var(--text-3); animation: fadeIn 0.5s ease;">
+            <div style="width: 80px; height: 80px; border-radius: 50%; background: var(--bg-raised); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem auto; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid var(--border-md);">
+              <svg width="36" height="36" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--blue);">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+              </svg>
+            </div>
+            <p style="font-weight: 500; font-size: 1.1rem; color: var(--text-2);">No messages yet</p>
+            <p style="font-size: 0.9rem; opacity: 0.7;">Be the first to say something!</p>
           </div>
           <% } %>
-          <% messages.forEach(function(msg) { %>
-          <div class="cp-msg" data-id="<%= msg.id %>">
+          <% messages.forEach(function(msg, index) { %>
+          <div class="cp-msg" data-id="<%= msg.id %>" style="animation-delay: <%= Math.min(index * 0.05, 0.5) %>s;">
             <div class="cp-avatar <%= msg.role === 'admin' ? 'cp-avatar-admin' : msg.role === 'mod' ? 'cp-avatar-mod' : '' %>">
               <%= msg.username.charAt(0).toUpperCase() %>
             </div>
@@ -42,13 +89,13 @@
               <div class="cp-meta">
                 <span class="cp-name <%= msg.role === 'admin' ? 'cp-name-admin' : msg.role === 'mod' ? 'cp-name-mod' : '' %>">
                   <%= msg.username %>
-                  <% if (msg.role === 'admin') { %><span class="cp-tag cp-tag-admin">ADMIN</span><% } %>
-                  <% if (msg.role === 'mod') { %><span class="cp-tag cp-tag-mod">MOD</span><% } %>
+                  <% if (msg.role === 'admin') { %><span class="badge badge-purple" style="font-size:0.55rem; margin-left: 4px;">ADMIN</span><% } %>
+                  <% if (msg.role === 'mod') { %><span class="badge badge-blue" style="font-size:0.55rem; margin-left: 4px;">MOD</span><% } %>
                 </span>
                 <span class="cp-time"><%= new Date(msg.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) %></span>
                 <% if (user && (user.role === 'admin' || user.role === 'mod')) { %>
                 <button class="cp-del" onclick="delMsg(<%= msg.id %>, this)" title="Delete">
-                  <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                  <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                 </button>
                 <% } %>
               </div>
@@ -56,7 +103,9 @@
               <div class="cp-text"><%= msg.content %></div>
               <% } %>
               <% if (msg.image_url) { %>
-              <img src="<%= msg.image_url %>" class="cp-img" onclick="openLb('<%= msg.image_url %>')" loading="lazy" />
+              <div style="margin-top: 0.5rem;">
+                <img src="<%= msg.image_url %>" class="cp-img" onclick="openLb('<%= msg.image_url %>')" loading="lazy" />
+              </div>
               <% } %>
             </div>
           </div>
@@ -67,27 +116,29 @@
         <!-- Image preview row -->
         <div class="cp-img-preview" id="imgPreviewRow" style="display:none;">
           <img id="imgPreviewThumb" />
-          <button class="cp-img-clear" onclick="clearImg()">✕</button>
-          <span class="cp-img-label t-xs dimmed">Image ready to send</span>
+          <button class="cp-img-clear" onclick="clearImg()" title="Remove image">
+            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+          <span class="cp-img-label t-xs dimmed" style="font-weight: 500;">Image ready to send</span>
         </div>
 
         <!-- Input bar -->
         <div class="cp-input-bar">
           <label class="cp-attach-btn" title="Attach image">
-            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
             <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="onFile(this)" />
           </label>
           <textarea
             id="msgInput"
             class="cp-textarea"
-            placeholder="Type a message… (Enter to send, Shift+Enter for newline)"
+            placeholder="Type your message here... (Press Enter to send)"
             maxlength="1000"
             rows="1"
             onkeydown="onKey(event)"
             oninput="autoGrow(this)"
           ></textarea>
-          <button class="cp-send-btn" id="sendBtn" onclick="sendMsg()">
-            <svg width="17" height="17" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+          <button class="cp-send-btn" id="sendBtn" onclick="sendMsg()" title="Send Message">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="transform: translateX(1px);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
           </button>
         </div>
       </div>
@@ -95,11 +146,17 @@
       <!-- Online users sidebar -->
       <div class="cp-side">
         <div class="cp-side-header">
-          Online
-          <span class="badge badge-green" id="online-count-side"><%= onlineCount %></span>
+          <span style="display: flex; align-items: center; gap: 0.5rem; color: var(--text);">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="c-green"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"/></svg>
+            Online Users
+          </span>
+          <span class="badge" id="online-count-side" style="background: var(--green); color: white; border: none; font-size: 0.7rem; padding: 2px 8px;"><%= onlineCount %></span>
         </div>
         <div class="cp-users-list" id="onlineUsersList">
-          <div class="dimmed t-xs" style="padding:0.5rem 0;">Loading…</div>
+          <div class="dimmed t-xs" style="padding:0.5rem 0; text-align: center;">
+            <div class="spinner" style="width: 16px; height: 16px; margin: 0 auto 0.5rem auto; border-color: var(--border-md); border-top-color: var(--green);"></div>
+            Loading...
+          </div>
         </div>
       </div>
     </div>

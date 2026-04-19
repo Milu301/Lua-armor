@@ -168,6 +168,30 @@ async function initDB() {
     );
     CREATE INDEX IF NOT EXISTS idx_bug_reports_user   ON bug_reports(user_id);
     CREATE INDEX IF NOT EXISTS idx_bug_reports_status ON bug_reports(status);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified_seller BOOL NOT NULL DEFAULT false;
+    CREATE TABLE IF NOT EXISTS shop_listings (
+      id          SERIAL PRIMARY KEY,
+      user_id     INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      username    VARCHAR(32) NOT NULL,
+      title       VARCHAR(128) NOT NULL,
+      description TEXT NOT NULL,
+      price       VARCHAR(64) NOT NULL DEFAULT 'Negotiable',
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS private_chats (
+      id SERIAL PRIMARY KEY,
+      user1_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      user2_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (user1_id, user2_id)
+    );
+    CREATE TABLE IF NOT EXISTS private_messages (
+      id SERIAL PRIMARY KEY,
+      chat_id INT NOT NULL REFERENCES private_chats(id) ON DELETE CASCADE,
+      sender_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      content TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
   `);
 
   /* Seed projects from env vars PROJECT_N_* */
@@ -497,43 +521,56 @@ app.post('/register', registerLimiter, async (req, res) => {
   const confirm  = (req.body.confirm  || '').trim();
   const key      = (req.body.key      || '').trim();
 
-  if (!username || !password || !key)      return fail('All fields are required.');
+  if (!username || !password)              return fail('Username and password are required.');
   if (!/^[a-z0-9_]{3,20}$/.test(username)) return fail('Username must be 3-20 chars (letters, numbers, underscore).');
   if (password.length < 8)                 return fail('Password must be at least 8 characters.');
   if (password !== confirm)                return fail('Passwords do not match.');
-  if (key.length < 6 || key.length > 256)  return fail('Invalid Luarmor key length.');
 
   const existsUser = await db.one('SELECT id FROM users WHERE username=$1', [username]);
   if (existsUser) return fail('That username is already taken.');
 
-  const existsKey = await db.one('SELECT id FROM users WHERE luarmor_key=$1', [key]);
-  if (existsKey) return fail('This Luarmor key is already registered to an account.');
+  let finalKey = key;
+  let finalProject = null;
+  let finalDiscordId = '';
+  let fullProject = null;
 
-  const found = await findProjectForKey(key);
-  if (!found) return fail('Key not found in any active project. Make sure you purchased or requested access, then try again.');
+  if (key) {
+    if (key.length < 6 || key.length > 256) return fail('Invalid Luarmor key length.');
+    const existsKey = await db.one('SELECT id FROM users WHERE luarmor_key=$1', [key]);
+    if (existsKey) return fail('This Luarmor key is already registered to an account.');
 
-  const { project, luaUser } = found;
+    const found = await findProjectForKey(key);
+    if (!found) return fail('Key not found in any active project. Make sure you purchased or requested access, then try again.');
 
-  if (luaUser.banned || luaUser.blacklisted)
-    return fail('This key is banned. Contact staff on Discord.');
+    const { project, luaUser } = found;
+
+    if (luaUser.banned || luaUser.blacklisted)
+      return fail('This key is banned. Contact staff on Discord.');
+    
+    finalProject = project.id;
+    fullProject = project;
+    finalDiscordId = luaUser.discord_id || '';
+  } else {
+    finalKey = `FREE-${username}-${Date.now()}`;
+  }
 
   const hash = await bcrypt.hash(password, 12);
   const scriptToken = crypto.randomBytes(16).toString('hex');
   const newUser = await db.one(
     `INSERT INTO users (username, password_hash, luarmor_key, project_id, discord_id, script_token)
      VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
-    [username, hash, key, project.id, luaUser.discord_id || '', scriptToken]
+    [username, hash, finalKey, finalProject, finalDiscordId, scriptToken]
   );
 
-  if (!luaUser.discord_id) {
-    await luarmorReq('POST', project.luarmor_project_id, project.luarmor_api_key,
+  if (key && !finalDiscordId && fullProject) {
+    await luarmorReq('POST', fullProject.luarmor_project_id, fullProject.luarmor_api_key,
       '/users/linkdiscord', { user_key: key, discord_id: '', force: false }).catch(() => {});
   }
 
   req.session.user = {
     id: newUser.id, username, role: 'user',
-    luarmorKey: key, projectId: project.id, project,
-    discordId: luaUser.discord_id || '',
+    luarmorKey: finalKey, projectId: finalProject, project: fullProject,
+    discordId: finalDiscordId,
     note: '', scriptToken,
   };
   res.redirect('/dashboard');
@@ -717,7 +754,7 @@ app.get('/api/admin/project/:id', apiAuth, adminApiOnly, async (req, res) => {
 app.get('/api/admin/user/:id', apiAuth, adminApiOnly, async (req, res) => {
   const user = await db.one(
     `SELECT u.id, u.username, u.luarmor_key, u.role, u.project_id, u.discord_id,
-            u.note, u.is_active, u.total_resets, u.created_at, u.last_login,
+            u.note, u.is_active, u.is_verified_seller, u.total_resets, u.created_at, u.last_login,
             p.name AS project_name
      FROM users u LEFT JOIN projects p ON p.id=u.project_id
      WHERE u.id=$1`,
@@ -798,13 +835,13 @@ app.get('/api/admin/users', apiAuth, adminApiOnly, async (req, res) => {
 
 app.patch('/api/admin/user/:id', apiAuth, adminApiOnly, async (req, res) => {
   const id = Number(req.params.id);
-  const allowed = ['role','project_id','discord_id','note','is_active','username'];
+  const allowed = ['role','project_id','discord_id','note','is_active','username','is_verified_seller'];
   const fields = []; const vals = []; let i = 1;
   for (const key of allowed) {
     if (req.body[key] === undefined) continue;
     let val = req.body[key];
     if (key === 'role' && !['user','admin','mod'].includes(val)) continue;
-    if (key === 'is_active') val = val === true || val === 'true';
+    if (key === 'is_active' || key === 'is_verified_seller') val = val === true || val === 'true';
     if (key === 'project_id') val = val ? Number(val) : null;
     if (key === 'note') val = String(val).slice(0, 100);
     if (key === 'username') val = String(val).toLowerCase().trim();
@@ -906,6 +943,39 @@ app.get('/api/admin/stats', apiAuth, adminApiOnly, async (_req, res) => {
 });
 
 /* ─────────────────────────────────────
+   MOD API — User Actions
+───────────────────────────────────── */
+app.post('/api/mod/user/:id/reset-hwid', apiAuth, modOrAdminApi, async (req, res) => {
+  const id = Number(req.params.id);
+  const user = await db.one('SELECT * FROM users WHERE id=$1', [id]);
+  if (!user) return res.json({ success: false, message: 'User not found.' });
+  if (user.role === 'admin') return res.json({ success: false, message: 'Cannot reset admin HWID.' });
+  
+  const proj = user.project_id ? await db.one('SELECT * FROM projects WHERE id=$1', [user.project_id]) : null;
+  if (!proj) return res.json({ success: false, message: 'User has no project assigned.' });
+  
+  const { json } = await luarmorReq('POST', proj.luarmor_project_id, proj.luarmor_api_key,
+    '/users/resethwid', { user_key: user.luarmor_key, force: true });
+  res.json({ success: json?.success || false, message: json?.message || 'HWID Reset successful.' });
+});
+
+app.post('/api/mod/user/:id/blacklist', apiAuth, modOrAdminApi, async (req, res) => {
+  const id = Number(req.params.id);
+  const user = await db.one('SELECT role FROM users WHERE id=$1', [id]);
+  if (!user) return res.json({ success: false, message: 'User not found.' });
+  if (user.role === 'admin') return res.json({ success: false, message: 'Cannot blacklist admin.' });
+  
+  await db.query('UPDATE users SET is_active=false WHERE id=$1', [id]);
+  res.json({ success: true, message: 'User blacklisted.' });
+});
+
+app.post('/api/mod/user/:id/unblacklist', apiAuth, modOrAdminApi, async (req, res) => {
+  const id = Number(req.params.id);
+  await db.query('UPDATE users SET is_active=true WHERE id=$1', [id]);
+  res.json({ success: true, message: 'User reinstated.' });
+});
+
+/* ─────────────────────────────────────
    ADMIN API — Bug Reports
 ───────────────────────────────────── */
 app.patch('/api/admin/bug-reports/:id', apiAuth, adminApiOnly, async (req, res) => {
@@ -919,6 +989,130 @@ app.patch('/api/admin/bug-reports/:id', apiAuth, adminApiOnly, async (req, res) 
   vals.push(id);
   await db.query(`UPDATE bug_reports SET ${fields.join(',')} WHERE id=$${i}`, vals);
   res.json({ success: true, message: 'Updated.' });
+});
+
+/* ─────────────────────────────────────
+   SHOP API
+───────────────────────────────────── */
+app.get('/shop', auth, async (req, res) => {
+  const listings = await db.all(`
+    SELECT sl.*, u.is_verified_seller 
+    FROM shop_listings sl
+    JOIN users u ON sl.user_id = u.id
+    ORDER BY sl.created_at DESC
+  `);
+  res.render('shop', { user: req.session.user, page: 'shop', listings });
+});
+
+app.post('/api/shop/listing', auth, async (req, res) => {
+  const { id: userId, username } = req.session.user;
+  const title = (req.body.title || '').trim().slice(0, 128);
+  const description = (req.body.description || '').trim().slice(0, 1000);
+  const price = (req.body.price || 'Negotiable').trim().slice(0, 64);
+  if (!title || !description) return res.json({ success: false, message: 'Title and description required' });
+  await db.query(
+    'INSERT INTO shop_listings (user_id, username, title, description, price) VALUES ($1,$2,$3,$4,$5)',
+    [userId, username, title, description, price]
+  );
+  res.json({ success: true });
+});
+
+app.delete('/api/shop/listing/:id', auth, async (req, res) => {
+  const listingId = Number(req.params.id);
+  const { id: userId, role } = req.session.user;
+  const listing = await db.one('SELECT user_id FROM shop_listings WHERE id=$1', [listingId]);
+  if (!listing) return res.json({ success: false, message: 'Not found' });
+  if (listing.user_id !== userId && role !== 'admin' && role !== 'mod') {
+    return res.json({ success: false, message: 'Unauthorized' });
+  }
+  await db.query('DELETE FROM shop_listings WHERE id=$1', [listingId]);
+  res.json({ success: true });
+});
+
+/* ─────────────────────────────────────
+   PRIVATE CHAT API
+───────────────────────────────────── */
+app.get('/private-chats', auth, async (req, res) => {
+  const userId = req.session.user.id;
+  let chats;
+  if (req.session.user.role === 'admin') {
+    chats = await db.all(`
+      SELECT pc.id, u1.username as u1_name, u2.username as u2_name, pc.created_at
+      FROM private_chats pc
+      JOIN users u1 ON pc.user1_id = u1.id
+      JOIN users u2 ON pc.user2_id = u2.id
+      ORDER BY pc.created_at DESC
+    `);
+  } else {
+    chats = await db.all(`
+      SELECT pc.id, 
+             CASE WHEN pc.user1_id = $1 THEN u2.username ELSE u1.username END as other_user_name,
+             pc.created_at
+      FROM private_chats pc
+      JOIN users u1 ON pc.user1_id = u1.id
+      JOIN users u2 ON pc.user2_id = u2.id
+      WHERE pc.user1_id = $1 OR pc.user2_id = $1
+      ORDER BY pc.created_at DESC
+    `, [userId]);
+  }
+  res.render('private_chats', { user: req.session.user, page: 'private_chats', chats });
+});
+
+app.post('/api/private-chat/start', auth, async (req, res) => {
+  const { seller_id } = req.body;
+  const user1 = Math.min(req.session.user.id, seller_id);
+  const user2 = Math.max(req.session.user.id, seller_id);
+  if (user1 === user2) return res.json({ success: false, message: 'Cannot chat with yourself' });
+  
+  let chat = await db.one('SELECT id FROM private_chats WHERE user1_id=$1 AND user2_id=$2', [user1, user2]);
+  if (!chat) {
+    chat = await db.one('INSERT INTO private_chats (user1_id, user2_id) VALUES ($1,$2) RETURNING id', [user1, user2]);
+  }
+  res.json({ success: true, chat_id: chat.id });
+});
+
+app.get('/private-chat/:id', auth, async (req, res) => {
+  const chatId = Number(req.params.id);
+  const userId = req.session.user.id;
+  const role = req.session.user.role;
+  
+  const chat = await db.one('SELECT * FROM private_chats WHERE id=$1', [chatId]);
+  if (!chat) return res.redirect('/private-chats');
+  if (chat.user1_id !== userId && chat.user2_id !== userId && role !== 'admin') {
+    return res.redirect('/private-chats');
+  }
+  
+  const messages = await db.all(`
+    SELECT pm.*, u.username 
+    FROM private_messages pm
+    JOIN users u ON pm.sender_id = u.id
+    WHERE pm.chat_id=$1
+    ORDER BY pm.created_at ASC
+  `, [chatId]);
+  
+  const otherUserId = chat.user1_id === userId ? chat.user2_id : chat.user1_id;
+  const otherUser = await db.one('SELECT username FROM users WHERE id=$1', [otherUserId]);
+  const otherUserName = otherUser ? otherUser.username : 'Unknown';
+
+  res.render('private_chat_view', { user: req.session.user, page: 'private_chats', chat, messages, otherUserName, otherUserId: otherUserId });
+});
+
+app.post('/api/private-chat/:id/message', auth, async (req, res) => {
+  const chatId = Number(req.params.id);
+  const userId = req.session.user.id;
+  const content = (req.body.content || '').trim().slice(0, 1000);
+  if (!content) return res.json({ success: false });
+  
+  const chat = await db.one('SELECT * FROM private_chats WHERE id=$1', [chatId]);
+  if (!chat || (chat.user1_id !== userId && chat.user2_id !== userId && req.session.user.role !== 'admin')) {
+    return res.json({ success: false, message: 'Unauthorized' });
+  }
+  
+  await db.query(
+    'INSERT INTO private_messages (chat_id, sender_id, content) VALUES ($1,$2,$3)',
+    [chatId, userId, content]
+  );
+  res.json({ success: true });
 });
 
 /* ─────────────────────────────────────

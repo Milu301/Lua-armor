@@ -1,0 +1,203 @@
+<%- include('partials/head', { title: 'Marketplace' }) %>
+
+<div class="layout">
+  <%- include('partials/sidebar', { page: 'shop' }) %>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="pulse-dot" style="background:var(--blue);"></div>
+        <div class="topbar-title">Marketplace</div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-primary btn-sm" onclick="openModal('new-listing-modal')">
+          + Create Listing
+        </button>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="card" style="margin-bottom: 2rem;">
+        <div class="card-head">
+          <div class="card-icon ci-blue">🛒</div>
+          <div>
+            <div class="card-title">Community Shop & Requests</div>
+            <div class="card-desc">Buy and sell scripts, services, or request help. All trades at your own risk.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="script-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem;">
+        <% if (listings && listings.length > 0) { %>
+          <% listings.forEach(l => { %>
+            <div class="card" style="margin:0; display:flex; flex-direction:column; justify-content:space-between; animation: slideUp 0.3s ease;">
+              <div>
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 0.75rem;">
+                  <h3 style="font-size:1.1rem; font-weight:700; color:var(--text);"><%= l.title %></h3>
+                  <span class="badge badge-green" style="font-size:0.8rem; font-weight:700;"><%= l.price %></span>
+                </div>
+                <div style="font-size:0.85rem; color:var(--text-2); margin-bottom: 1rem; white-space:pre-wrap; word-break:break-word;"><%= l.description %></div>
+              </div>
+              
+              <div style="border-top:1px solid var(--border); padding-top:1rem; margin-top:auto; display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <div style="width:28px; height:28px; border-radius:50%; background:var(--bg-raised); display:flex; align-items:center; justify-content:center; font-weight:bold; color:var(--text-3);"><%= l.username.charAt(0).toUpperCase() %></div>
+                  <div>
+                    <div style="font-size:0.8rem; font-weight:600; color:var(--text); display:flex; align-items:center; gap:0.3rem;">
+                      <%= l.username %>
+                      <% if (l.is_verified_seller) { %>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="#3b82f6" title="Verified Seller">
+                          <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1.9 14.7L6 12.6l1.4-1.4 2.7 2.7 6.5-6.5 1.4 1.4-7.9 7.9z"/>
+                        </svg>
+                      <% } %>
+                    </div>
+                    <div style="font-size:0.65rem; color:var(--text-3);"><%= new Date(l.created_at).toLocaleDateString() %></div>
+                  </div>
+                </div>
+
+                <div style="display:flex; gap:0.5rem;">
+                  <% if (user.id !== l.user_id) { %>
+                    <button class="btn btn-sm btn-ghost" onclick="contactSeller(<%= l.user_id %>)">
+                      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                      </svg>
+                      Contact
+                    </button>
+                  <% } %>
+                  
+                  <% if (user.role === 'admin' || user.role === 'mod' || user.id === l.user_id) { %>
+                    <button class="btn btn-sm" style="color:var(--red);" onclick="deleteListing(<%= l.id %>, this)">
+                      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                    </button>
+                  <% } %>
+                </div>
+              </div>
+            </div>
+          <% }) %>
+        <% } else { %>
+          <div style="grid-column: 1/-1; text-align:center; padding: 3rem 1rem; color:var(--text-3);">
+            <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-bottom:1rem; opacity:0.5;">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+            <div>No listings in the shop right now. Be the first!</div>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Listing Modal -->
+<div class="overlay" id="new-listing-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Create New Listing</h2>
+      <button class="modal-x" onclick="closeModal('new-listing-modal')">×</button>
+    </div>
+    
+    <div class="form-group">
+      <label class="label">Title</label>
+      <input type="text" class="input" id="listing-title" placeholder="What are you offering or looking for?" maxlength="128" />
+    </div>
+
+    <div class="form-group">
+      <label class="label">Description</label>
+      <textarea class="input" id="listing-desc" rows="4" placeholder="Describe the service or item in detail..." maxlength="1000"></textarea>
+    </div>
+
+    <div class="form-group">
+      <label class="label">Price</label>
+      <input type="text" class="input" id="listing-price" placeholder="e.g. $10, Free, Negotiable, LF Offers" maxlength="64" />
+    </div>
+
+    <div class="flex gap-2 mt-4">
+      <button class="btn btn-primary" onclick="submitListing(this)" style="flex:1;">Post Listing</button>
+      <button class="btn btn-ghost" onclick="closeModal('new-listing-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function toast(msg, type = 'info') {
+  const icons = { ok: '✅', err: '❌', warn: '⚠️', info: 'ℹ️' };
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span>${msg}</span>`;
+  document.body.appendChild(el);
+  setTimeout(() => { el.style.animation = 'toastOut 0.3s forwards'; setTimeout(() => el.remove(), 320); }, 4000);
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+async function submitListing(btn) {
+  const title = document.getElementById('listing-title').value.trim();
+  const desc = document.getElementById('listing-desc').value.trim();
+  const price = document.getElementById('listing-price').value.trim();
+  
+  if (!title || !desc) return toast('Title and description required', 'warn');
+  
+  btn.disabled = true;
+  btn.textContent = 'Posting...';
+  
+  try {
+    const res = await fetch('/api/shop/listing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, description: desc, price })
+    });
+    const data = await res.json();
+    if (data.success) {
+      window.location.reload();
+    } else {
+      toast(data.message || 'Error posting listing', 'err');
+      btn.disabled = false;
+      btn.textContent = 'Post Listing';
+    }
+  } catch (err) {
+    toast('Network error', 'err');
+    btn.disabled = false;
+    btn.textContent = 'Post Listing';
+  }
+}
+
+async function deleteListing(id, btn) {
+  if (!confirm('Are you sure you want to delete this listing?')) return;
+  btn.disabled = true;
+  try {
+    const res = await fetch(`/api/shop/listing/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) {
+      window.location.reload();
+    } else {
+      toast(data.message || 'Error deleting listing', 'err');
+      btn.disabled = false;
+    }
+  } catch (err) {
+    toast('Network error', 'err');
+    btn.disabled = false;
+  }
+}
+
+async function contactSeller(userId) {
+  try {
+    const res = await fetch('/api/private-chat/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ seller_id: userId })
+    });
+    const data = await res.json();
+    if (data.success) {
+      window.location.href = '/private-chat/' + data.chat_id;
+    } else {
+      toast(data.message || 'Error starting chat', 'err');
+    }
+  } catch (err) {
+    toast('Network error', 'err');
+  }
+}
+</script>
+</body>
+</html>

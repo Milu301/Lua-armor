@@ -1,0 +1,147 @@
+<%- include('partials/head', { title: 'Settings — ' + panelName }) %>
+
+<div class="layout">
+  <%- include('partials/sidebar', { page: 'settings' }) %>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="pulse-dot"></div>
+        <div class="topbar-title" data-i18n="Settings">Settings</div>
+      </div>
+    </div>
+
+    <div class="content" style="max-width: 800px;">
+      <div class="card" style="animation: slideUp 0.3s ease;">
+        <div class="card-head">
+          <div class="card-icon ci-purple">⚙️</div>
+          <div>
+            <div class="card-title" data-i18n="Profile Settings">Profile Settings</div>
+            <div class="card-desc" data-i18n="Manage your account preferences and integrations.">Manage your account preferences and integrations.</div>
+          </div>
+        </div>
+
+        <div style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem;">
+          
+          <div class="form-group">
+            <label class="label" data-i18n="Avatar URL (Image/GIF)">Avatar URL (Image/GIF)</label>
+            <div style="display: flex; gap: 1rem; align-items: flex-start;">
+              <div style="width: 64px; height: 64px; border-radius: 50%; background: var(--bg-body); overflow: hidden; border: 2px solid var(--border-md); flex-shrink: 0;">
+                <% if (dbUser && dbUser.avatar_url) { %>
+                  <img src="<%= dbUser.avatar_url %>" style="width:100%;height:100%;object-fit:cover;" id="avatar-preview"/>
+                <% } else { %>
+                  <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:var(--text-3);"><%= user.username.charAt(0).toUpperCase() %></div>
+                <% } %>
+              </div>
+              <input type="text" class="input" id="set-avatar" placeholder="https://example.com/image.png" value="<%= dbUser ? dbUser.avatar_url : '' %>" style="flex: 1;" oninput="updateAvatarPreview(this.value)"/>
+            </div>
+            <div class="t-xs muted" style="margin-top:0.5rem;" data-i18n="Link to any direct image or GIF URL to use as your profile picture.">Link to any direct image or GIF URL to use as your profile picture.</div>
+          </div>
+
+          <div class="form-group">
+            <label class="label" data-i18n="Discord ID">Discord ID</label>
+            <input type="text" class="input" id="set-discord" placeholder="e.g. 123456789012345678" value="<%= dbUser ? dbUser.discord_id : '' %>"/>
+            <div class="t-xs muted" style="margin-top:0.5rem;" data-i18n="Connect your Discord account to sync roles or use Discord avatars in the future.">Connect your Discord account to sync roles or use Discord avatars in the future.</div>
+          </div>
+
+          <div class="form-group">
+            <label class="label" data-i18n="Language">Language</label>
+            <select class="input" id="set-language" onchange="translatePage(this.value)">
+              <option value="en" <%= dbUser && dbUser.language === 'en' ? 'selected' : '' %>>English</option>
+              <option value="es" <%= dbUser && dbUser.language === 'es' ? 'selected' : '' %>>Español</option>
+            </select>
+          </div>
+
+          <div style="border-top: 1px solid var(--border-md); padding-top: 1.5rem; display: flex; justify-content: flex-end;">
+            <button class="btn btn-primary" onclick="saveSettings(this)" data-i18n="Save Changes">Save Changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function toast(msg, type = 'info') {
+  const icons = { ok: '✅', err: '❌', warn: '⚠️', info: 'ℹ️' };
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span>${msg}</span>`;
+  document.body.appendChild(el);
+  setTimeout(() => { el.style.animation = 'toastOut 0.3s forwards'; setTimeout(() => el.remove(), 320); }, 4000);
+}
+
+function updateAvatarPreview(url) {
+  const img = document.getElementById('avatar-preview');
+  if (img) img.src = url;
+}
+
+async function saveSettings(btn) {
+  const avatarUrl = document.getElementById('set-avatar').value.trim();
+  const discordId = document.getElementById('set-discord').value.trim();
+  const language = document.getElementById('set-language').value;
+
+  btn.disabled = true;
+  btn.textContent = language === 'es' ? 'Guardando...' : 'Saving...';
+
+  try {
+    const res = await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ avatar_url: avatarUrl, discord_id: discordId, language })
+    });
+    const data = await res.json();
+    if (data.success) {
+      toast(language === 'es' ? 'Configuración guardada' : 'Settings saved', 'ok');
+      setTimeout(() => window.location.reload(), 1000);
+    } else {
+      toast(data.message || 'Error', 'err');
+      btn.disabled = false;
+      btn.textContent = language === 'es' ? 'Guardar Cambios' : 'Save Changes';
+    }
+  } catch (err) {
+    toast('Network error', 'err');
+    btn.disabled = false;
+    btn.textContent = language === 'es' ? 'Guardar Cambios' : 'Save Changes';
+  }
+}
+
+/* ── Basic i18n Dictionary for Settings page ── */
+const dict = {
+  es: {
+    "Settings": "Ajustes",
+    "Profile Settings": "Ajustes de Perfil",
+    "Manage your account preferences and integrations.": "Gestiona las preferencias de tu cuenta e integraciones.",
+    "Avatar URL (Image/GIF)": "URL del Avatar (Imagen/GIF)",
+    "Link to any direct image or GIF URL to use as your profile picture.": "Enlaza cualquier URL directa de imagen o GIF para usarla como tu foto de perfil.",
+    "Discord ID": "ID de Discord",
+    "Connect your Discord account to sync roles or use Discord avatars in the future.": "Conecta tu cuenta de Discord para sincronizar roles o usar avatares de Discord en el futuro.",
+    "Language": "Idioma",
+    "Save Changes": "Guardar Cambios"
+  }
+};
+
+function translatePage(lang) {
+  if (lang !== 'es') {
+    return;
+  }
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (dict[lang] && dict[lang][key]) {
+      if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+        el.placeholder = dict[lang][key];
+      } else {
+        el.textContent = dict[lang][key];
+      }
+    }
+  });
+}
+
+// Initial translation on load
+const currentLang = document.getElementById('set-language').value;
+if (currentLang === 'es') {
+  translatePage('es');
+}
+</script>
+</body>
+</html>

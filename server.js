@@ -124,6 +124,8 @@ async function initDB() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     ALTER TABLE users ADD COLUMN IF NOT EXISTS script_token VARCHAR(32) UNIQUE;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT DEFAULT '';
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS language VARCHAR(16) DEFAULT 'en';
     CREATE TABLE IF NOT EXISTS user_keys (
       id          SERIAL PRIMARY KEY,
       user_id     INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -501,6 +503,8 @@ app.post('/login', loginLimiter, async (req, res) => {
     project: proj,
     discordId: user.discord_id || '',
     note: user.note || '', scriptToken,
+    avatarUrl: user.avatar_url || '',
+    language: user.language || 'en'
   };
   await db.query('UPDATE users SET last_login=NOW() WHERE id=$1', [user.id]);
   res.redirect('/dashboard');
@@ -572,6 +576,8 @@ app.post('/register', registerLimiter, async (req, res) => {
     luarmorKey: finalKey, projectId: finalProject, project: fullProject,
     discordId: finalDiscordId,
     note: '', scriptToken,
+    avatarUrl: '',
+    language: 'en'
   };
   res.redirect('/dashboard');
 });
@@ -811,6 +817,15 @@ app.delete('/api/admin/project/:id', apiAuth, adminApiOnly, async (req, res) => 
   res.json({ success: true, message: 'Project disabled.' });
 });
 
+app.delete('/api/admin/project/:id/hard', apiAuth, adminApiOnly, async (req, res) => {
+  const id = Number(req.params.id);
+  // Unlink users from this project
+  await db.query('UPDATE users SET project_id=NULL WHERE project_id=$1', [id]);
+  // Delete project
+  await db.query('DELETE FROM projects WHERE id=$1', [id]);
+  res.json({ success: true, message: 'Project completely deleted.' });
+});
+
 /* ─────────────────────────────────────
    ADMIN API — Users CRUD
 ───────────────────────────────────── */
@@ -992,6 +1007,29 @@ app.patch('/api/admin/bug-reports/:id', apiAuth, adminApiOnly, async (req, res) 
 });
 
 /* ─────────────────────────────────────
+   SETTINGS API
+───────────────────────────────────── */
+app.get('/settings', auth, async (req, res) => {
+  const dbUser = await db.one('SELECT * FROM users WHERE id=$1', [req.session.user.id]);
+  res.render('settings', { user: req.session.user, dbUser, page: 'settings' });
+});
+
+app.post('/api/settings', auth, async (req, res) => {
+  const userId = req.session.user.id;
+  const avatarUrl = (req.body.avatar_url || '').trim().slice(0, 500);
+  const language = (req.body.language || 'en').trim().slice(0, 16);
+  const discordId = (req.body.discord_id || '').trim().slice(0, 32);
+
+  await db.query(
+    'UPDATE users SET avatar_url=$1, language=$2, discord_id=$3 WHERE id=$4',
+    [avatarUrl, language, discordId, userId]
+  );
+  req.session.user.discordId = discordId; // update session
+  req.session.user.avatarUrl = avatarUrl;
+  res.json({ success: true, message: 'Settings saved' });
+});
+
+/* ─────────────────────────────────────
    SHOP API
 ───────────────────────────────────── */
 app.get('/shop', auth, async (req, res) => {
@@ -1159,11 +1197,13 @@ app.post('/api/chat/image', apiAuth, chatLimiter, chatUpload.single('image'), as
 
   const { id: userId, username, role } = req.session.user;
   const imageUrl = `/uploads/chat/${req.file.filename}`;
+  let content = (req.body.content || '').trim().slice(0, 500);
+  content = content.replace(/<[^>]*>/g, ''); // basic xss
 
   const msg = await db.one(
-    `INSERT INTO chat_messages (user_id, username, role, image_url)
-     VALUES ($1,$2,$3,$4) RETURNING id, user_id, username, role, content, image_url, created_at`,
-    [userId, username, role, imageUrl]
+    `INSERT INTO chat_messages (user_id, username, role, content, image_url)
+     VALUES ($1,$2,$3,$4,$5) RETURNING id, user_id, username, role, content, image_url, created_at`,
+    [userId, username, role, content, imageUrl]
   );
 
   io.emit('chat_message', msg);

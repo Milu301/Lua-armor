@@ -1,89 +1,158 @@
 <%- include('partials/head', { title: panelName + ' — Aurora Hub' }) %>
 
-<div class="landing-page">
-  <div class="landing-wrap">
-    <div class="landing-top">
-      <img src="<%= panelLogo %>" alt="<%= panelName %>" class="landing-logo" />
-      <div>
-        <div class="landing-kicker">AURORA HUB</div>
-        <h1 class="landing-title">Executor Hub</h1>
-      </div>
-      <div class="landing-actions">
-        <% if (user) { %>
-          <a href="/dashboard" class="btn btn-primary">Open Dashboard</a>
-          <a href="/home" class="btn btn-ghost">Home</a>
-        <% } else { %>
-          <a href="/login" class="btn btn-primary">Login</a>
-          <a href="/register" class="btn btn-secondary">Register</a>
-        <% } %>
-      </div>
-    </div>
+<style>
+  .hero-bg {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
+    background: radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.15), transparent 60%),
+                radial-gradient(circle at 80% 50%, rgba(6, 182, 212, 0.1), transparent 50%),
+                radial-gradient(circle at 20% 80%, rgba(245, 158, 11, 0.1), transparent 50%);
+    background-color: #030712;
+  }
+  .navbar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 1.5rem 3rem; position: sticky; top: 0; z-index: 100;
+    background: rgba(3, 7, 18, 0.6); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .hero-section {
+    padding: 6rem 2rem; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 80vh; position: relative; overflow: hidden;
+  }
+  .hero-badge {
+    background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.3);
+    color: #c4b5fd; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600;
+    font-size: 0.85rem; letter-spacing: 0.05em; margin-bottom: 1.5rem; text-transform: uppercase;
+    animation: fadeInDown 0.6s ease;
+  }
+  .hero-title {
+    font-size: clamp(3rem, 6vw, 5rem); font-weight: 900; line-height: 1.1; margin-bottom: 1.5rem;
+    background: linear-gradient(to right, #fff, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    animation: fadeInUp 0.8s ease;
+  }
+  .hero-subtitle {
+    font-size: 1.25rem; color: #9ca3af; max-width: 600px; margin-bottom: 2.5rem; line-height: 1.6;
+    animation: fadeInUp 1s ease;
+  }
+  .feature-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;
+    max-width: 1200px; margin: 0 auto; padding: 4rem 2rem;
+  }
+  .feat-card {
+    background: rgba(17, 24, 39, 0.6); backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.08); border-radius: 24px; padding: 2rem;
+    text-align: left; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: slideUp 0.8s ease backwards;
+  }
+  .feat-card:hover {
+    transform: translateY(-5px); border-color: rgba(139, 92, 246, 0.4);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 40px rgba(139, 92, 246, 0.1);
+  }
+  .feat-icon {
+    width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(6, 182, 212, 0.2));
+    display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1.5rem; border: 1px solid rgba(255,255,255,0.05);
+  }
+  .btn-huge {
+    padding: 1rem 2.5rem; font-size: 1.1rem; border-radius: 12px; font-weight: 700;
+    transition: all 0.3s;
+  }
+  .btn-huge.primary {
+    background: linear-gradient(135deg, #8b5cf6, #3b82f6); color: white; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+  }
+  .btn-huge.primary:hover {
+    transform: translateY(-2px); box-shadow: 0 8px 25px rgba(139, 92, 246, 0.6);
+  }
+  .btn-huge.secondary {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white;
+  }
+  .btn-huge.secondary:hover {
+    background: rgba(255,255,255,0.1);
+  }
+  .game-list {
+    display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-top: 2rem;
+  }
+  .game-tag {
+    background: rgba(255,255,255,0.05); padding: 0.4rem 1rem; border-radius: 999px;
+    font-size: 0.85rem; color: #d1d5db; border: 1px solid rgba(255,255,255,0.05);
+  }
+</style>
 
-    <div class="landing-card">
-      <p class="landing-banner">⚡ A U R O R A H U B • E X E C U T O R ⚡</p>
-      <p class="landing-sub">Unlock powerful features across all your favorite games</p>
-      <p class="landing-sep">━━━━━━━━━━ ❖ ━━━━━━━━━━</p>
+<div class="hero-bg"></div>
 
-      <h2 class="landing-h2">🎮 SUPPORTED GAMES</h2>
-      <ul class="landing-list">
-        <li>✅ Saber Simulator</li>
-        <li>✅ Booga Booga Reborn</li>
-        <li>✅ BLOXFRUIT</li>
-        <li>✅ Escape Tsunami For Brainrots!</li>
-        <li>✅ Be a Lucky Block</li>
-        <li>✅ Be a Brainrot</li>
-        <li>✅ SHARP</li>
-        <li>✅ MM2</li>
-        <li>✅ ARSENAL</li>
-        <li>✅ THE BUTTON</li>
-        <li>✅ [FPS] One Tap</li>
-      </ul>
-
-      <p class="landing-sep">━━━━━━━━━━ ❖ ━━━━━━━━━━</p>
-
-      <h2 class="landing-h2">🚀 MAIN SCRIPT (LOADSTRING)</h2>
-      <pre class="landing-code"><code>loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/041dfce7ef89e1b8a4ef50d5828ed22c.lua"))()</code></pre>
-      <p class="t-sm dimmed">Copy and paste into your favorite executor.</p>
-
-      <p class="landing-sep">━━━━━━━━━━ ❖ ━━━━━━━━━━</p>
-
-      <div class="landing-block">
-        <p>💎 <strong>GOLDFREE ACCESS — EXCLUSIVE</strong></p>
-        <p>🔥 Booga Booga GoldFarm [FREE]</p>
-        <p>⚙️ Features: Auto Farm • Fast Progress • Optimized</p>
-        <p>🔗 Access Link:
-          <a href="https://direct-link.net/601111/fHaGJ6WhO5vW" target="_blank" rel="noopener">
-            https://direct-link.net/601111/fHaGJ6WhO5vW
-          </a>
-        </p>
-      </div>
-
-      <p class="landing-sep">━━━━━━━━━━ ❖ ━━━━━━━━━━</p>
-
-      <h2 class="landing-h2">✨ WHY USE AURORAHUB?</h2>
-      <ul class="landing-list">
-        <li>🏆 Constant Updates</li>
-        <li>🧼 Clean and Powerful UI</li>
-        <li>🎲 Multi-Game Support</li>
-        <li>📈 Optimized Performance</li>
-      </ul>
-
-      <p class="landing-sep">━━━━━━━━━━ ❖ ━━━━━━━━━━</p>
-      <p>🌙 More games coming soon...</p>
-      <p>🚀 Stay updated and dominate every server.</p>
-      <p class="t-sm dimmed">||@everyone||</p>
-    </div>
-
+<nav class="navbar">
+  <div style="display:flex; align-items:center; gap:0.75rem;">
+    <img src="<%= panelLogo %>" alt="Logo" style="width:36px; height:36px; border-radius:8px;" onerror="this.style.display='none'"/>
+    <span style="font-weight:800; font-size:1.25rem; letter-spacing:-0.02em;"><%= panelName %></span>
+  </div>
+  <div style="display:flex; gap:1rem;">
     <% if (user) { %>
-      <div class="landing-user">
-        <span class="badge badge-green">Logged in as <%= user.username %></span>
-        <% if (project) { %>
-          <span class="badge badge-purple"><%= project.icon %> <%= project.name %> · <%= project.daily_reset_limit %>/day resets</span>
-        <% } %>
-      </div>
+      <a href="/dashboard" class="btn btn-primary" style="padding: 0.5rem 1.5rem;">Dashboard</a>
+    <% } else { %>
+      <a href="/login" class="btn btn-ghost">Sign In</a>
+      <a href="/register" class="btn btn-primary">Get Started</a>
     <% } %>
   </div>
-</div>
+</nav>
+
+<section class="hero-section">
+  <div class="hero-badge">✨ V4 UPDATE IS LIVE</div>
+  <h1 class="hero-title">Dominate Your <br/> Favorite Games</h1>
+  <p class="hero-subtitle">Aurora Hub is the ultimate multi-game script hub, offering unparalleled performance, clean UI, and consistent updates.</p>
+  
+  <div style="display:flex; gap:1rem; flex-wrap:wrap; justify-content:center; animation: fadeInUp 1.2s ease;">
+    <% if (user) { %>
+      <a href="/dashboard" class="btn-huge primary">Launch Dashboard</a>
+    <% } else { %>
+      <a href="/register" class="btn-huge primary">Get Access Now</a>
+      <a href="#features" class="btn-huge secondary">View Features</a>
+    <% } %>
+  </div>
+
+  <div style="margin-top: 4rem; animation: fadeInUp 1.5s ease;">
+    <p class="t-sm dimmed" style="margin-bottom: 1rem; text-transform:uppercase; letter-spacing:0.1em; font-weight:600;">Supported Games</p>
+    <div class="game-list">
+      <span class="game-tag">Saber Simulator</span>
+      <span class="game-tag">Booga Booga Reborn</span>
+      <span class="game-tag">BLOXFRUIT</span>
+      <span class="game-tag">Escape Tsunami</span>
+      <span class="game-tag">Lucky Block</span>
+      <span class="game-tag">MM2</span>
+      <span class="game-tag">Arsenal</span>
+      <span class="game-tag">+ Many More</span>
+    </div>
+  </div>
+</section>
+
+<section id="features" style="background: rgba(0,0,0,0.3); border-top: 1px solid rgba(255,255,255,0.05);">
+  <div class="feature-grid">
+    <div class="feat-card" style="animation-delay: 0.1s;">
+      <div class="feat-icon" style="color: #a855f7;">⚡</div>
+      <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:0.75rem;">Main Script Loader</h3>
+      <p style="color:#9ca3af; font-size:0.95rem; line-height:1.6; margin-bottom: 1rem;">Universal loadstring for instant access across multiple games.</p>
+      <div style="background:#0d1117; padding:0.75rem; border-radius:8px; font-family:monospace; font-size:0.75rem; color:#8b5cf6; overflow-x:auto; white-space:nowrap; border:1px solid rgba(255,255,255,0.05);">
+        loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/041..."))()
+      </div>
+    </div>
+
+    <div class="feat-card" style="animation-delay: 0.2s;">
+      <div class="feat-icon" style="color: #eab308;">💎</div>
+      <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:0.75rem;">Goldfarm Exclusive</h3>
+      <p style="color:#9ca3af; font-size:0.95rem; line-height:1.6; margin-bottom:1rem;">Booga Booga auto farm with fast progress and optimized logic.</p>
+      <a href="https://direct-link.net/601111/fHaGJ6WhO5vW" target="_blank" style="color:#eab308; font-weight:600; font-size:0.9rem; display:flex; align-items:center; gap:0.4rem;">
+        Get Free Access
+        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+      </a>
+    </div>
+
+    <div class="feat-card" style="animation-delay: 0.3s;">
+      <div class="feat-icon" style="color: #06b6d4;">🛡️</div>
+      <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:0.75rem;">Secure & Private</h3>
+      <p style="color:#9ca3af; font-size:0.95rem; line-height:1.6;">Advanced HWID tracking and private messaging ensures a safe community environment.</p>
+    </div>
+  </div>
+</section>
+
+<footer style="text-align:center; padding: 3rem; border-top: 1px solid rgba(255,255,255,0.05); color: #6b7280; font-size:0.9rem;">
+  <p>© 2026 Aurora Hub. Powered by Luarmor V4.</p>
+</footer>
 
 </body>
 </html>

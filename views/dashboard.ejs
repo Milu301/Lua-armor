@@ -118,6 +118,17 @@ const isFreeUser   = !!(user && user.luarmorKey && user.luarmorKey.startsWith('F
         </div>
       </div>
 
+      <!-- Tabs Navigation -->
+      <div class="dash-tabs" style="display:flex; gap:2rem; border-bottom:1px solid var(--border); margin-bottom:2rem; padding-bottom:0.5rem; overflow-x:auto;">
+        <button class="dash-tab active" style="background:none; border:none; color:var(--text); font-weight:600; font-size:1rem; cursor:pointer; padding-bottom:0.5rem; border-bottom:2px solid var(--accent);" onclick="switchTab('tab-overview', this)" data-i18n="Overview">Overview</button>
+        <% if (!isFreeUser) { %>
+        <button class="dash-tab" style="background:none; border:none; color:var(--text-3); font-weight:600; font-size:1rem; cursor:pointer; padding-bottom:0.5rem; border-bottom:2px solid transparent;" onclick="switchTab('tab-scripts', this)" data-i18n="Scripts">Scripts</button>
+        <button class="dash-tab" style="background:none; border:none; color:var(--text-3); font-weight:600; font-size:1rem; cursor:pointer; padding-bottom:0.5rem; border-bottom:2px solid transparent;" onclick="switchTab('tab-accounts', this)" data-i18n="Connected Accounts">Connected Accounts</button>
+        <% } %>
+      </div>
+
+      <!-- Tab: Overview -->
+      <div id="tab-overview" class="dash-tab-content" style="display:block;">
       <!-- Top Stats Row -->
       <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);">
         <div class="stat">
@@ -159,60 +170,103 @@ const isFreeUser   = !!(user && user.luarmorKey && user.luarmorKey.startsWith('F
         </div>
       </div>
 
-      <!-- Scripts Section -->
-      <div class="card" id="get-script" style="animation: slideUp 0.3s ease;">
+      <% if (isFreeUser) { %>
+      <div class="card" style="margin-top:2rem; border-color:var(--cyan); background:linear-gradient(to right, rgba(6, 182, 212, 0.05), transparent);">
         <div class="card-head">
-          <div class="card-icon ci-blue">📜</div>
+          <div class="card-icon" style="background:var(--cyan); color:white;">🎁</div>
           <div>
-            <div class="card-title">Get Script</div>
-            <div class="card-desc">Copy your personal loadstrings for the hub</div>
+            <div class="card-title" data-i18n="Free Tier Access">Free Tier Access</div>
+            <div class="card-desc" data-i18n="You are currently on the free tier.">You are currently on the free tier.</div>
+          </div>
+        </div>
+        <div style="padding:1.5rem;">
+          <p style="margin-bottom:1rem; color:var(--text-2);" data-i18n="Here is your auto-generated Free Tier Key. Please copy this and provide it to an Administrator so they can register you to a project and assign your time limit.">
+            Here is your auto-generated Free Tier Key. Please copy this and provide it to an Administrator so they can register you to a project and assign your time limit.
+          </p>
+          <div class="chip" style="user-select:all; cursor:text; padding:1rem; font-size:1.1rem; justify-content:center; border:1px dashed var(--cyan);">
+            <%= user.luarmorKey %>
+          </div>
+          <p style="margin-top:1rem; font-size:0.85rem; color:var(--text-3); text-align:center;" data-i18n="Once an admin registers your key, you will see your script access and time remaining here.">
+            Once an admin registers your key, you will see your script access and time remaining here.
+          </p>
+        </div>
+      </div>
+      <% } %>
+
+      </div> <!-- End tab-overview -->
+
+      <% if (!isFreeUser) { %>
+      <!-- Tab: Scripts -->
+      <div id="tab-scripts" class="dash-tab-content" style="display:none;">
+      <!-- Scripts Section -->
+      <div class="card" id="get-script" style="animation: slideUp 0.3s ease; background: linear-gradient(180deg, var(--bg-card), var(--bg-body)); border-color: var(--accent-border); box-shadow: 0 10px 30px rgba(139, 92, 246, 0.1);">
+        <div class="card-head" style="border-bottom: 1px solid var(--border-md); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+          <div class="card-icon" style="background: linear-gradient(135deg, var(--accent), var(--blue)); color: white; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+          </div>
+          <div>
+            <div class="card-title" style="font-size: 1.25rem;">Your Scripts</div>
+            <div class="card-desc">Execute these loaders in your executor. Your personal key is pre-filled.</div>
           </div>
         </div>
 
-        <div class="script-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-top: 1rem;">
+        <div class="script-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
           
           <!-- Queen Ant Farm -->
-          <div class="script-card" style="background:var(--bg-raised); border:1px solid var(--border); border-radius:var(--rl); padding:1rem; transition:transform 0.2s, border-color 0.2s;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
-              <div style="font-weight:700; font-size:0.85rem; display:flex; align-items:center; gap:0.5rem;">
-                <span style="font-size:1.1rem;">🐜</span> Queen Ant Farm
+          <div class="script-card" style="background:var(--bg-raised); border:1px solid var(--border-md); border-radius:16px; overflow:hidden; transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'; this.style.borderColor='var(--accent)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'; this.style.borderColor='var(--border-md)';">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding: 1rem 1.25rem; background: linear-gradient(to right, rgba(139, 92, 246, 0.1), transparent); border-bottom: 1px solid var(--border);">
+              <div style="font-weight:700; font-size:0.95rem; display:flex; align-items:center; gap:0.6rem; color: var(--text);">
+                <div style="width:28px;height:28px;border-radius:8px;background:var(--bg-body);display:flex;align-items:center;justify-content:center;font-size:1.1rem;box-shadow:inset 0 2px 4px rgba(0,0,0,0.1);">🐜</div>
+                Queen Ant Farm
               </div>
-              <button class="btn btn-sm btn-ghost" onclick="copyScript('script-ant')" data-tip="Copy script">
+              <button class="btn btn-sm" style="background: var(--bg-body); border: 1px solid var(--border-md); color: var(--text-2); display: flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.8rem; border-radius: 8px; font-weight: 600; transition: all 0.2s;" onclick="copyScriptEnhanced('script-ant', this)" data-tip="Click to copy">
                 <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2"/>
-                  <path stroke-width="2" d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
                 </svg>
-                Copy
+                <span class="copy-text">Copy</span>
               </button>
             </div>
-            <div class="script-code-wrap" style="background:var(--bg-input); border:1px solid var(--border-md); border-radius:var(--r); padding:0.75rem; overflow-x:auto;">
-              <code id="script-ant" style="font-family:'JetBrains Mono', monospace; font-size:0.75rem; color:var(--text-2); white-space:pre;">script_key="<%= user ? user.luarmorKey : 'Your-Key' %>";&#10;loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/31649ec8f11421d042ab19f33ea4e5f2.lua"))()</code>
+            <div class="script-code-wrap" style="background:#0d1117; padding:1.25rem; overflow-x:auto; position: relative;">
+              <div style="position: absolute; top: 0; left: 0; bottom: 0; width: 3px; background: var(--accent);"></div>
+              <code id="script-ant" style="font-family:'Fira Code', 'JetBrains Mono', monospace; font-size:0.8rem; line-height: 1.6; white-space:pre; display: block;">
+<span style="color:#ff7b72;">getgenv</span>().<span style="color:#79c0ff;">script_key</span> <span style="color:#ff7b72;">=</span> <span style="color:#a5d6ff;">"<%= user ? user.luarmorKey : 'Your-Key' %>"</span>;
+<span style="color:#d2a8ff;">loadstring</span>(<span style="color:#79c0ff;">game</span>:<span style="color:#d2a8ff;">HttpGet</span>(<span style="color:#a5d6ff;">"https://api.luarmor.net/files/v4/loaders/31649ec8f11421d042ab19f33ea4e5f2.lua"</span>))()
+              </code>
             </div>
           </div>
 
           <!-- Goldfarm -->
-          <div class="script-card" style="background:var(--bg-raised); border:1px solid var(--border); border-radius:var(--rl); padding:1rem; transition:transform 0.2s, border-color 0.2s;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
-              <div style="font-weight:700; font-size:0.85rem; display:flex; align-items:center; gap:0.5rem;">
-                <span style="font-size:1.1rem;">💰</span> Goldfarm
+          <div class="script-card" style="background:var(--bg-raised); border:1px solid var(--border-md); border-radius:16px; overflow:hidden; transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'; this.style.borderColor='var(--yellow)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'; this.style.borderColor='var(--border-md)';">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding: 1rem 1.25rem; background: linear-gradient(to right, rgba(250, 204, 21, 0.1), transparent); border-bottom: 1px solid var(--border);">
+              <div style="font-weight:700; font-size:0.95rem; display:flex; align-items:center; gap:0.6rem; color: var(--text);">
+                <div style="width:28px;height:28px;border-radius:8px;background:var(--bg-body);display:flex;align-items:center;justify-content:center;font-size:1.1rem;box-shadow:inset 0 2px 4px rgba(0,0,0,0.1);">💰</div>
+                Goldfarm
               </div>
-              <button class="btn btn-sm btn-ghost" onclick="copyScript('script-gold')" data-tip="Copy script">
+              <button class="btn btn-sm" style="background: var(--bg-body); border: 1px solid var(--border-md); color: var(--text-2); display: flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.8rem; border-radius: 8px; font-weight: 600; transition: all 0.2s;" onclick="copyScriptEnhanced('script-gold', this)" data-tip="Click to copy">
                 <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2"/>
-                  <path stroke-width="2" d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
                 </svg>
-                Copy
+                <span class="copy-text">Copy</span>
               </button>
             </div>
-            <div class="script-code-wrap" style="background:var(--bg-input); border:1px solid var(--border-md); border-radius:var(--r); padding:0.75rem; overflow-x:auto;">
-              <code id="script-gold" style="font-family:'JetBrains Mono', monospace; font-size:0.75rem; color:var(--text-2); white-space:pre;">script_key="<%= user ? user.luarmorKey : 'Your-Key' %>";&#10;loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/9fa922adc3e9c42fc4fcb70f03584b49.lua"))()</code>
+            <div class="script-code-wrap" style="background:#0d1117; padding:1.25rem; overflow-x:auto; position: relative;">
+              <div style="position: absolute; top: 0; left: 0; bottom: 0; width: 3px; background: var(--yellow);"></div>
+              <code id="script-gold" style="font-family:'Fira Code', 'JetBrains Mono', monospace; font-size:0.8rem; line-height: 1.6; white-space:pre; display: block;">
+<span style="color:#ff7b72;">getgenv</span>().<span style="color:#79c0ff;">script_key</span> <span style="color:#ff7b72;">=</span> <span style="color:#a5d6ff;">"<%= user ? user.luarmorKey : 'Your-Key' %>"</span>;
+<span style="color:#d2a8ff;">loadstring</span>(<span style="color:#79c0ff;">game</span>:<span style="color:#d2a8ff;">HttpGet</span>(<span style="color:#a5d6ff;">"https://api.luarmor.net/files/v4/loaders/9fa922adc3e9c42fc4fcb70f03584b49.lua"</span>))()
+              </code>
             </div>
           </div>
 
         </div>
       </div>
 
-      <% if (!isFreeUser) { %>
+      </div> <!-- End tab-scripts -->
+      
+      <!-- Tab: Accounts -->
+      <div id="tab-accounts" class="dash-tab-content" style="display:none;">
       <!-- Connected Accounts -->
       <div class="card" id="stats">
         <div class="card-head">
@@ -762,6 +816,26 @@ function copyScript(elementId) {
     .catch(() => toast('Failed to copy script', 'err'));
 }
 
+function switchTab(tabId, btn) {
+  // Hide all tab contents
+  document.querySelectorAll('.dash-tab-content').forEach(el => el.style.display = 'none');
+  // Remove active class from buttons
+  document.querySelectorAll('.dash-tab').forEach(el => {
+    el.classList.remove('active');
+    el.style.borderBottomColor = 'transparent';
+    el.style.color = 'var(--text-3)';
+  });
+  
+  // Show selected tab
+  const target = document.getElementById(tabId);
+  if (target) target.style.display = 'block';
+  
+  // Update button style
+  btn.classList.add('active');
+  btn.style.borderBottomColor = 'var(--accent)';
+  btn.style.color = 'var(--text)';
+}
+
 /* ── Progress helpers ── */
 function updateProgress() {
   const pct = Math.min(100, Math.round((resetsToday / DAILY_LIMIT) * 100));
@@ -1229,6 +1303,23 @@ setInterval(refresh, 2 * 60 * 1000);
 /* Auto-open chat if navigated with #chat */
 if (window.location.hash === '#chat') {
   window.addEventListener('DOMContentLoaded', () => { setTimeout(toggleChat, 300); });
+}
+
+/* ─── Fancy copy scripts ─── */
+function copyScriptEnhanced(id, btn) {
+  const codeEl = document.getElementById(id);
+  if (!codeEl) return;
+  const text = codeEl.textContent || codeEl.innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    const span = btn.querySelector('.copy-text');
+    const oldIcon = btn.innerHTML;
+    btn.innerHTML = `<svg width="14" height="14" fill="none" stroke="var(--green)" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span style="color:var(--green)">Copied!</span>`;
+    btn.style.borderColor = 'var(--green)';
+    setTimeout(() => {
+      btn.innerHTML = oldIcon;
+      btn.style.borderColor = 'var(--border-md)';
+    }, 2000);
+  });
 }
 </script>
 

@@ -1,0 +1,89 @@
+<%- include('partials/head', { title: panelName + ' — Aurora Hub' }) %>
+
+<div class="landing-page">
+  <div class="landing-wrap">
+    <div class="landing-top">
+      <img src="<%= panelLogo %>" alt="<%= panelName %>" class="landing-logo" />
+      <div>
+        <div class="landing-kicker">AURORA HUB</div>
+        <h1 class="landing-title">Executor Hub</h1>
+      </div>
+      <div class="landing-actions">
+        <% if (user) { %>
+          <a href="/dashboard" class="btn btn-primary">Open Dashboard</a>
+          <a href="/home" class="btn btn-ghost">Home</a>
+        <% } else { %>
+          <a href="/login" class="btn btn-primary">Login</a>
+          <a href="/register" class="btn btn-secondary">Register</a>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="landing-card">
+      <p class="landing-banner">⚡ A U R O R A H U B • E X E C U T O R ⚡</p>
+      <p class="landing-sub">Unlock powerful features across all your favorite games</p>
+      <p class="landing-sep">━━━━━━━━━━ ❖ ━━━━━━━━━━</p>
+
+      <h2 class="landing-h2">🎮 SUPPORTED GAMES</h2>
+      <ul class="landing-list">
+        <li>✅ Saber Simulator</li>
+        <li>✅ Booga Booga Reborn</li>
+        <li>✅ BLOXFRUIT</li>
+        <li>✅ Escape Tsunami For Brainrots!</li>
+        <li>✅ Be a Lucky Block</li>
+        <li>✅ Be a Brainrot</li>
+        <li>✅ SHARP</li>
+        <li>✅ MM2</li>
+        <li>✅ ARSENAL</li>
+        <li>✅ THE BUTTON</li>
+        <li>✅ [FPS] One Tap</li>
+      </ul>
+
+      <p class="landing-sep">━━━━━━━━━━ ❖ ━━━━━━━━━━</p>
+
+      <h2 class="landing-h2">🚀 MAIN SCRIPT (LOADSTRING)</h2>
+      <pre class="landing-code"><code>loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/041dfce7ef89e1b8a4ef50d5828ed22c.lua"))()</code></pre>
+      <p class="t-sm dimmed">Copy and paste into your favorite executor.</p>
+
+      <p class="landing-sep">━━━━━━━━━━ ❖ ━━━━━━━━━━</p>
+
+      <div class="landing-block">
+        <p>💎 <strong>GOLDFREE ACCESS — EXCLUSIVE</strong></p>
+        <p>🔥 Booga Booga GoldFarm [FREE]</p>
+        <p>⚙️ Features: Auto Farm • Fast Progress • Optimized</p>
+        <p>🔗 Access Link:
+          <a href="https://direct-link.net/601111/fHaGJ6WhO5vW" target="_blank" rel="noopener">
+            https://direct-link.net/601111/fHaGJ6WhO5vW
+          </a>
+        </p>
+      </div>
+
+      <p class="landing-sep">━━━━━━━━━━ ❖ ━━━━━━━━━━</p>
+
+      <h2 class="landing-h2">✨ WHY USE AURORAHUB?</h2>
+      <ul class="landing-list">
+        <li>🏆 Constant Updates</li>
+        <li>🧼 Clean and Powerful UI</li>
+        <li>🎲 Multi-Game Support</li>
+        <li>📈 Optimized Performance</li>
+      </ul>
+
+      <p class="landing-sep">━━━━━━━━━━ ❖ ━━━━━━━━━━</p>
+      <p>🌙 More games coming soon...</p>
+      <p>🚀 Stay updated and dominate every server.</p>
+      <p class="t-sm dimmed">||@everyone||</p>
+    </div>
+
+    <% if (user) { %>
+      <div class="landing-user">
+        <span class="badge badge-green">Logged in as <%= user.username %></span>
+        <% if (project) { %>
+          <span class="badge badge-purple"><%= project.icon %> <%= project.name %> · <%= project.daily_reset_limit %>/day resets</span>
+        <% } %>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+</body>
+</html>

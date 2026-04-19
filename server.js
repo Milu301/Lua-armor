@@ -433,7 +433,15 @@ io.on('connection', (socket) => {
 /* ─────────────────────────────────────
    PAGE ROUTES
 ───────────────────────────────────── */
-app.get('/', (req, res) => res.redirect(req.session.user ? '/dashboard' : '/login'));
+app.get('/', (_req, res) => res.redirect('/home'));
+
+app.get('/home', async (req, res) => {
+  let project = null;
+  if (req.session.user?.projectId) {
+    project = await db.one('SELECT id, name, icon, daily_reset_limit FROM projects WHERE id=$1', [req.session.user.projectId]);
+  }
+  res.render('home', { project });
+});
 
 app.get('/login', (req, res) => {
   if (req.session.user) return res.redirect('/dashboard');
@@ -531,7 +539,7 @@ app.post('/register', registerLimiter, async (req, res) => {
   res.redirect('/dashboard');
 });
 
-app.post('/logout', (req, res) => req.session.destroy(() => res.redirect('/login')));
+app.post('/logout', (req, res) => req.session.destroy(() => res.redirect('/home')));
 
 app.get('/dashboard', auth, async (req, res) => {
   const { id, projectId } = req.session.user;

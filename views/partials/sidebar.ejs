@@ -17,6 +17,13 @@
   <nav class="sb-nav">
     <div class="sb-label">Menu</div>
 
+    <a href="/home" class="sb-link <%= page === 'home' ? 'active' : '' %>">
+      <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-width="2" d="M3 10.5L12 3l9 7.5V21a1 1 0 01-1 1h-5v-7H9v7H4a1 1 0 01-1-1v-10.5z"/>
+      </svg>
+      Home
+    </a>
+
     <a href="/dashboard" class="sb-link <%= page === 'dashboard' ? 'active' : '' %>">
       <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <rect x="3" y="3" width="7" height="7" rx="1.5" stroke-width="2"/>

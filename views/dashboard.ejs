@@ -578,7 +578,7 @@ const hasHwid      = !!(luaUser && luaUser.identifier);
         <!-- Add key form -->
         <div class="key-add-form" id="key-add-section">
           <div id="key-add-result"></div>
-          <div style="display:grid;grid-template-columns:1fr 160px auto;gap:0.6rem;align-items:end;">
+          <div class="key-add-grid" style="display:grid;grid-template-columns:1fr 160px auto;gap:0.6rem;align-items:end;">
             <div class="form-group" style="margin-bottom:0;">
               <label class="label" style="font-size:0.72rem;">Luarmor Key</label>
               <input type="text" class="input mono" id="new-key-input" placeholder="paste your key here" />
@@ -594,7 +594,7 @@ const hasHwid      = !!(luaUser && luaUser.identifier);
       </div>
 
       <!-- Two columns: Discord + Note -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;" id="discord">
+      <div class="dashboard-two-col" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;" id="discord">
 
         <div class="card" style="margin-bottom:0;">
           <div class="card-head">

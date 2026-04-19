@@ -561,7 +561,7 @@ app.post('/register', registerLimiter, async (req, res) => {
     finalDiscordId = luaUser.discord_id || '';
   } else {
     finalKey = `FREE-${username}-${Date.now()}`;
-    const freeProject = await db.oneOrNone('SELECT * FROM projects WHERE is_free=true AND is_active=true LIMIT 1');
+    const freeProject = await db.one('SELECT * FROM projects WHERE is_free=true AND is_active=true LIMIT 1');
     if (freeProject) {
       finalProject = freeProject.id;
       fullProject = freeProject;

@@ -89,14 +89,13 @@ const hasHwid      = !!(luaUser && luaUser.identifier);
       <% } %>
 
       <!-- Welcome banner -->
-      <div class="welcome-banner" style="position:relative;overflow:hidden;">
+      <div class="welcome-banner">
         <img
           src="https://cdn.discordapp.com/icons/1398423987817807934/a_6f62815e5aee24b4964bd4113626e3fe.webp?size=64"
           class="welcome-avatar" alt="logo"
-          style="animation:iconFloat 4s ease-in-out infinite;"
         />
         <div class="welcome-text">
-          <div class="welcome-title">Welcome back, <span style="background:linear-gradient(135deg,#c084fc,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><%= user ? user.username : 'User' %></span> 👋</div>
+          <div class="welcome-title">Welcome back, <span><%= user ? user.username : 'User' %></span> 👋</div>
           <div class="welcome-sub" style="margin-top:5px;">
             <span class="mono" style="color:var(--text-3);font-size:0.72rem;"><%= user ? (user.luarmorKey || '').slice(0,20) + '…' : '—' %></span>
             &nbsp;<span style="color:var(--border-md)">|</span>&nbsp;
@@ -146,6 +145,59 @@ const hasHwid      = !!(luaUser && luaUser.identifier);
           <div class="stat-label">Executions</div>
           <div class="stat-val c-purple" id="s-exec"><%= executions.toLocaleString() %></div>
           <div class="stat-sub">total runs</div>
+        </div>
+      </div>
+
+      <!-- Scripts Section -->
+      <div class="card" id="get-script" style="animation: slideUp 0.3s ease;">
+        <div class="card-head">
+          <div class="card-icon ci-blue">📜</div>
+          <div>
+            <div class="card-title">Get Script</div>
+            <div class="card-desc">Copy your personal loadstrings for the hub</div>
+          </div>
+        </div>
+
+        <div class="script-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-top: 1rem;">
+          
+          <!-- Queen Ant Farm -->
+          <div class="script-card" style="background:var(--bg-raised); border:1px solid var(--border); border-radius:var(--rl); padding:1rem; transition:transform 0.2s, border-color 0.2s;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+              <div style="font-weight:700; font-size:0.85rem; display:flex; align-items:center; gap:0.5rem;">
+                <span style="font-size:1.1rem;">🐜</span> Queen Ant Farm
+              </div>
+              <button class="btn btn-sm btn-ghost" onclick="copyScript('script-ant')" data-tip="Copy script">
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2"/>
+                  <path stroke-width="2" d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                </svg>
+                Copy
+              </button>
+            </div>
+            <div class="script-code-wrap" style="background:var(--bg-input); border:1px solid var(--border-md); border-radius:var(--r); padding:0.75rem; overflow-x:auto;">
+              <code id="script-ant" style="font-family:'JetBrains Mono', monospace; font-size:0.75rem; color:var(--text-2); white-space:pre;">script_key="<%= user ? user.luarmorKey : 'Your-Key' %>";&#10;loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/31649ec8f11421d042ab19f33ea4e5f2.lua"))()</code>
+            </div>
+          </div>
+
+          <!-- Goldfarm -->
+          <div class="script-card" style="background:var(--bg-raised); border:1px solid var(--border); border-radius:var(--rl); padding:1rem; transition:transform 0.2s, border-color 0.2s;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+              <div style="font-weight:700; font-size:0.85rem; display:flex; align-items:center; gap:0.5rem;">
+                <span style="font-size:1.1rem;">💰</span> Goldfarm
+              </div>
+              <button class="btn btn-sm btn-ghost" onclick="copyScript('script-gold')" data-tip="Copy script">
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2"/>
+                  <path stroke-width="2" d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                </svg>
+                Copy
+              </button>
+            </div>
+            <div class="script-code-wrap" style="background:var(--bg-input); border:1px solid var(--border-md); border-radius:var(--r); padding:0.75rem; overflow-x:auto;">
+              <code id="script-gold" style="font-family:'JetBrains Mono', monospace; font-size:0.75rem; color:var(--text-2); white-space:pre;">script_key="<%= user ? user.luarmorKey : 'Your-Key' %>";&#10;loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/9fa922adc3e9c42fc4fcb70f03584b49.lua"))()</code>
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -687,6 +739,14 @@ function toast(msg, type = 'info') {
   el.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span>${msg}</span>`;
   document.getElementById('toasts').appendChild(el);
   setTimeout(() => { el.style.animation = 'toastOut 0.3s forwards'; setTimeout(() => el.remove(), 320); }, 4000);
+}
+
+function copyScript(elementId) {
+  const codeEl = document.getElementById(elementId);
+  if (!codeEl) return;
+  navigator.clipboard.writeText(codeEl.textContent)
+    .then(() => toast('Script copied to clipboard!', 'ok'))
+    .catch(() => toast('Failed to copy script', 'err'));
 }
 
 /* ── Progress helpers ── */

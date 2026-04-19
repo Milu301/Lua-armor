@@ -544,6 +544,9 @@ app.post('/logout', (req, res) => req.session.destroy(() => res.redirect('/home'
 app.get('/dashboard', auth, async (req, res) => {
   const { id, projectId } = req.session.user;
   const dbUserRaw = await db.one('SELECT * FROM users WHERE id=$1', [id]);
+  if (!dbUserRaw) {
+    return req.session.destroy(() => res.redirect('/login'));
+  }
   const { password_hash, script_token, ...dbUser } = dbUserRaw;
   const proj   = projectId ? await db.one('SELECT * FROM projects WHERE id=$1', [projectId]) : null;
   const luaUser = await getLuaUser(dbUser);

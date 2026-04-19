@@ -57,13 +57,9 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Subtle global background texture */
-body::before {
-  content: '';
-  position: fixed; inset: 0; pointer-events: none; z-index: 0;
-  background:
-    radial-gradient(ellipse 80% 60% at 0% 0%, rgba(139,92,246,0.05) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 50% at 100% 100%, rgba(99,102,241,0.04) 0%, transparent 60%);
+/* Subtle global background */
+body {
+  background: var(--bg);
 }
 
 ::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -391,24 +387,18 @@ a { color: inherit; text-decoration: none; }
    WELCOME BANNER
 ═══════════════════════════════ */
 .welcome-banner {
-  background: linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(99,102,241,0.05) 50%, rgba(6,182,212,0.04) 100%);
-  border: 1px solid var(--accent-border);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: var(--rl);
   padding: 1.5rem;
   margin-bottom: 1rem;
   display: flex; align-items: center; gap: 1.25rem;
   position: relative; overflow: hidden;
 }
-.welcome-banner::before {
-  content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(139,92,246,0.5), rgba(99,102,241,0.5), transparent);
-}
 .welcome-avatar {
   width: 52px; height: 52px; border-radius: 14px;
   object-fit: cover; flex-shrink: 0;
-  border: 1px solid var(--accent-border);
-  box-shadow: 0 0 0 3px rgba(139,92,246,0.12);
+  border: 1px solid var(--border);
 }
 .welcome-text { flex: 1; min-width: 0; }
 .welcome-title { font-size: 1.05rem; font-weight: 800; letter-spacing: -0.025em; }
@@ -642,58 +632,27 @@ a { color: inherit; text-decoration: none; }
   position: relative; overflow: hidden;
 }
 
-.login-page::before {
-  content: '';
-  position: fixed; inset: 0; pointer-events: none; z-index: 0;
-  background-image:
-    linear-gradient(rgba(139,92,246,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(139,92,246,0.03) 1px, transparent 1px);
-  background-size: 48px 48px;
-}
-
-.login-glow {
-  position: fixed; inset: 0; pointer-events: none; z-index: 0;
-  background:
-    radial-gradient(ellipse 65% 55% at 15% 65%, rgba(139,92,246,0.12) 0%, transparent 70%),
-    radial-gradient(ellipse 55% 45% at 85% 20%, rgba(99,102,241,0.10) 0%, transparent 70%),
-    radial-gradient(ellipse 40% 35% at 55% 85%, rgba(6,182,212,0.05) 0%, transparent 70%);
-}
-
 .auth-card {
-  background: rgba(14,14,26,0.92);
-  border: 1px solid rgba(139,92,246,0.18);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: var(--rxl);
   padding: 2.5rem 2.25rem;
   width: 100%; max-width: 420px;
   position: relative; z-index: 1;
-  box-shadow:
-    0 0 0 1px rgba(139,92,246,0.05),
-    0 32px 80px rgba(0,0,0,0.65),
-    0 0 60px rgba(139,92,246,0.07);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-}
-
-.auth-card::before {
-  content: '';
-  position: absolute; top: 0; left: 15%; right: 15%; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(139,92,246,0.6), rgba(99,102,241,0.5), transparent);
-  border-radius: 99px;
+  box-shadow: var(--shadow-sm);
 }
 
 /* Keep login-card as alias */
-.login-card { background: rgba(13,13,24,0.90); border: 1px solid rgba(139,92,246,0.20); border-radius: var(--rxl); padding: 2.75rem 2.375rem; width: 100%; max-width: 420px; position: relative; z-index: 1; box-shadow: 0 0 0 1px rgba(139,92,246,0.05), 0 32px 80px rgba(0,0,0,0.65), 0 0 60px rgba(139,92,246,0.08); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
-.login-card::before { content: ''; position: absolute; top: 0; left: 15%; right: 15%; height: 1px; background: linear-gradient(90deg, transparent, rgba(139,92,246,0.6), rgba(99,102,241,0.6), transparent); border-radius: 99px; }
+.login-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--rxl); padding: 2.75rem 2.375rem; width: 100%; max-width: 420px; position: relative; z-index: 1; box-shadow: var(--shadow-sm); }
 
 .login-top { display: flex; flex-direction: column; align-items: center; gap: 1rem; margin-bottom: 2.25rem; text-align: center; }
 .login-icon {
   width: 64px; height: 64px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
   border-radius: 18px;
   display: flex; align-items: center; justify-content: center;
   font-size: 28px;
-  box-shadow: 0 8px 32px rgba(139,92,246,0.45), 0 0 0 1px rgba(139,92,246,0.3);
-  animation: iconFloat 3s ease-in-out infinite;
 }
 @keyframes iconFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 
@@ -1412,22 +1371,17 @@ a { color: inherit; text-decoration: none; }
 ═══════════════════════════════ */
 .hwid-card {
   background: var(--bg-card);
-  border: 1px solid var(--accent-border);
+  border: 1px solid var(--border);
   border-radius: var(--rl);
   padding: 1.5rem;
   margin-bottom: 1rem;
   position: relative;
   overflow: hidden;
 }
-.hwid-card::before {
-  content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(139,92,246,0.5), rgba(99,102,241,0.4), transparent);
-}
 
-.hwid-orb { position: absolute; border-radius: 50%; filter: blur(60px); pointer-events: none; }
-.hwid-orb-1 { width: 220px; height: 220px; background: rgba(139,92,246,0.09); top: -60px; right: -40px; }
-.hwid-orb-2 { width: 160px; height: 160px; background: rgba(99,102,241,0.07); bottom: -40px; left: -30px; }
+.hwid-orb { display: none; }
+.hwid-orb-1 { display: none; }
+.hwid-orb-2 { display: none; }
 
 .hwid-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; position: relative; }
 .hwid-header-left { display: flex; align-items: center; gap: 0.875rem; }
@@ -1562,7 +1516,7 @@ a { color: inherit; text-decoration: none; }
    AUTH PAGES  (login + register)
 ═══════════════════════════════════════════════════════ */
 
-/* Full-page wrapper */
+/* Auth pages wrapper */
 .auth-page {
   min-height: 100vh;
   display: flex;
@@ -1574,30 +1528,15 @@ a { color: inherit; text-decoration: none; }
   z-index: 1;
 }
 
-/* Fixed animated background */
 .auth-bg {
   position: fixed;
   inset: 0;
   background: var(--bg);
   z-index: -1;
-  overflow: hidden;
 }
 
-/* Dot-grid overlay */
-.auth-grid {
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
-  background-size: 28px 28px;
-  pointer-events: none;
-}
-
-/* Ambient orbs */
-.auth-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(90px);
-  pointer-events: none;
+.auth-grid { display: none; }
+.auth-orb { display: none; }
   animation: orbDrift 18s ease-in-out infinite alternate;
 }
 .auth-orb-1 {

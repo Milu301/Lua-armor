@@ -126,6 +126,7 @@ async function initDB() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS script_token VARCHAR(32) UNIQUE;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT DEFAULT '';
     ALTER TABLE users ADD COLUMN IF NOT EXISTS language VARCHAR(16) DEFAULT 'en';
+    ALTER TABLE projects ADD COLUMN IF NOT EXISTS is_free BOOLEAN DEFAULT false;
     CREATE TABLE IF NOT EXISTS user_keys (
       id          SERIAL PRIMARY KEY,
       user_id     INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -471,7 +472,7 @@ app.get('/home', async (req, res) => {
 
 app.get('/login', (req, res) => {
   if (req.session.user) return res.redirect('/dashboard');
-  res.render('login', { error: null });
+  res.render('login', { error: null, disableAds: true });
 });
 
 app.post('/login', loginLimiter, async (req, res) => {
@@ -479,13 +480,13 @@ app.post('/login', loginLimiter, async (req, res) => {
   const password = (req.body.password || '').trim();
 
   if (!username || !password)
-    return res.render('login', { error: 'Please fill in all fields.' });
+    return res.render('login', { error: 'Please fill in all fields.', disableAds: true });
 
   const user = await db.one('SELECT * FROM users WHERE username=$1 AND is_active=true', [username]);
-  if (!user) return res.render('login', { error: 'Invalid username or password.' });
+  if (!user) return res.render('login', { error: 'Invalid username or password.', disableAds: true });
 
   const ok = await bcrypt.compare(password, user.password_hash);
-  if (!ok) return res.render('login', { error: 'Invalid username or password.' });
+  if (!ok) return res.render('login', { error: 'Invalid username or password.', disableAds: true });
 
   const proj = user.project_id
     ? await db.one('SELECT * FROM projects WHERE id=$1', [user.project_id])
@@ -512,13 +513,13 @@ app.post('/login', loginLimiter, async (req, res) => {
 
 app.get('/register', async (req, res) => {
   if (req.session.user) return res.redirect('/dashboard');
-  const projects = await db.all('SELECT id,name,slug,color,gradient,icon,description,daily_reset_limit FROM projects WHERE is_active=true ORDER BY sort_order');
-  res.render('register', { error: null, projects });
+  const projects = await db.all('SELECT id,name,slug,color,gradient,icon,description,daily_reset_limit FROM projects WHERE is_active=true AND is_free=false ORDER BY sort_order');
+  res.render('register', { error: null, projects, disableAds: true });
 });
 
 app.post('/register', registerLimiter, async (req, res) => {
-  const getProjects = () => db.all('SELECT id,name,slug,color,gradient,icon,description,daily_reset_limit FROM projects WHERE is_active=true ORDER BY sort_order');
-  const fail = async (msg) => res.render('register', { error: msg, projects: await getProjects() });
+  const getProjects = () => db.all('SELECT id,name,slug,color,gradient,icon,description,daily_reset_limit FROM projects WHERE is_active=true AND is_free=false ORDER BY sort_order');
+  const fail = async (msg) => res.render('register', { error: msg, projects: await getProjects(), disableAds: true });
 
   const username = (req.body.username || '').trim().toLowerCase();
   const password = (req.body.password || '').trim();
@@ -538,6 +539,10 @@ app.post('/register', registerLimiter, async (req, res) => {
   let finalDiscordId = '';
   let fullProject = null;
 
+  if (key && key.toUpperCase().startsWith('FREE-')) {
+    key = ''; // User accidentally entered a free key, treat as free registration
+  }
+
   if (key) {
     if (key.length < 6 || key.length > 256) return fail('Invalid Luarmor key length.');
     const existsKey = await db.one('SELECT id FROM users WHERE luarmor_key=$1', [key]);
@@ -556,6 +561,11 @@ app.post('/register', registerLimiter, async (req, res) => {
     finalDiscordId = luaUser.discord_id || '';
   } else {
     finalKey = `FREE-${username}-${Date.now()}`;
+    const freeProject = await db.oneOrNone('SELECT * FROM projects WHERE is_free=true AND is_active=true LIMIT 1');
+    if (freeProject) {
+      finalProject = freeProject.id;
+      fullProject = freeProject;
+    }
   }
 
   const hash = await bcrypt.hash(password, 12);
@@ -784,11 +794,13 @@ app.post('/api/admin/project', apiAuth, adminApiOnly, async (req, res) => {
   const limit = Math.max(1, Number(req.body.daily_reset_limit) || 3);
   const desc  = (req.body.description || '').trim();
 
+  const isFree = req.body.is_free === true || req.body.is_free === 'true';
+
   try {
     const proj = await db.one(`
-      INSERT INTO projects (name,slug,luarmor_project_id,luarmor_api_key,color,gradient,icon,daily_reset_limit,description)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id
-    `, [name, slug, pid, pkey, color, grad, icon, limit, desc]);
+      INSERT INTO projects (name,slug,luarmor_project_id,luarmor_api_key,color,gradient,icon,daily_reset_limit,description,is_free)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id
+    `, [name, slug, pid, pkey, color, grad, icon, limit, desc, isFree]);
     res.json({ success: true, id: proj.id, message: `Project "${name}" created.` });
   } catch (e) {
     res.json({ success: false, message: e.detail || e.message });
@@ -797,13 +809,13 @@ app.post('/api/admin/project', apiAuth, adminApiOnly, async (req, res) => {
 
 app.patch('/api/admin/project/:id', apiAuth, adminApiOnly, async (req, res) => {
   const id = Number(req.params.id);
-  const allowed = ['name','luarmor_project_id','luarmor_api_key','color','gradient','icon','daily_reset_limit','description','is_active','sort_order'];
+  const allowed = ['name','luarmor_project_id','luarmor_api_key','color','gradient','icon','daily_reset_limit','description','is_active','sort_order','is_free'];
   const fields = []; const vals = []; let i = 1;
   for (const key of allowed) {
     if (req.body[key] === undefined) continue;
     let val = req.body[key];
     if (key === 'daily_reset_limit' || key === 'sort_order') val = Number(val);
-    if (key === 'is_active') val = val === true || val === 'true';
+    if (key === 'is_active' || key === 'is_free') val = val === true || val === 'true';
     fields.push(`${key}=$${i++}`); vals.push(val);
   }
   if (!fields.length) return res.json({ success: false, message: 'Nothing to update.' });

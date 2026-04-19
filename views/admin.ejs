@@ -485,6 +485,12 @@
     </div>
     <div class="form-row"><label class="label">Gradient CSS <span class="dimmed">(auto-filled from color)</span></label><input type="text" class="input mono" id="pm-gradient" placeholder="linear-gradient(135deg,#8b5cf6,#6366f1)"/></div>
     <div class="form-row"><label class="label">Description</label><input type="text" class="input" id="pm-desc" placeholder="Short description shown on register page" maxlength="200"/></div>
+    <div class="form-row">
+      <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.82rem;margin-top:0.5rem;">
+        <input type="checkbox" id="pm-free" style="accent-color:var(--cyan);width:16px;height:16px;"/>
+        Free Tier Project (Users without a Luarmor key will be assigned here)
+      </label>
+    </div>
     <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
       <button class="btn btn-primary" onclick="saveProject()">
         <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
@@ -633,6 +639,7 @@ async function openProjectModal(projId) {
   document.getElementById('pm-color').value    = '#8b5cf6';
   document.getElementById('pm-gradient').value = 'linear-gradient(135deg,#8b5cf6,#6366f1)';
   document.getElementById('pm-desc').value     = '';
+  document.getElementById('pm-free').checked   = false;
   document.getElementById('pm-result').innerHTML = projId
     ? '<div class="alert alert-info" style="margin-bottom:.5rem;font-size:.75rem;">Loading…</div>' : '';
   openModal('project-modal');
@@ -652,6 +659,7 @@ async function openProjectModal(projId) {
     document.getElementById('pm-color').value    = proj.color || '#8b5cf6';
     document.getElementById('pm-gradient').value = proj.gradient || 'linear-gradient(135deg,#8b5cf6,#6366f1)';
     document.getElementById('pm-desc').value     = proj.description || '';
+    document.getElementById('pm-free').checked   = !!proj.is_free;
     document.getElementById('pm-result').innerHTML = '';
   } catch {
     document.getElementById('pm-result').innerHTML = '<div class="alert alert-danger" style="font-size:.75rem;">Network error loading project.</div>';
@@ -674,6 +682,7 @@ async function saveProject() {
     gradient:            document.getElementById('pm-gradient').value.trim(),
     icon:                document.getElementById('pm-icon').value.trim() || '⚡',
     description:         document.getElementById('pm-desc').value.trim(),
+    is_free:             document.getElementById('pm-free').checked,
   };
   const url    = id ? `/api/admin/project/${id}` : '/api/admin/project';
   const method = id ? 'PATCH' : 'POST';

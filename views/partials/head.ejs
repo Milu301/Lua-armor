@@ -11,8 +11,10 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" />
   <link rel="stylesheet" href="/css/style.css" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔑</text></svg>" />
+  <% if (typeof disableAds === 'undefined' || !disableAds) { %>
   <script src="https://publisher.linkvertise.com/cdn/linkvertise.js"></script>
   <script>linkvertise(601111, {whitelist: [], blacklist: [""]});</script>
+  <% } %>
 </head>
 <body>
 

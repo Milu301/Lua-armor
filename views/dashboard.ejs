@@ -130,7 +130,7 @@ const isFreeUser   = !!(proj && proj.is_free) || !!(user && user.luarmorKey && u
       <!-- Tab: Overview -->
       <div id="tab-overview" class="dash-tab-content" style="display:block;">
       <!-- Top Stats Row -->
-      <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);">
+      <div class="stat-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
         <div class="stat">
           <div class="stat-label">Key Status</div>
           <div style="margin-top:8px;">
@@ -265,6 +265,36 @@ const isFreeUser   = !!(proj && proj.is_free) || !!(user && user.luarmorKey && u
         }
       </script>
       <% } %>
+
+      <!-- Supported Games Section -->
+      <div class="card" style="margin-top:2rem; border-color:var(--accent-border); background:linear-gradient(135deg, var(--bg-card), var(--bg-body)); box-shadow: 0 10px 30px rgba(139, 92, 246, 0.05);">
+        <div class="card-head" style="border-bottom: 1px solid var(--border-md); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+          <div class="card-icon" style="background: linear-gradient(135deg, var(--accent), var(--blue)); color: white;">🎮</div>
+          <div>
+            <div class="card-title" style="font-size: 1.25rem;">Supported Games</div>
+            <div class="card-desc">Unlock powerful features across all your favorite games</div>
+          </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; padding: 0.5rem;">
+          <% 
+            const supportedGames = [
+              "Saber Simulator", "Booga Booga Reborn", "BLOXFRUIT", 
+              "Escape Tsunami For Brainrots!", "Be a Lucky Block", 
+              "Be a Brainrot", "SHARP", "MM2", "ARSENAL", 
+              "THE BUTTON", "[FPS] One Tap"
+            ];
+          %>
+          <% supportedGames.forEach(game => { %>
+          <div style="display:flex; align-items:center; gap: 0.75rem; padding: 1rem; background: var(--bg-raised); border: 1px solid var(--border-md); border-radius: 12px; transition: all 0.3s;" onmouseover="this.style.borderColor='var(--accent)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.borderColor='var(--border-md)'; this.style.transform='translateY(0)';">
+            <div style="width:24px; height:24px; background: rgba(34,197,94,0.15); color: var(--green); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <div style="font-weight: 600; font-size: 0.95rem; color: var(--text);"><%= game %></div>
+          </div>
+          <% }) %>
+        </div>
+      </div>
 
       </div> <!-- End tab-overview -->
 

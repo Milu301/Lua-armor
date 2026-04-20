@@ -411,7 +411,7 @@ app.use(helmet({
       defaultSrc:    ["'self'"],
       styleSrc:      ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
       fontSrc:       ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "data:"],
-      scriptSrc:     ["'self'", "'unsafe-inline'", "https://publisher.linkvertise.com"],
+      scriptSrc:     ["'self'", "'unsafe-inline'", "https://publisher.linkvertise.com", "https://checkout.bold.co"],
       scriptSrcAttr: ["'unsafe-inline'"],
       imgSrc:        ["'self'", "data:", "blob:", "https://cdn.discordapp.com", "https://i.imgur.com", "https:"],
       connectSrc:    ["'self'", "https://api.luarmor.net", "https://api.ipify.org", "https://linkvertise.com", "https://*.linkvertise.com", "https://checkout.bold.co", "ws:", "wss:"],

@@ -1,158 +1,429 @@
-<%- include('partials/head', { title: panelName + ' — Aurora Hub' }) %>
+<%- include('partials/head', { title: (typeof panelName !== 'undefined' ? panelName : 'Aurora Hub') + ' — Home' }) %>
 
 <style>
-  .hero-bg {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
-    background: radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.15), transparent 60%),
-                radial-gradient(circle at 80% 50%, rgba(6, 182, 212, 0.1), transparent 50%),
-                radial-gradient(circle at 20% 80%, rgba(245, 158, 11, 0.1), transparent 50%);
-    background-color: #030712;
-  }
-  .navbar {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 1.5rem 3rem; position: sticky; top: 0; z-index: 100;
-    background: rgba(3, 7, 18, 0.6); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.05);
-  }
-  .hero-section {
-    padding: 6rem 2rem; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    min-height: 80vh; position: relative; overflow: hidden;
-  }
-  .hero-badge {
-    background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.3);
-    color: #c4b5fd; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600;
-    font-size: 0.85rem; letter-spacing: 0.05em; margin-bottom: 1.5rem; text-transform: uppercase;
-    animation: fadeInDown 0.6s ease;
-  }
-  .hero-title {
-    font-size: clamp(3rem, 6vw, 5rem); font-weight: 900; line-height: 1.1; margin-bottom: 1.5rem;
-    background: linear-gradient(to right, #fff, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    animation: fadeInUp 0.8s ease;
-  }
-  .hero-subtitle {
-    font-size: 1.25rem; color: #9ca3af; max-width: 600px; margin-bottom: 2.5rem; line-height: 1.6;
-    animation: fadeInUp 1s ease;
-  }
-  .feature-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;
-    max-width: 1200px; margin: 0 auto; padding: 4rem 2rem;
-  }
-  .feat-card {
-    background: rgba(17, 24, 39, 0.6); backdrop-filter: blur(8px);
-    border: 1px solid rgba(255,255,255,0.08); border-radius: 24px; padding: 2rem;
-    text-align: left; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    animation: slideUp 0.8s ease backwards;
-  }
-  .feat-card:hover {
-    transform: translateY(-5px); border-color: rgba(139, 92, 246, 0.4);
-    box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 40px rgba(139, 92, 246, 0.1);
-  }
-  .feat-icon {
-    width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(6, 182, 212, 0.2));
-    display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1.5rem; border: 1px solid rgba(255,255,255,0.05);
-  }
-  .btn-huge {
-    padding: 1rem 2.5rem; font-size: 1.1rem; border-radius: 12px; font-weight: 700;
-    transition: all 0.3s;
-  }
-  .btn-huge.primary {
-    background: linear-gradient(135deg, #8b5cf6, #3b82f6); color: white; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
-  }
-  .btn-huge.primary:hover {
-    transform: translateY(-2px); box-shadow: 0 8px 25px rgba(139, 92, 246, 0.6);
-  }
-  .btn-huge.secondary {
-    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white;
-  }
-  .btn-huge.secondary:hover {
-    background: rgba(255,255,255,0.1);
-  }
-  .game-list {
-    display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-top: 2rem;
-  }
-  .game-tag {
-    background: rgba(255,255,255,0.05); padding: 0.4rem 1rem; border-radius: 999px;
-    font-size: 0.85rem; color: #d1d5db; border: 1px solid rgba(255,255,255,0.05);
-  }
+/* Reset & Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  --bg: #030305;
+  --surface: #0a0a0f;
+  --surface-glass: rgba(15, 15, 20, 0.4);
+  --border: rgba(255, 255, 255, 0.05);
+  --border-glow: rgba(139, 92, 246, 0.3);
+  --primary: #7c3aed;
+  --primary-light: #a78bfa;
+  --secondary: #0ea5e9;
+  --accent: #f59e0b;
+  --text: #f8fafc;
+  --text-dim: #94a3b8;
+}
+
+body {
+  font-family: 'Space Grotesk', sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  margin: 0;
+  overflow-x: hidden;
+  line-height: 1.5;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+/* Global Background */
+.ambient-bg {
+  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -2;
+  background: 
+    radial-gradient(circle at 10% 20%, rgba(124, 58, 237, 0.15) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(14, 165, 233, 0.1) 0%, transparent 40%);
+  filter: blur(60px);
+}
+
+.noise-overlay {
+  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1;
+  opacity: 0.03; pointer-events: none;
+  background-image: url('data:image/svg+xml,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)"/%3E%3C/svg%3E');
+}
+
+/* Navbar */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  padding: 1.2rem 4rem; display: flex; justify-content: space-between; align-items: center;
+  background: rgba(3, 3, 5, 0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border); transition: all 0.3s;
+}
+.nav-brand {
+  display: flex; align-items: center; gap: 1rem; text-decoration: none;
+}
+.nav-brand img { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--border); }
+.nav-brand span { font-weight: 800; font-size: 1.5rem; color: #fff; letter-spacing: -0.5px; }
+.nav-links { display: flex; gap: 2.5rem; }
+.nav-links a {
+  color: var(--text-dim); text-decoration: none; font-weight: 600; font-size: 0.95rem;
+  transition: 0.3s; position: relative;
+}
+.nav-links a:hover { color: #fff; }
+.nav-links a::after {
+  content: ''; position: absolute; bottom: -5px; left: 0; width: 0%; height: 2px;
+  background: var(--primary-light); transition: 0.3s;
+}
+.nav-links a:hover::after { width: 100%; }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 0.5rem; justify-content: center;
+  padding: 0.8rem 1.8rem; font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+  border-radius: 12px; text-decoration: none; transition: 0.3s; cursor: pointer;
+  border: none; position: relative; overflow: hidden;
+}
+.btn-glow {
+  background: linear-gradient(135deg, var(--primary), #4f46e5); color: #fff;
+  box-shadow: 0 0 20px rgba(124, 58, 237, 0.3), inset 0 1px 1px rgba(255,255,255,0.2);
+}
+.btn-glow:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 10px 30px rgba(124, 58, 237, 0.5), inset 0 1px 1px rgba(255,255,255,0.3);
+}
+.btn-gold {
+  background: linear-gradient(135deg, #f59e0b, #ea580c); color: #fff;
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+}
+.btn-gold:hover {
+  transform: translateY(-2px); box-shadow: 0 10px 30px rgba(245, 158, 11, 0.5);
+}
+.btn-glass {
+  background: rgba(255,255,255,0.03); color: #fff; border: 1px solid var(--border);
+}
+.btn-glass:hover {
+  background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2);
+}
+
+/* Hero Section */
+.hero {
+  min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 0 2rem; position: relative;
+}
+.hero-pill {
+  background: rgba(124, 58, 237, 0.1); border: 1px solid rgba(124, 58, 237, 0.3);
+  padding: 0.5rem 1.5rem; border-radius: 50px; color: var(--primary-light);
+  font-weight: 600; font-size: 0.9rem; margin-bottom: 2rem; letter-spacing: 1px; text-transform: uppercase;
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  animation: float 3s ease-in-out infinite;
+}
+.hero h1 {
+  font-size: clamp(3rem, 8vw, 6.5rem); font-weight: 900; line-height: 1;
+  margin: 0 0 1.5rem 0; letter-spacing: -2px;
+  background: linear-gradient(to bottom right, #ffffff, #a78bfa, #38bdf8);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.hero p {
+  font-family: 'Inter', sans-serif; font-size: clamp(1rem, 2vw, 1.25rem);
+  color: var(--text-dim); max-width: 600px; margin: 0 auto 3rem; line-height: 1.7;
+}
+
+/* Floating Elements around Hero */
+.float-icon {
+  position: absolute; width: 60px; height: 60px; border-radius: 16px;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
+  backdrop-filter: blur(10px); animation: float-slow 6s ease-in-out infinite;
+  color: #fff;
+}
+.fi-1 { top: 20%; left: 15%; animation-delay: 0s; color: #a78bfa; }
+.fi-2 { top: 30%; right: 15%; animation-delay: 1s; color: #38bdf8; }
+.fi-3 { bottom: 25%; left: 20%; animation-delay: 2s; color: #f59e0b; }
+.fi-4 { bottom: 20%; right: 20%; animation-delay: 3s; color: #10b981; }
+
+/* Pricing / Tiers Section */
+.section { padding: 8rem 2rem; max-width: 1400px; margin: 0 auto; }
+.section-head { text-align: center; margin-bottom: 5rem; }
+.section-head h2 { font-size: 3.5rem; font-weight: 800; margin: 0 0 1rem; letter-spacing: -1px; }
+.section-head p { font-family: 'Inter', sans-serif; color: var(--text-dim); font-size: 1.1rem; }
+
+.tiers-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 2.5rem; align-items: center; justify-content: center; max-width: 1000px; margin: 0 auto; }
+.tier-card {
+  background: var(--surface-glass); border: 1px solid var(--border); border-radius: 30px;
+  padding: 3rem; position: relative; overflow: hidden; transition: 0.4s;
+  backdrop-filter: blur(20px); display: flex; flex-direction: column;
+}
+.tier-card:hover { transform: translateY(-10px); border-color: rgba(255,255,255,0.1); }
+.tier-card.premium {
+  background: linear-gradient(180deg, rgba(30, 27, 75, 0.8) 0%, rgba(15, 23, 42, 0.8) 100%);
+  border-color: rgba(124, 58, 237, 0.5); transform: scale(1.05); z-index: 10;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(124, 58, 237, 0.3);
+}
+.tier-card.premium:hover { transform: scale(1.05) translateY(-10px); border-color: var(--primary-light); box-shadow: 0 30px 60px rgba(124, 58, 237, 0.2); }
+
+.tier-badge {
+  position: absolute; top: 1.5rem; right: 1.5rem; background: rgba(245, 158, 11, 0.2);
+  color: #fcd34d; padding: 0.4rem 1rem; border-radius: 20px; font-size: 0.8rem; font-weight: 700;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+.tier-icon {
+  width: 70px; height: 70px; border-radius: 20px; display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; margin-bottom: 2rem;
+}
+.tier-free .tier-icon { background: rgba(255,255,255,0.05); color: #94a3b8; }
+.tier-premium .tier-icon { background: linear-gradient(135deg, var(--primary), #f59e0b); color: #fff; box-shadow: 0 10px 20px rgba(245, 158, 11, 0.2); }
+
+.tier-title { font-size: 2rem; font-weight: 800; margin: 0 0 0.5rem; }
+.tier-desc { font-family: 'Inter', sans-serif; color: var(--text-dim); margin-bottom: 2rem; font-size: 0.95rem; }
+
+.tier-features { list-style: none; padding: 0; margin: 0 0 2.5rem; font-family: 'Inter', sans-serif; flex-grow: 1; }
+.tier-features li { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1.2rem; font-size: 1.05rem; }
+.tier-free .tier-features li i { color: #64748b; margin-top: 4px; }
+.tier-premium .tier-features li i { color: #10b981; margin-top: 4px; }
+
+/* Feature Showcase */
+.showcase { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; padding: 8rem 2rem; max-width: 1400px; margin: 0 auto; }
+.showcase-text h3 { font-size: 3rem; font-weight: 800; line-height: 1.1; margin-bottom: 1.5rem; }
+.showcase-text p { font-family: 'Inter', sans-serif; color: var(--text-dim); font-size: 1.1rem; margin-bottom: 2rem; }
+.showcase-visual { position: relative; }
+.visual-box {
+  background: rgba(15, 15, 20, 0.6); border: 1px solid var(--border); border-radius: 30px;
+  padding: 2rem; backdrop-filter: blur(20px); position: relative; z-index: 2;
+  box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+}
+.visual-glow {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 120%; height: 120%; background: radial-gradient(circle, rgba(124, 58, 237, 0.2) 0%, transparent 60%);
+  z-index: 1; pointer-events: none;
+}
+.code-window {
+  background: #0d0d12; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; overflow: hidden;
+}
+.code-header { background: #15151a; padding: 1rem; display: flex; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.dot { width: 12px; height: 12px; border-radius: 50%; }
+.dot-r { background: #ef4444; } .dot-y { background: #f59e0b; } .dot-g { background: #10b981; }
+.code-body { padding: 1.5rem; font-family: monospace; color: #a78bfa; font-size: 0.9rem; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; }
+
+/* Grid of mini features */
+.grid-features { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; margin-top: 4rem; }
+.g-card { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 24px; padding: 2.5rem; transition: 0.3s; }
+.g-card:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); transform: translateY(-5px); }
+.g-icon { font-size: 2.5rem; margin-bottom: 1.5rem; color: var(--primary-light); }
+
+/* Animations */
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes float-slow { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-20px) rotate(5deg); } }
+
+/* Marquee */
+.marquee-wrapper { width: 100%; overflow: hidden; padding: 3rem 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.3); }
+.marquee { display: flex; gap: 3rem; width: max-content; animation: marquee 40s linear infinite; }
+.m-item { font-size: 1.5rem; font-weight: 800; color: rgba(255,255,255,0.2); text-transform: uppercase; letter-spacing: 2px; display: flex; align-items: center; gap: 1rem; }
+.m-item i { color: rgba(124, 58, 237, 0.5); }
+@keyframes marquee { to { transform: translateX(-50%); } }
+
+/* Footer */
+.footer { border-top: 1px solid var(--border); padding: 4rem 2rem; text-align: center; color: var(--text-dim); background: #030305; font-family: 'Inter', sans-serif; }
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .tier-card.premium { transform: scale(1); }
+  .tier-card.premium:hover { transform: translateY(-10px); }
+  .showcase { grid-template-columns: 1fr; gap: 3rem; }
+}
+@media (max-width: 768px) {
+  .nav { padding: 1rem 2rem; flex-direction: column; gap: 1rem; }
+  .nav-links { display: none; }
+  .hero h1 { font-size: 3.5rem; }
+  .section-head h2 { font-size: 2.5rem; }
+  .float-icon { display: none; }
+  .showcase-text h3 { font-size: 2.5rem; }
+}
 </style>
 
-<div class="hero-bg"></div>
+<!-- Phosphor Icons -->
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
 
-<nav class="navbar">
-  <div style="display:flex; align-items:center; gap:0.75rem;">
-    <img src="<%= panelLogo %>" alt="Logo" style="width:36px; height:36px; border-radius:8px;" onerror="this.style.display='none'"/>
-    <span style="font-weight:800; font-size:1.25rem; letter-spacing:-0.02em;"><%= panelName %></span>
+<div class="ambient-bg"></div>
+<div class="noise-overlay"></div>
+
+<!-- Navigation -->
+<nav class="nav">
+  <a href="/" class="nav-brand">
+    <img src="<%= typeof panelLogo !== 'undefined' ? panelLogo : '/logo.png' %>" onerror="this.src='https://ui-avatars.com/api/?name=AH&background=7c3aed&color=fff'" alt="Logo">
+    <span><%= typeof panelName !== 'undefined' ? panelName : 'Aurora Hub' %></span>
+  </a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#premium">Pricing</a>
+    <a href="#games">Games</a>
   </div>
-  <div style="display:flex; gap:1rem;">
+  <div style="display: flex; gap: 1rem;">
     <% if (user) { %>
-      <a href="/dashboard" class="btn btn-primary" style="padding: 0.5rem 1.5rem;">Dashboard</a>
+      <a href="/dashboard" class="btn btn-glass"><i class="ph ph-squares-four"></i> Dashboard</a>
+      <a href="/plans" class="btn btn-glow"><i class="ph-fill ph-crown"></i> Get Premium</a>
     <% } else { %>
-      <a href="/login" class="btn btn-ghost">Sign In</a>
-      <a href="/register" class="btn btn-primary">Get Started</a>
+      <a href="/login" class="btn btn-glass">Login</a>
+      <a href="/register" class="btn btn-glow">Get Started</a>
     <% } %>
   </div>
 </nav>
 
-<section class="hero-section">
-  <div class="hero-badge">✨ V4 UPDATE IS LIVE</div>
-  <h1 class="hero-title">Dominate Your <br/> Favorite Games</h1>
-  <p class="hero-subtitle">Aurora Hub is the ultimate multi-game script hub, offering unparalleled performance, clean UI, and consistent updates.</p>
+<!-- Hero -->
+<section class="hero">
+  <!-- Floating Elements -->
+  <div class="float-icon fi-1"><i class="ph-fill ph-code"></i></div>
+  <div class="float-icon fi-2"><i class="ph-fill ph-sword"></i></div>
+  <div class="float-icon fi-3"><i class="ph-fill ph-coins"></i></div>
+  <div class="float-icon fi-4"><i class="ph-fill ph-shield-check"></i></div>
+
+  <div class="hero-pill"><i class="ph-fill ph-sparkle"></i> V4 Architecture Now Live</div>
+  <h1>Dominate Your<br>Favorite Games</h1>
+  <p>The most advanced, undetected, and powerful script hub for Roblox. Elevate your gameplay with features designed for absolute supremacy.</p>
   
-  <div style="display:flex; gap:1rem; flex-wrap:wrap; justify-content:center; animation: fadeInUp 1.2s ease;">
+  <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">
     <% if (user) { %>
-      <a href="/dashboard" class="btn-huge primary">Launch Dashboard</a>
+      <a href="/dashboard" class="btn btn-glow" style="padding: 1.2rem 3rem; font-size: 1.1rem;">Launch Hub</a>
     <% } else { %>
-      <a href="/register" class="btn-huge primary">Get Access Now</a>
-      <a href="#features" class="btn-huge secondary">View Features</a>
+      <a href="/register" class="btn btn-glow" style="padding: 1.2rem 3rem; font-size: 1.1rem;">Create Free Account</a>
     <% } %>
+    <a href="#premium" class="btn btn-glass" style="padding: 1.2rem 3rem; font-size: 1.1rem;"><i class="ph-fill ph-crown"></i> View Premium</a>
+  </div>
+</section>
+
+<!-- Marquee -->
+<div id="games" class="marquee-wrapper">
+  <div class="marquee">
+    <div class="m-item"><i class="ph-fill ph-sword"></i> Saber Simulator</div>
+    <div class="m-item"><i class="ph-fill ph-hammer"></i> Booga Booga Reborn</div>
+    <div class="m-item"><i class="ph-fill ph-orange-slice"></i> Blox Fruits</div>
+    <div class="m-item"><i class="ph-fill ph-knife"></i> Murder Mystery 2</div>
+    <div class="m-item"><i class="ph-fill ph-crosshair"></i> Arsenal</div>
+    <div class="m-item"><i class="ph-fill ph-sword"></i> Saber Simulator</div>
+    <div class="m-item"><i class="ph-fill ph-hammer"></i> Booga Booga Reborn</div>
+    <div class="m-item"><i class="ph-fill ph-orange-slice"></i> Blox Fruits</div>
+    <div class="m-item"><i class="ph-fill ph-knife"></i> Murder Mystery 2</div>
+    <div class="m-item"><i class="ph-fill ph-crosshair"></i> Arsenal</div>
+  </div>
+</div>
+
+<!-- Premium / Free Comparison -->
+<section id="premium" class="section">
+  <div class="section-head">
+    <h2>Choose Your Arsenal</h2>
+    <p>Unlock the full power of Aurora Hub. Skip the waits, skip the ads.</p>
   </div>
 
-  <div style="margin-top: 4rem; animation: fadeInUp 1.5s ease;">
-    <p class="t-sm dimmed" style="margin-bottom: 1rem; text-transform:uppercase; letter-spacing:0.1em; font-weight:600;">Supported Games</p>
-    <div class="game-list">
-      <span class="game-tag">Saber Simulator</span>
-      <span class="game-tag">Booga Booga Reborn</span>
-      <span class="game-tag">BLOXFRUIT</span>
-      <span class="game-tag">Escape Tsunami</span>
-      <span class="game-tag">Lucky Block</span>
-      <span class="game-tag">MM2</span>
-      <span class="game-tag">Arsenal</span>
-      <span class="game-tag">+ Many More</span>
+  <div class="tiers-grid">
+    <!-- Free Tier -->
+    <div class="tier-card tier-free">
+      <div class="tier-icon"><i class="ph ph-user"></i></div>
+      <h3 class="tier-title">Standard</h3>
+      <p class="tier-desc">Basic access to our universal scripts.</p>
+      <div style="font-size: 3rem; font-weight: 900; margin-bottom: 2rem;">$0<span style="font-size: 1rem; color: var(--text-dim); font-weight: 400;">/forever</span></div>
+      
+      <ul class="tier-features">
+        <li><i class="ph ph-hourglass-high"></i> <span><strong>Wait 1 Hour</strong> to generate your daily key</span></li>
+        <li><i class="ph ph-link-break"></i> <span>Must complete Linkvertise ads</span></li>
+        <li><i class="ph ph-check-circle"></i> <span>Standard script execution</span></li>
+        <li><i class="ph ph-users"></i> <span>Community Support</span></li>
+      </ul>
+      <a href="/register" class="btn btn-glass" style="width: 100%; padding: 1rem;">Start for Free</a>
+    </div>
+
+    <!-- Premium Tier -->
+    <div class="tier-card premium tier-premium">
+      <div class="tier-badge">RECOMMENDED</div>
+      <div class="tier-icon"><i class="ph-fill ph-crown"></i></div>
+      <h3 class="tier-title">Premium</h3>
+      <p class="tier-desc">The ultimate uninterrupted experience.</p>
+      <div style="font-size: 3rem; font-weight: 900; margin-bottom: 2rem; color: #fff;">Pro<span style="font-size: 1rem; color: #a78bfa; font-weight: 400;">/access</span></div>
+      
+      <ul class="tier-features">
+        <li><i class="ph-fill ph-check-circle"></i> <span><strong>No Waiting:</strong> Instant key generation, bypass the 1 hour wait</span></li>
+        <li><i class="ph-fill ph-check-circle"></i> <span><strong>No Ads:</strong> Bypass all Linkvertise steps instantly</span></li>
+        <li><i class="ph-fill ph-check-circle"></i> <span><strong>Goldfarm Access:</strong> Exclusive Booga Booga autobuild</span></li>
+        <li><i class="ph-fill ph-check-circle"></i> <span><strong>Priority Support:</strong> Direct developer assistance</span></li>
+      </ul>
+      <a href="/plans" class="btn btn-gold" style="width: 100%; padding: 1rem; font-size: 1.1rem;"><i class="ph-bold ph-shopping-cart"></i> Buy Premium Now</a>
     </div>
   </div>
 </section>
 
-<section id="features" style="background: rgba(0,0,0,0.3); border-top: 1px solid rgba(255,255,255,0.05);">
-  <div class="feature-grid">
-    <div class="feat-card" style="animation-delay: 0.1s;">
-      <div class="feat-icon" style="color: #a855f7;">⚡</div>
-      <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:0.75rem;">Main Script Loader</h3>
-      <p style="color:#9ca3af; font-size:0.95rem; line-height:1.6; margin-bottom: 1rem;">Universal loadstring for instant access across multiple games.</p>
-      <div style="background:#0d1117; padding:0.75rem; border-radius:8px; font-family:monospace; font-size:0.75rem; color:#8b5cf6; overflow-x:auto; white-space:nowrap; border:1px solid rgba(255,255,255,0.05);">
-        loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/041..."))()
+<!-- Visual Feature Showcase -->
+<section id="features" class="section" style="padding-top: 0;">
+  <div class="showcase">
+    <div class="showcase-text">
+      <h3>Universal Loader.<br><span style="color: var(--primary-light);">Zero Hassle.</span></h3>
+      <p>We've built a single, unified loadstring that automatically detects the game you're playing and injects the precise optimized script required to dominate.</p>
+      <div class="grid-features" style="margin-top: 2rem; display: flex; flex-direction: column; gap: 1.5rem;">
+        <div style="display: flex; gap: 1rem; align-items: flex-start;">
+          <div style="background: rgba(124, 58, 237, 0.2); padding: 1rem; border-radius: 12px; color: #a78bfa;"><i class="ph-fill ph-shield-check" style="font-size: 1.5rem;"></i></div>
+          <div>
+            <h4 style="margin: 0 0 0.5rem; font-size: 1.2rem;">Luarmor V4 Protected</h4>
+            <p style="margin: 0; color: var(--text-dim); font-size: 0.95rem;">Industry-leading security keeps your account safe from bans.</p>
+          </div>
+        </div>
+        <div style="display: flex; gap: 1rem; align-items: flex-start;">
+          <div style="background: rgba(245, 158, 11, 0.2); padding: 1rem; border-radius: 12px; color: #f59e0b;"><i class="ph-fill ph-lightning" style="font-size: 1.5rem;"></i></div>
+          <div>
+            <h4 style="margin: 0 0 0.5rem; font-size: 1.2rem;">Instant Execution</h4>
+            <p style="margin: 0; color: var(--text-dim); font-size: 0.95rem;">Highly optimized Lua code ensures zero lag during gameplay.</p>
+          </div>
+        </div>
       </div>
     </div>
+    
+    <div class="showcase-visual">
+      <div class="visual-glow"></div>
+      <div class="visual-box">
+        <div class="code-window">
+          <div class="code-header">
+            <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+          </div>
+          <div class="code-body">
+<span style="color: #60a5fa;">loadstring</span>(<span style="color: #34d399;">game</span>:<span style="color: #fcd34d;">HttpGet</span>(<span style="color: #fca5a5;">"https://api.luarmor.net/files/v4/loaders/041..."</span>))()
 
-    <div class="feat-card" style="animation-delay: 0.2s;">
-      <div class="feat-icon" style="color: #eab308;">💎</div>
-      <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:0.75rem;">Goldfarm Exclusive</h3>
-      <p style="color:#9ca3af; font-size:0.95rem; line-height:1.6; margin-bottom:1rem;">Booga Booga auto farm with fast progress and optimized logic.</p>
-      <a href="https://direct-link.net/601111/fHaGJ6WhO5vW" target="_blank" style="color:#eab308; font-weight:600; font-size:0.9rem; display:flex; align-items:center; gap:0.4rem;">
-        Get Free Access
-        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-      </a>
-    </div>
-
-    <div class="feat-card" style="animation-delay: 0.3s;">
-      <div class="feat-icon" style="color: #06b6d4;">🛡️</div>
-      <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:0.75rem;">Secure & Private</h3>
-      <p style="color:#9ca3af; font-size:0.95rem; line-height:1.6;">Advanced HWID tracking and private messaging ensures a safe community environment.</p>
+<span style="color: #64748b;">-- Initializing Aurora Core...</span>
+<span style="color: #64748b;">-- Game Detected: Booga Booga Reborn</span>
+<span style="color: #64748b;">-- Loading Goldfarm Module...</span>
+<span style="color: #34d399;">Success!</span> Module loaded in 0.4s.
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
-<footer style="text-align:center; padding: 3rem; border-top: 1px solid rgba(255,255,255,0.05); color: #6b7280; font-size:0.9rem;">
-  <p>© 2026 Aurora Hub. Powered by Luarmor V4.</p>
+<!-- Footer -->
+<footer class="footer">
+  <img src="<%= typeof panelLogo !== 'undefined' ? panelLogo : '/logo.png' %>" onerror="this.src='https://ui-avatars.com/api/?name=AH&background=7c3aed&color=fff'" style="width: 40px; border-radius: 10px; margin-bottom: 1rem;">
+  <h2><%= typeof panelName !== 'undefined' ? panelName : 'Aurora Hub' %></h2>
+  <p style="max-width: 400px; margin: 1rem auto 2rem;">The premium script hub experience powered by Luarmor V4 architecture.</p>
+  <div style="display: flex; justify-content: center; gap: 2rem; margin-bottom: 2rem;">
+    <a href="#" style="color: var(--text-dim); text-decoration: none; transition: 0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text-dim)'">Terms</a>
+    <a href="#" style="color: var(--text-dim); text-decoration: none; transition: 0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text-dim)'">Privacy</a>
+    <a href="#" style="color: var(--text-dim); text-decoration: none; transition: 0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text-dim)'">Discord</a>
+  </div>
+  <p style="font-size: 0.9rem;">© <%= new Date().getFullYear() %> Aurora Hub. All rights reserved.</p>
 </footer>
+
+<script>
+  // Add simple scroll animations to visual elements
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.style.opacity = 1;
+        entry.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.tier-card, .showcase-text, .visual-box').forEach(el => {
+    if (!el.classList.contains('premium')) {
+      el.style.opacity = 0;
+      el.style.transform = 'translateY(30px)';
+      el.style.transition = 'all 0.8s cubic-bezier(0.16, 1, 0.3, 1)';
+      observer.observe(el);
+    }
+  });
+</script>
 
 </body>
 </html>

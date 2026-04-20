@@ -42,7 +42,24 @@ const translations = {
     "Save Settings": "Guardar Ajustes",
     "Update Profile": "Actualizar Perfil",
     "Discord Connection": "Conexión con Discord",
-    "Not connected": "No conectado"
+    "Not connected": "No conectado",
+    "Supported Games": "Juegos Soportados",
+    "Unlock powerful features across all your favorite games": "Desbloquea funciones poderosas en todos tus juegos favoritos",
+    "Live Accounts": "Cuentas en Vivo",
+    "Offline": "Desconectado",
+    "Online": "En Línea",
+    "Total Script Executions": "Ejecuciones Totales de Script",
+    "HWID Reset": "Reinicio de HWID",
+    "Unlink your device & bind a new one": "Desvincula tu dispositivo y vincula uno nuevo",
+    "Key Information": "Información de la Llave",
+    "Live data pulled from Luarmor": "Datos en vivo extraídos de Luarmor",
+    "My Keys": "Mis Llaves",
+    "Refresh": "Actualizar",
+    "Updated just now": "Actualizado justo ahora",
+    "Welcome back": "Bienvenido de nuevo",
+    "Free Account": "Cuenta Gratis",
+    "Active": "Activo",
+    "Expired": "Expirado"
   },
 
   pt: {

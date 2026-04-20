@@ -1,0 +1,201 @@
+<%- include('partials/head', { title: 'Plans & Pricing — ' + panelName }) %>
+
+<div class="auth-page">
+  <div class="auth-bg">
+    <div class="auth-orb auth-orb-1"></div>
+    <div class="auth-orb auth-orb-2"></div>
+    <div class="auth-orb auth-orb-3"></div>
+    <div class="auth-grid"></div>
+  </div>
+
+  <div style="position:relative;z-index:1;width:100%;max-width:900px;margin:0 auto;padding:2rem 1rem;">
+
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:2.5rem;">
+      <div style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.25);border-radius:20px;padding:0.35rem 1rem;margin-bottom:1rem;">
+        <span style="font-size:0.75rem;font-weight:700;color:#a78bfa;letter-spacing:0.05em;">💳 SECURE CHECKOUT · BOLD</span>
+      </div>
+      <h1 style="font-size:2.2rem;font-weight:900;background:linear-gradient(135deg,#c4b5fd,#818cf8,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:0.5rem;">
+        Choose Your Plan
+      </h1>
+      <p style="color:var(--text-3);font-size:0.95rem;max-width:480px;margin:0 auto;">
+        Pay securely with your debit or credit card (Visa, Mastercard, Amex).<br/>
+        Your Luarmor key is activated automatically after payment.
+      </p>
+    </div>
+
+    <% if (!boldEnabled) { %>
+    <div class="alert" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:12px;padding:1rem 1.25rem;display:flex;gap:0.75rem;align-items:center;margin-bottom:2rem;">
+      <span style="font-size:1.2rem;">⚠️</span>
+      <span style="color:var(--text-2);font-size:0.875rem;">Payments are not yet configured. Contact an admin.</span>
+    </div>
+    <% } %>
+
+    <% if (plans && plans.length > 0) { %>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.25rem;">
+      <% plans.forEach((p, idx) => { %>
+      <div class="plan-card" id="plan-card-<%= p.id %>" style="
+        background: var(--bg-card);
+        border: 1px solid var(--border-md);
+        border-radius: 16px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+        animation: slideUp <%= 0.15 + idx * 0.07 %>s ease both;
+        cursor: pointer;
+        position: relative;
+      " onmouseenter="this.style.transform='translateY(-4px)';this.style.boxShadow='0 12px 40px rgba(0,0,0,0.3)';this.style.borderColor='<%= p.color %>55';"
+         onmouseleave="this.style.transform='';this.style.boxShadow='';this.style.borderColor='';">
+
+        <!-- Top gradient bar -->
+        <div style="height:4px;background:<%= p.gradient %>;"></div>
+
+        <div style="padding:1.5rem;flex:1;display:flex;flex-direction:column;gap:0.75rem;">
+          <!-- Icon + name -->
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <div style="width:42px;height:42px;border-radius:12px;background:<%= p.gradient %>;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">
+              <%= p.icon %>
+            </div>
+            <div>
+              <div style="font-weight:800;font-size:1rem;color:var(--text);"><%= p.name %></div>
+              <% if (p.project_name) { %>
+              <div style="font-size:0.7rem;color:var(--text-3);">Project: <%= p.project_name %></div>
+              <% } %>
+            </div>
+          </div>
+
+          <!-- Price -->
+          <div style="margin:0.25rem 0;">
+            <span style="font-size:2rem;font-weight:900;color:var(--text);">$<%= Number(p.price_usd).toFixed(2) %></span>
+            <span style="font-size:0.8rem;color:var(--text-3);margin-left:4px;">USD</span>
+            <div style="font-size:0.72rem;color:var(--text-3);margin-top:2px;"><%= p.duration_days %> days of access</div>
+          </div>
+
+          <!-- Description -->
+          <% if (p.description) { %>
+          <p style="font-size:0.82rem;color:var(--text-3);line-height:1.5;margin:0;"><%= p.description %></p>
+          <% } %>
+
+          <!-- Features list (if any) -->
+          <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.35rem;font-size:0.8rem;color:var(--text-2);">
+            <li style="display:flex;align-items:center;gap:0.4rem;">
+              <svg width="12" height="12" fill="none" stroke="#22c55e" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+              Luarmor key auto-delivered
+            </li>
+            <li style="display:flex;align-items:center;gap:0.4rem;">
+              <svg width="12" height="12" fill="none" stroke="#22c55e" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+              <%= p.duration_days %> days of access
+            </li>
+            <li style="display:flex;align-items:center;gap:0.4rem;">
+              <svg width="12" height="12" fill="none" stroke="#22c55e" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+              Secure payment via Bold
+            </li>
+          </ul>
+        </div>
+
+        <!-- Buy button -->
+        <div style="padding:0 1.5rem 1.5rem;">
+          <% if (boldEnabled && user) { %>
+          <button class="btn btn-primary btn-full" id="buy-btn-<%= p.id %>"
+            onclick="startCheckout(<%= p.id %>, '<%= p.name %>', this)"
+            style="background:<%= p.gradient %>;border:none;font-weight:700;">
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+            Buy Now
+          </button>
+          <% } else if (!user) { %>
+          <a href="/login" class="btn btn-primary btn-full" style="text-align:center;text-decoration:none;">Login to Purchase</a>
+          <% } else { %>
+          <button class="btn btn-full" disabled style="opacity:0.5;cursor:not-allowed;">Payments unavailable</button>
+          <% } %>
+        </div>
+
+      </div>
+      <% }) %>
+    </div>
+    <% } else { %>
+    <div style="text-align:center;padding:4rem 1rem;color:var(--text-3);">
+      <div style="font-size:3rem;margin-bottom:1rem;">📦</div>
+      <div style="font-size:1rem;font-weight:600;color:var(--text-2);">No plans available yet</div>
+      <div style="font-size:0.85rem;margin-top:0.5rem;">Contact an admin to set up payment plans.</div>
+    </div>
+    <% } %>
+
+    <!-- Security note -->
+    <div style="text-align:center;margin-top:2rem;display:flex;align-items:center;justify-content:center;gap:1rem;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:0.4rem;font-size:0.75rem;color:var(--text-3);">
+        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+        Secured by Bold
+      </div>
+      <div style="display:flex;align-items:center;gap:0.4rem;font-size:0.75rem;color:var(--text-3);">
+        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+        Visa · Mastercard · Amex · PSE · Nequi
+      </div>
+      <div style="display:flex;align-items:center;gap:0.4rem;font-size:0.75rem;color:var(--text-3);">
+        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        Instant key delivery
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:1rem;">
+      <% if (user) { %>
+      <a href="/dashboard" class="auth-link" style="font-size:0.8rem;">← Back to Dashboard</a>
+      <% } else { %>
+      <a href="/home" class="auth-link" style="font-size:0.8rem;">← Back to Home</a>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden Bold checkout form (populated by JS) -->
+<form id="bold-form" method="POST" action="https://checkout.bold.co/payment/link" style="display:none;">
+  <input type="hidden" name="order_id"            id="bf-order-id"/>
+  <input type="hidden" name="currency"            value="COP"/>
+  <input type="hidden" name="amount"              id="bf-amount"/>
+  <input type="hidden" name="api_key"             id="bf-api-key"/>
+  <input type="hidden" name="integrity_signature" id="bf-integrity"/>
+  <input type="hidden" name="description"         id="bf-description"/>
+  <input type="hidden" name="redirection_url"     id="bf-redirect"/>
+</form>
+
+<script>
+async function startCheckout(planId, planName, btn) {
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px;"></div> Preparing…';
+
+  try {
+    const res  = await fetch('/api/payment/create-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan_id: planId })
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      toast(data.message || 'Error creating order', 'err');
+      btn.disabled = false;
+      btn.innerHTML = orig;
+      return;
+    }
+
+    /* Fill Bold form and submit */
+    document.getElementById('bf-order-id').value   = data.order_ref;
+    document.getElementById('bf-amount').value     = data.amount_cop;   // Bold requires COP
+    document.getElementById('bf-api-key').value    = data.identity_key;
+    document.getElementById('bf-integrity').value  = data.integrity;
+    document.getElementById('bf-description').value = `${planName} — AuroraHub`;
+    document.getElementById('bf-redirect').value   = window.location.origin + '/payment/success?ref=' + data.order_ref;
+
+    btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px;"></div> Redirecting to Bold…';
+    document.getElementById('bold-form').submit();
+
+  } catch (err) {
+    toast('Network error. Please try again.', 'err');
+    btn.disabled = false;
+    btn.innerHTML = orig;
+  }
+}
+</script>
+</body>
+</html>

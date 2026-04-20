@@ -82,6 +82,11 @@
         <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
         Settings
       </button>
+      <button class="tab-btn" onclick="switchTab('payments',this);loadPaymentsTab();">
+        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+        Payments
+        <span class="sb-badge" style="background:rgba(139,92,246,0.12);border-color:rgba(139,92,246,0.25);color:#a78bfa;">BOLD</span>
+      </button>
     </div>
 
     <!-- ═══════ TAB: OVERVIEW ═══════ -->
@@ -462,6 +467,86 @@
       </div>
     </div>
 
+    <!-- ═══════ TAB: PAYMENTS ═══════ -->
+    <div class="tab-panel" id="tab-payments">
+      <div class="content" style="max-width:1100px;">
+
+        <!-- Stats row -->
+        <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.25rem;" id="pay-stats-row">
+          <div class="stat" style="border-top:2px solid var(--green);">
+            <div class="stat-label">Total Revenue</div>
+            <div class="stat-val c-green" id="pay-revenue">—</div>
+            <div class="stat-sub">USD · all time</div>
+          </div>
+          <div class="stat" style="border-top:2px solid var(--accent);">
+            <div class="stat-label">Orders</div>
+            <div class="stat-val c-purple" id="pay-total">—</div>
+            <div class="stat-sub">total orders</div>
+          </div>
+          <div class="stat" style="border-top:2px solid #3b82f6;">
+            <div class="stat-label">Approved</div>
+            <div class="stat-val c-blue" id="pay-approved">—</div>
+            <div class="stat-sub">paid orders</div>
+          </div>
+          <div class="stat" style="border-top:2px solid var(--yellow);">
+            <div class="stat-label">Active Plans</div>
+            <div class="stat-val c-yellow" id="pay-plans-count">—</div>
+            <div class="stat-sub">on sale</div>
+          </div>
+        </div>
+
+        <!-- Plans management -->
+        <div class="card" style="margin-bottom:1.25rem;">
+          <div class="card-head">
+            <div class="card-icon" style="background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.22);">💳</div>
+            <div>
+              <div class="card-title">Payment Plans</div>
+              <div class="card-desc">Manage the plans users can buy at /plans. Each plan auto-delivers a Luarmor key on payment.</div>
+            </div>
+            <button class="btn btn-primary btn-sm" style="margin-left:auto;" onclick="openPlanModal()">
+              <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              New Plan
+            </button>
+          </div>
+          <div id="admin-plans-list" style="min-height:60px;">
+            <div class="empty-state" style="padding:2rem;">Loading plans…</div>
+          </div>
+        </div>
+
+        <!-- Orders table -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-icon ci-green">📋</div>
+            <div>
+              <div class="card-title">Payment Orders</div>
+              <div class="card-desc">All transactions processed through Bold. Keys are auto-generated when approved.</div>
+            </div>
+            <button class="btn btn-sm btn-ghost" style="margin-left:auto;" onclick="loadPaymentsTab()">
+              <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              Refresh
+            </button>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table" id="orders-table">
+              <thead><tr>
+                <th>Order Ref</th>
+                <th>User</th>
+                <th>Plan</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Bold TX</th>
+              </tr></thead>
+              <tbody id="orders-tbody">
+                <tr><td colspan="7" style="text-align:center;color:var(--text-3);padding:2rem;">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
   </div><!-- /main -->
 </div><!-- /layout -->
 
@@ -589,6 +674,49 @@
 </div>
 
 <div class="toast-wrap" id="toasts"></div>
+
+<!-- ═══ PAYMENT PLAN MODAL ═══ -->
+<div class="modal-overlay" id="plan-modal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('plan-modal')">×</button>
+    <h2 id="plm-title">New Payment Plan</h2>
+    <input type="hidden" id="plm-id" value="" />
+    <div id="plm-result"></div>
+
+    <div class="field-grid">
+      <div class="form-row"><label class="label">Plan Name *</label><input type="text" class="input" id="plm-name" placeholder="Premium 30d" maxlength="64"/></div>
+      <div class="form-row"><label class="label">Icon (emoji)</label><input type="text" class="input" id="plm-icon" placeholder="⚡" maxlength="8" style="font-size:1.2rem;"/></div>
+    </div>
+    <div class="field-grid">
+      <div class="form-row"><label class="label">Price (USD) *</label><input type="number" class="input" id="plm-price" placeholder="9.99" min="0.50" step="0.01"/></div>
+      <div class="form-row"><label class="label">Duration (days) *</label><input type="number" class="input" id="plm-days" placeholder="30" min="1" max="365" value="30"/></div>
+    </div>
+    <div class="form-row">
+      <label class="label">Luarmor Project</label>
+      <select class="input" id="plm-project">
+        <option value="">— None / manual assign —</option>
+        <% projects.forEach(p => { %>
+        <option value="<%= p.id %>"><%= p.icon %> <%= p.name %> (ID: <%= p.luarmor_project_id %>)</option>
+        <% }) %>
+      </select>
+      <div class="input-hint">When a payment is approved, a key is auto-created in this Luarmor project for the buyer.</div>
+    </div>
+    <div class="form-row"><label class="label">Description</label><textarea class="input" id="plm-desc" rows="2" placeholder="What does this plan include?" maxlength="300"></textarea></div>
+    <div class="field-grid">
+      <div class="form-row"><label class="label">Accent Color</label><input type="color" class="input" id="plm-color" value="#8b5cf6" style="height:40px;padding:4px;" oninput="updatePlanGradient()"/></div>
+      <div class="form-row"><label class="label">Sort Order</label><input type="number" class="input" id="plm-sort" placeholder="0" value="0" min="0"/></div>
+    </div>
+    <div class="form-row"><label class="label">Gradient CSS <span class="dimmed">(auto-filled)</span></label><input type="text" class="input mono" id="plm-gradient" placeholder="linear-gradient(135deg,#8b5cf6,#6366f1)"/></div>
+
+    <div style="display:flex;gap:0.5rem;margin-top:1rem;">
+      <button class="btn btn-primary" onclick="savePlan()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        Save Plan
+      </button>
+      <button class="btn btn-ghost" onclick="closeModal('plan-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <script>
 /* ── Tabs ── */
@@ -890,6 +1018,155 @@ function previewLogo(url) {
   const img = document.getElementById('logo-preview');
   img.src = url;
   img.style.display = '';
+}
+
+/* ═══ PAYMENTS TAB ═══ */
+let _plansCache = [];
+
+async function loadPaymentsTab() {
+  await Promise.all([loadAdminPlans(), loadAdminOrders()]);
+}
+
+async function loadAdminPlans() {
+  try {
+    const r = await fetch('/api/admin/payment-plans');
+    const d = await r.json();
+    if (!d.success) return;
+    _plansCache = d.plans;
+    document.getElementById('pay-plans-count').textContent = d.plans.filter(p=>p.is_active).length;
+    const el = document.getElementById('admin-plans-list');
+    if (!d.plans.length) { el.innerHTML = '<div class="empty-state" style="padding:2rem;">No plans yet. Click "New Plan" to create one.</div>'; return; }
+    el.innerHTML = d.plans.map(p => `
+      <div class="admin-project-row" id="planrow-${p.id}" style="opacity:${p.is_active?1:0.5};">
+        <div class="admin-proj-icon" style="background:${p.gradient}">${p.icon}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:0.85rem;font-weight:700;display:flex;align-items:center;gap:0.5rem;">
+            ${p.name}
+            ${!p.is_active?'<span class="badge badge-red" style="font-size:0.6rem;">Disabled</span>':''}
+            <span class="badge badge-gray" style="font-size:0.6rem;">${p.duration_days}d</span>
+          </div>
+          <div class="t-xs dimmed" style="margin-top:2px;">
+            $${Number(p.price_usd).toFixed(2)} USD
+            ${p.project_name?' · 🔗 '+p.project_name:' · ⚠️ No project linked'}
+          </div>
+        </div>
+        <div style="display:flex;gap:0.4rem;flex-shrink:0;">
+          <button class="btn btn-sm btn-secondary" onclick="openPlanModal(${p.id})">Edit</button>
+          <button class="btn btn-sm" style="background:var(--red-dim);border:1px solid var(--red-border);color:#f87171;" onclick="deletePlan(${p.id},'${p.name}')">Disable</button>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    document.getElementById('admin-plans-list').innerHTML = '<div class="empty-state" style="padding:1.5rem;">Error loading plans.</div>';
+  }
+}
+
+async function loadAdminOrders() {
+  try {
+    const r = await fetch('/api/admin/payment-orders');
+    const d = await r.json();
+    if (!d.success) return;
+    const orders = d.orders;
+    document.getElementById('pay-total').textContent    = orders.length;
+    const approved = orders.filter(o=>o.status==='approved');
+    document.getElementById('pay-approved').textContent = approved.length;
+    const revenue = approved.reduce((s,o)=>s+Number(o.amount_usd),0);
+    document.getElementById('pay-revenue').textContent  = '$'+revenue.toFixed(2);
+    const tbody = document.getElementById('orders-tbody');
+    if (!orders.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-3);padding:2rem;">No orders yet.</td></tr>'; return; }
+    const statusBadge = s => ({
+      approved: '<span class="badge badge-green" style="font-size:0.65rem;">✓ Approved</span>',
+      pending:  '<span class="badge badge-gray" style="font-size:0.65rem;">⏳ Pending</span>',
+      failed:   '<span class="badge badge-red" style="font-size:0.65rem;">✗ Failed</span>',
+    }[s] || `<span class="badge badge-gray" style="font-size:0.65rem;">${s}</span>`);
+    tbody.innerHTML = orders.map(o => `
+      <tr>
+        <td><span class="mono t-xs" title="${o.order_ref}">${o.order_ref.slice(0,20)}…</span></td>
+        <td><span style="font-weight:600;font-size:0.82rem;">${o.username||'—'}</span></td>
+        <td><span class="t-sm">${o.plan_name||'—'}</span></td>
+        <td><span class="t-sm" style="font-weight:600;">$${Number(o.amount_usd).toFixed(2)}</span> <span class="dimmed t-xs">USD</span></td>
+        <td>${statusBadge(o.status)}</td>
+        <td><span class="t-xs dimmed">${new Date(o.created_at).toLocaleDateString('en',{day:'numeric',month:'short',year:'2-digit'})}</span></td>
+        <td><span class="mono t-xs dimmed">${o.bold_tx_id?o.bold_tx_id.slice(0,14)+'…':'—'}</span></td>
+      </tr>
+    `).join('');
+  } catch(e) {
+    document.getElementById('orders-tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-3);">Error loading orders.</td></tr>';
+  }
+}
+
+function openPlanModal(planId) {
+  document.getElementById('plm-id').value    = planId || '';
+  document.getElementById('plm-title').textContent = planId ? 'Edit Plan' : 'New Payment Plan';
+  document.getElementById('plm-name').value  = '';
+  document.getElementById('plm-icon').value  = '⚡';
+  document.getElementById('plm-price').value = '';
+  document.getElementById('plm-days').value  = 30;
+  document.getElementById('plm-project').value = '';
+  document.getElementById('plm-desc').value  = '';
+  document.getElementById('plm-color').value = '#8b5cf6';
+  document.getElementById('plm-sort').value  = 0;
+  document.getElementById('plm-gradient').value = 'linear-gradient(135deg,#8b5cf6,#6366f1)';
+  document.getElementById('plm-result').innerHTML = '';
+  openModal('plan-modal');
+
+  if (planId) {
+    const p = _plansCache.find(x=>x.id===planId);
+    if (p) {
+      document.getElementById('plm-name').value    = p.name;
+      document.getElementById('plm-icon').value    = p.icon;
+      document.getElementById('plm-price').value   = p.price_usd;
+      document.getElementById('plm-days').value    = p.duration_days;
+      document.getElementById('plm-project').value = p.project_id || '';
+      document.getElementById('plm-desc').value    = p.description;
+      document.getElementById('plm-color').value   = p.color || '#8b5cf6';
+      document.getElementById('plm-sort').value    = p.sort_order;
+      document.getElementById('plm-gradient').value = p.gradient;
+    }
+  }
+}
+
+function updatePlanGradient() {
+  const c = document.getElementById('plm-color').value;
+  document.getElementById('plm-gradient').value = `linear-gradient(135deg,${c},${c}cc)`;
+}
+
+async function savePlan() {
+  const id = document.getElementById('plm-id').value;
+  const body = {
+    name:         document.getElementById('plm-name').value.trim(),
+    price_usd:    document.getElementById('plm-price').value,
+    duration_days:document.getElementById('plm-days').value,
+    project_id:   document.getElementById('plm-project').value || null,
+    description:  document.getElementById('plm-desc').value.trim(),
+    icon:         document.getElementById('plm-icon').value.trim() || '⚡',
+    color:        document.getElementById('plm-color').value,
+    gradient:     document.getElementById('plm-gradient').value.trim(),
+    sort_order:   document.getElementById('plm-sort').value,
+  };
+  if (!body.name || !body.price_usd) { toast('Name and price required.','warn'); return; }
+  const url    = id ? `/api/admin/payment-plans/${id}` : '/api/admin/payment-plans';
+  const method = id ? 'PATCH' : 'POST';
+  const r = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  const d = await r.json();
+  const res = document.getElementById('plm-result');
+  if (d.success) {
+    res.innerHTML = `<div class="alert alert-success" style="margin-bottom:.75rem;font-size:.78rem;">✓ Plan saved!</div>`;
+    toast('Plan saved!', 'ok');
+    closeModal('plan-modal');
+    loadAdminPlans();
+  } else {
+    res.innerHTML = `<div class="alert alert-danger" style="margin-bottom:.75rem;font-size:.78rem;">${d.message}</div>`;
+    toast(d.message, 'err');
+  }
+}
+
+async function deletePlan(id, name) {
+  if (!confirm(`Disable plan "${name}"? It will be hidden from the /plans page.`)) return;
+  const r = await fetch(`/api/admin/payment-plans/${id}`, { method:'DELETE' });
+  const d = await r.json();
+  if (d.success) { toast('Plan disabled.', 'warn'); loadAdminPlans(); }
+  else toast(d.message, 'err');
 }
 
 async function saveSettings() {

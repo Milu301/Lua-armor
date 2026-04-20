@@ -1,0 +1,99 @@
+<%- include('partials/head', { title: (success ? 'Payment Successful' : 'Payment Cancelled') + ' — ' + panelName }) %>
+
+<div class="auth-page">
+  <div class="auth-bg">
+    <div class="auth-orb auth-orb-1"></div>
+    <div class="auth-orb auth-orb-2"></div>
+    <div class="auth-orb auth-orb-3"></div>
+  </div>
+
+  <div style="position:relative;z-index:1;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem;">
+    <div style="
+      background: var(--bg-card);
+      border: 1px solid var(--border-md);
+      border-radius: 20px;
+      padding: 3rem 2.5rem;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+      animation: slideUp 0.4s ease;
+    ">
+      <% if (success) { %>
+        <!-- Success -->
+        <div style="
+          width: 72px; height: 72px; border-radius: 50%;
+          background: linear-gradient(135deg,#22c55e,#16a34a);
+          display: flex; align-items: center; justify-content: center;
+          margin: 0 auto 1.5rem;
+          box-shadow: 0 0 40px rgba(34,197,94,0.3);
+          animation: pulse 2s infinite;
+        ">
+          <svg width="32" height="32" fill="none" stroke="#fff" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+
+        <h1 style="font-size:1.6rem;font-weight:900;color:var(--text);margin-bottom:0.5rem;">Payment Received!</h1>
+        <p style="color:var(--text-3);font-size:0.9rem;line-height:1.6;margin-bottom:1.5rem;">
+          Your payment is being processed. Your Luarmor key will be automatically delivered to your account once the payment is confirmed by Bold (usually within seconds).
+        </p>
+
+        <% if (order) { %>
+        <div style="background:var(--bg-raised);border-radius:12px;padding:1rem;margin-bottom:1.5rem;text-align:left;">
+          <div style="font-size:0.72rem;font-weight:700;color:var(--text-3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:0.5rem;">Order Details</div>
+          <div style="display:flex;justify-content:space-between;font-size:0.82rem;margin-bottom:0.25rem;">
+            <span style="color:var(--text-3);">Reference</span>
+            <span style="color:var(--text);font-family:monospace;font-size:0.75rem;"><%= order.order_ref %></span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:0.82rem;margin-bottom:0.25rem;">
+            <span style="color:var(--text-3);">Amount</span>
+            <span style="color:var(--text);font-weight:600;">$<%= Number(order.amount_usd).toFixed(2) %> USD</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
+            <span style="color:var(--text-3);">Status</span>
+            <% if (order.status === 'approved') { %>
+            <span style="color:#22c55e;font-weight:600;">✓ Approved</span>
+            <% } else { %>
+            <span style="color:#f59e0b;font-weight:600;">⏳ Processing…</span>
+            <% } %>
+          </div>
+        </div>
+        <% } %>
+
+        <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;">
+          <a href="/dashboard" class="btn btn-primary" style="text-decoration:none;">
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke-width="2"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke-width="2"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke-width="2"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke-width="2"/></svg>
+            Go to Dashboard
+          </a>
+          <a href="/plans" class="btn btn-ghost" style="text-decoration:none;">Buy Another</a>
+        </div>
+
+      <% } else { %>
+        <!-- Cancelled -->
+        <div style="
+          width: 72px; height: 72px; border-radius: 50%;
+          background: linear-gradient(135deg,#6b7280,#4b5563);
+          display: flex; align-items: center; justify-content: center;
+          margin: 0 auto 1.5rem;
+        ">
+          <svg width="30" height="30" fill="none" stroke="#fff" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </div>
+
+        <h1 style="font-size:1.6rem;font-weight:900;color:var(--text);margin-bottom:0.5rem;">Payment Cancelled</h1>
+        <p style="color:var(--text-3);font-size:0.9rem;line-height:1.6;margin-bottom:1.5rem;">
+          You cancelled the payment. No charges were made. You can try again whenever you're ready.
+        </p>
+
+        <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;">
+          <a href="/plans" class="btn btn-primary" style="text-decoration:none;">Try Again</a>
+          <a href="/dashboard" class="btn btn-ghost" style="text-decoration:none;">Back to Dashboard</a>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -35,6 +35,13 @@ const PANEL_LOGO    = process.env.PANEL_LOGO || 'https://cdn.discordapp.com/icon
 /* Dynamic settings (overrides env vars, editable from admin panel) */
 let dynSettings = { panel_name: PANEL_NAME, discord_url: DISCORD_URL, panel_logo: PANEL_LOGO };
 
+/* ─── Bold Payments Config ─── */
+const BOLD_IDENTITY_KEY = process.env.BOLD_IDENTITY_KEY || '';
+const BOLD_SECRET_KEY   = process.env.BOLD_SECRET_KEY   || '';
+/* Exchange rate used ONLY internally when sending amount to Bold (which requires COP).
+   Bold charges the COP equivalent — users always see and pay in USD. */
+const USD_TO_COP_RATE   = Number(process.env.USD_TO_COP_RATE) || 4100;
+
 if (!DATABASE_URL) { console.error('DATABASE_URL required'); process.exit(1); }
 
 /* ─── Ensure upload directories exist ─── */
@@ -203,6 +210,48 @@ async function initDB() {
       content TEXT NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    CREATE TABLE IF NOT EXISTS payment_plans (
+      id          SERIAL PRIMARY KEY,
+      name        VARCHAR(64) NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      price_usd   NUMERIC(10,2) NOT NULL,
+      project_id  INT REFERENCES projects(id) ON DELETE SET NULL,
+      duration_days INT NOT NULL DEFAULT 30,
+      is_active   BOOL NOT NULL DEFAULT true,
+      sort_order  INT NOT NULL DEFAULT 0,
+      icon        VARCHAR(8) NOT NULL DEFAULT '⚡',
+      color       VARCHAR(20) NOT NULL DEFAULT '#8b5cf6',
+      gradient    VARCHAR(80) NOT NULL DEFAULT 'linear-gradient(135deg,#8b5cf6,#6366f1)',
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS payment_orders (
+      id            SERIAL PRIMARY KEY,
+      order_ref     VARCHAR(64) NOT NULL UNIQUE,
+      user_id       INT REFERENCES users(id) ON DELETE SET NULL,
+      plan_id       INT REFERENCES payment_plans(id) ON DELETE SET NULL,
+      amount_usd    NUMERIC(10,2) NOT NULL,
+      amount_cop    INT,
+      status        VARCHAR(16) NOT NULL DEFAULT 'pending',
+      bold_tx_id    VARCHAR(128),
+      activated_at  TIMESTAMPTZ,
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_payment_orders_ref    ON payment_orders(order_ref);
+    CREATE INDEX IF NOT EXISTS idx_payment_orders_user   ON payment_orders(user_id);
+    CREATE INDEX IF NOT EXISTS idx_payment_orders_status ON payment_orders(status);
+    /* ── Migrations: rename columns if upgrading from old COP schema ── */
+    DO $$ BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='payment_plans' AND column_name='price_cop') THEN
+        ALTER TABLE payment_plans RENAME COLUMN price_cop TO price_usd;
+        ALTER TABLE payment_plans ALTER COLUMN price_usd TYPE NUMERIC(10,2);
+      END IF;
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='payment_orders' AND column_name='amount_cop' AND
+                 NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='payment_orders' AND column_name='amount_usd')) THEN
+        ALTER TABLE payment_orders RENAME COLUMN amount_cop TO amount_usd;
+        ALTER TABLE payment_orders ALTER COLUMN amount_usd TYPE NUMERIC(10,2);
+        ALTER TABLE payment_orders ADD COLUMN IF NOT EXISTS amount_cop INT;
+      END IF;
+    END $$;
   `);
 
   /* Seed projects from env vars PROJECT_N_* */
@@ -1559,8 +1608,219 @@ app.get('/api/offline', heartbeatLimiter, async (req, res) => {
 });
 
 app.get('/health', (req, res) => res.json({ ok:true, ts: Date.now() }));
+
+/* ═══════════════════════════════════════════════════════════
+   BOLD PAYMENT SYSTEM
+═══════════════════════════════════════════════════════════ */
+
+/* ── Helper: generate Bold integrity signature ─────────────
+   SHA-256 of: orderId + amountInCOP(integer) + "COP" + secretKey
+   Bold always charges in COP — we convert from USD internally.
+─────────────────────────────────────────────────────────── */
+function usdToCop(usd) {
+  return Math.round(Number(usd) * USD_TO_COP_RATE);
+}
+function boldIntegrity(orderId, amountCop) {
+  const data = `${orderId}${amountCop}COP${BOLD_SECRET_KEY}`;
+  return crypto.createHash('sha256').update(data).digest('hex');
+}
+
+/* ── GET /plans — public plans page ────────────────────── */
+app.get('/plans', async (req, res) => {
+  const plans = await db.all(`
+    SELECT pp.*, p.name AS project_name, p.icon AS project_icon
+    FROM payment_plans pp
+    LEFT JOIN projects p ON p.id = pp.project_id
+    WHERE pp.is_active = true
+    ORDER BY pp.sort_order, pp.price_usd
+  `);
+  res.render('plans', {
+    plans,
+    boldIdentityKey: BOLD_IDENTITY_KEY,
+    boldEnabled: !!BOLD_IDENTITY_KEY,
+    disableAds: true
+  });
+});
+
+/* ── POST /api/payment/create-order — create Bold order ─── */
+app.post('/api/payment/create-order', auth, async (req, res) => {
+  const planId = Number(req.body.plan_id);
+  if (!planId) return res.json({ success: false, message: 'Plan required.' });
+
+  const plan = await db.one('SELECT * FROM payment_plans WHERE id=$1 AND is_active=true', [planId]);
+  if (!plan) return res.json({ success: false, message: 'Plan not found.' });
+
+  if (!BOLD_IDENTITY_KEY) return res.json({ success: false, message: 'Payments not configured yet.' });
+
+  const userId     = req.session.user.id;
+  const orderRef   = `AH-${userId}-${planId}-${Date.now()}`;
+  const amountUsd  = Number(plan.price_usd);
+  /* Bold requires COP — convert internally, user never sees COP */
+  const amountCop  = usdToCop(amountUsd);
+  const integrity  = boldIntegrity(orderRef, amountCop);
+
+  /* Save pending order (store USD for records, COP for Bold reference) */
+  await db.query(
+    `INSERT INTO payment_orders (order_ref, user_id, plan_id, amount_usd, amount_cop, status)
+     VALUES ($1,$2,$3,$4,$5,'pending')`,
+    [orderRef, userId, planId, amountUsd, amountCop]
+  );
+
+  res.json({
+    success:      true,
+    order_ref:    orderRef,
+    amount_usd:   amountUsd,
+    amount_cop:   amountCop,   /* sent to Bold form */
+    integrity,
+    plan_name:    plan.name,
+    identity_key: BOLD_IDENTITY_KEY
+  });
+});
+
+/* ── GET /payment/success — redirect after Bold checkout ─── */
+app.get('/payment/success', auth, async (req, res) => {
+  const ref = (req.query.bold_order_id || req.query.ref || '').slice(0, 64);
+  const order = ref ? await db.one('SELECT * FROM payment_orders WHERE order_ref=$1', [ref]) : null;
+  res.render('payment_result', {
+    success: true,
+    order,
+    disableAds: true
+  });
+});
+
+/* ── GET /payment/cancel — user cancelled Bold checkout ─── */
+app.get('/payment/cancel', auth, async (req, res) => {
+  res.render('payment_result', { success: false, order: null, disableAds: true });
+});
+
+/* ── POST /api/payment/webhook — Bold notifies payment ─── */
+/* Bold sends this when a payment is approved/rejected       */
+app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  try {
+    const body = typeof req.body === 'string' ? req.body : req.body.toString();
+    const payload = JSON.parse(body);
+
+    /* Verify Bold signature (x-bold-signature header) */
+    const sig       = req.headers['x-bold-signature'] || '';
+    const expected  = crypto.createHmac('sha256', BOLD_SECRET_KEY)
+                            .update(body)
+                            .digest('hex');
+    if (BOLD_SECRET_KEY && sig !== expected) {
+      console.warn('[Bold] Webhook signature mismatch — ignoring');
+      return res.status(400).json({ ok: false });
+    }
+
+    const { order_id, status, transaction_id } = payload;
+    if (!order_id) return res.status(400).json({ ok: false });
+
+    const order = await db.one('SELECT * FROM payment_orders WHERE order_ref=$1', [order_id]);
+    if (!order) return res.status(404).json({ ok: false });
+
+    if (status === 'APPROVED' && order.status !== 'approved') {
+      /* Mark order approved */
+      await db.query(
+        `UPDATE payment_orders SET status='approved', bold_tx_id=$1, activated_at=NOW() WHERE order_ref=$2`,
+        [transaction_id || null, order_id]
+      );
+
+      /* Auto-activate: get plan → project → generate Luarmor key for user */
+      if (order.plan_id && order.user_id) {
+        const plan = await db.one('SELECT * FROM payment_plans WHERE id=$1', [order.plan_id]);
+        if (plan && plan.project_id) {
+          const proj = await db.one('SELECT * FROM projects WHERE id=$1', [plan.project_id]);
+          if (proj) {
+            /* Create a new key in Luarmor for this user */
+            const { json } = await luarmorReq('POST', proj.luarmor_project_id, proj.luarmor_api_key,
+              '/users', {
+                note: `AuroraHub payment order ${order_id}`,
+                auth_expire: Math.floor(Date.now() / 1000) + (plan.duration_days * 86400)
+              }
+            );
+            if (json?.user_key) {
+              /* Store in user_keys table (additional key for user) */
+              const user = await db.one('SELECT * FROM users WHERE id=$1', [order.user_id]);
+              if (user) {
+                await db.query(
+                  `INSERT INTO user_keys (user_id, luarmor_key, project_id, label)
+                   VALUES ($1,$2,$3,$4) ON CONFLICT (luarmor_key) DO NOTHING`,
+                  [order.user_id, json.user_key, plan.project_id, `${plan.name} — Order ${order_id}`]
+                );
+              }
+              console.log(`[Bold] ✅ Key activated for user ${order.user_id}: ${json.user_key}`);
+            }
+          }
+        }
+      }
+    } else if (status === 'REJECTED' || status === 'FAILED' || status === 'EXPIRED') {
+      await db.query(
+        `UPDATE payment_orders SET status='failed', bold_tx_id=$1 WHERE order_ref=$2`,
+        [transaction_id || null, order_id]
+      );
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[Bold] Webhook error:', err.message);
+    res.status(500).json({ ok: false });
+  }
+});
+
+/* ── ADMIN: Payment Plans CRUD ────────────────────────── */
+app.get('/api/admin/payment-plans', apiAuth, adminApiOnly, async (req, res) => {
+  const plans = await db.all('SELECT pp.*, p.name AS project_name FROM payment_plans pp LEFT JOIN projects p ON p.id=pp.project_id ORDER BY pp.sort_order');
+  res.json({ success: true, plans });
+});
+
+app.post('/api/admin/payment-plans', apiAuth, adminApiOnly, async (req, res) => {
+  const { name, description, price_usd, project_id, duration_days, icon, color, gradient, sort_order } = req.body;
+  if (!name || !price_usd) return res.json({ success: false, message: 'Name and price required.' });
+  const plan = await db.one(
+    `INSERT INTO payment_plans (name, description, price_usd, project_id, duration_days, icon, color, gradient, sort_order)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+    [name, description||'', Number(price_usd), project_id||null, Number(duration_days)||30,
+     icon||'⚡', color||'#8b5cf6', gradient||'linear-gradient(135deg,#8b5cf6,#6366f1)', Number(sort_order)||0]
+  );
+  res.json({ success: true, id: plan.id });
+});
+
+app.patch('/api/admin/payment-plans/:id', apiAuth, adminApiOnly, async (req, res) => {
+  const id = Number(req.params.id);
+  const allowed = ['name','description','price_usd','project_id','duration_days','icon','color','gradient','sort_order','is_active'];
+  const fields = []; const vals = []; let i = 1;
+  for (const key of allowed) {
+    if (req.body[key] === undefined) continue;
+    let val = req.body[key];
+    if (['price_usd','duration_days','sort_order'].includes(key)) val = Number(val);
+    if (key === 'is_active') val = val === true || val === 'true';
+    if (key === 'project_id') val = val ? Number(val) : null;
+    fields.push(`${key}=$${i++}`); vals.push(val);
+  }
+  if (!fields.length) return res.json({ success: false, message: 'Nothing to update.' });
+  vals.push(id);
+  await db.query(`UPDATE payment_plans SET ${fields.join(',')} WHERE id=$${i}`, vals);
+  res.json({ success: true });
+});
+
+app.delete('/api/admin/payment-plans/:id', apiAuth, adminApiOnly, async (req, res) => {
+  await db.query('UPDATE payment_plans SET is_active=false WHERE id=$1', [req.params.id]);
+  res.json({ success: true });
+});
+
+/* ── ADMIN: Payment Orders list ───────────────────────── */
+app.get('/api/admin/payment-orders', apiAuth, adminApiOnly, async (req, res) => {
+  const orders = await db.all(`
+    SELECT po.*, u.username, pp.name AS plan_name
+    FROM payment_orders po
+    LEFT JOIN users u ON u.id=po.user_id
+    LEFT JOIN payment_plans pp ON pp.id=po.plan_id
+    ORDER BY po.created_at DESC LIMIT 200
+  `);
+  res.json({ success: true, orders });
+});
+
 app.use((req, res) => res.status(404).render('404'));
 app.use((err, req, res, next) => { console.error(err); res.status(500).render('error', { message:'Internal server error.' }); });
+
 
 /* ─── Boot ─── */
 async function main() {

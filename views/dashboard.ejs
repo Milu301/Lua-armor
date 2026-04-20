@@ -24,7 +24,7 @@ const pfClass      = pct >= 100 ? 'pf-red' : pct >= 70 ? 'pf-yellow' : 'pf-green
 const executions   = (luaUser && luaUser.total_executions != null) ? luaUser.total_executions : 0;
 const hasDiscord   = !!(user && user.discordId) || !!(luaUser && luaUser.discord_id);
 const hasHwid      = !!(luaUser && luaUser.identifier);
-const isFreeUser   = !!(user && user.luarmorKey && user.luarmorKey.startsWith('FREE-'));
+const isFreeUser   = !!(proj && proj.is_free) || !!(user && user.luarmorKey && user.luarmorKey.startsWith('FREE-'));
 %>
 
 <div class="layout">

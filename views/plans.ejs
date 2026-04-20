@@ -147,16 +147,8 @@
   </div>
 </div>
 
-<!-- Hidden Bold checkout form (populated by JS) -->
-<form id="bold-form" method="POST" action="https://checkout.bold.co/payment" style="display:none;">
-  <input type="hidden" name="order_id"            id="bf-order-id"/>
-  <input type="hidden" name="currency"            value="COP"/>
-  <input type="hidden" name="amount"              id="bf-amount"/>
-  <input type="hidden" name="api_key"             id="bf-api-key"/>
-  <input type="hidden" name="integrity_signature" id="bf-integrity"/>
-  <input type="hidden" name="description"         id="bf-description"/>
-  <input type="hidden" name="redirection_url"     id="bf-redirect"/>
-</form>
+<!-- Bold Checkout JS Library -->
+<script src="https://checkout.bold.co/library/boldPaymentButton.js"></script>
 
 <script>
 async function startCheckout(planId, planName, btn) {
@@ -179,16 +171,20 @@ async function startCheckout(planId, planName, btn) {
       return;
     }
 
-    /* Fill Bold form and submit */
-    document.getElementById('bf-order-id').value   = data.order_ref;
-    document.getElementById('bf-amount').value     = data.amount_cop;   // Bold requires COP
-    document.getElementById('bf-api-key').value    = data.identity_key;
-    document.getElementById('bf-integrity').value  = data.integrity;
-    document.getElementById('bf-description').value = `${planName} — AuroraHub`;
-    document.getElementById('bf-redirect').value   = window.location.origin + '/payment/success?ref=' + data.order_ref;
+    /* Open Bold Widget */
+    const checkout = new BoldCheckout({
+      orderId: data.order_ref,
+      currency: "COP",
+      amount: data.amount_cop.toString(),
+      apiKey: data.identity_key,
+      integritySignature: data.integrity,
+      description: `${planName} — AuroraHub`,
+      redirectionUrl: window.location.origin + '/payment/success?ref=' + data.order_ref
+    });
+    checkout.open();
 
-    btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px;"></div> Redirecting to Bold…';
-    document.getElementById('bold-form').submit();
+    btn.disabled = false;
+    btn.innerHTML = orig;
 
   } catch (err) {
     toast('Network error. Please try again.', 'err');

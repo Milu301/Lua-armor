@@ -31,7 +31,7 @@
         <rect x="3" y="14" width="7" height="7" rx="1.5" stroke-width="2"/>
         <rect x="14" y="14" width="7" height="7" rx="1.5" stroke-width="2"/>
       </svg>
-      Dashboard
+      <span data-i18n="Dashboard">Dashboard</span>
     </a>
 
     <a href="/settings" class="sb-link <%= page === 'settings' ? 'active' : '' %>">
@@ -39,7 +39,7 @@
         <path stroke-linecap="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
         <path stroke-linecap="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
       </svg>
-      Settings
+      <span data-i18n="Settings">Settings</span>
     </a>
 
     <div class="sb-label" style="margin-top:0.5rem;">Community</div>
@@ -48,35 +48,35 @@
       <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
       </svg>
-      Global Chat
+      <span data-i18n="Global Chat">Global Chat</span>
     </a>
 
     <a href="/shop" class="sb-link <%= page === 'shop' ? 'active' : '' %>">
       <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
       </svg>
-      Marketplace
+      <span data-i18n="Marketplace">Marketplace</span>
     </a>
 
     <a href="/private-chats" class="sb-link <%= page === 'private_chats' ? 'active' : '' %>">
       <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
       </svg>
-      Private Chats
+      <span data-i18n="Private Chats">Private Chats</span>
     </a>
 
     <a href="/bugs" class="sb-link <%= page === 'bugs' ? 'active' : '' %>">
       <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
       </svg>
-      Report Bug
+      <span data-i18n="Report Bug">Report Bug</span>
     </a>
 
     <a href="<%= discordUrl %>" target="_blank" rel="noopener" class="sb-link">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="color:#5865f2;">
         <path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03z"/>
       </svg>
-      Discord Server
+      <span data-i18n="Discord Server">Discord Server</span>
     </a>
 
     <% if (user && (user.role === 'admin' || user.role === 'mod')) { %>

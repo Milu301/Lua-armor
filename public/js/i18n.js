@@ -1,5 +1,6 @@
 const translations = {
   es: {
+    /* Sidebar */
     "Overview": "Vista General",
     "Scripts": "Scripts",
     "Connected Accounts": "Cuentas Conectadas",
@@ -10,6 +11,7 @@ const translations = {
     "Private Chats": "Chats Privados",
     "Report Bug": "Reportar Error",
     "Discord Server": "Servidor de Discord",
+    /* Dashboard */
     "Free Tier Access": "Acceso Gratuito",
     "Enter your Free Key to check your remaining time:": "Ingresa tu Llave Gratis para revisar tu tiempo restante:",
     "Check Remaining Time": "Ver Tiempo Restante",
@@ -21,40 +23,317 @@ const translations = {
     "Executions": "Ejecuciones",
     "Unlimited resets": "Reinicios Ilimitados",
     "Unlimited": "Ilimitado",
-    "Free script access": "Acceso gratis",
+    "Free script access": "Acceso gratis al script",
     "Free Tier": "Nivel Gratis",
     "total runs": "ejecuciones totales",
     "Your Scripts": "Tus Scripts",
     "Click to copy": "Click para copiar",
     "Copy": "Copiar",
     "Copied!": "¡Copiado!",
-    "Save Settings": "Guardar Ajustes",
+    /* Settings */
+    "Profile Settings": "Ajustes de Perfil",
+    "Manage your account preferences and integrations.": "Gestiona las preferencias de tu cuenta e integraciones.",
+    "Avatar URL (Image/GIF)": "URL del Avatar (Imagen/GIF)",
+    "Link to any direct image or GIF URL to use as your profile picture.": "Enlaza cualquier URL directa de imagen o GIF para usarla como tu foto de perfil.",
+    "Discord ID": "ID de Discord",
+    "Connect your Discord account to sync roles or use Discord avatars in the future.": "Conecta tu cuenta de Discord para sincronizar roles o usar avatares en el futuro.",
     "Language": "Idioma",
-    "English": "Inglés",
-    "Spanish": "Español",
+    "Save Changes": "Guardar Cambios",
+    "Save Settings": "Guardar Ajustes",
     "Update Profile": "Actualizar Perfil",
     "Discord Connection": "Conexión con Discord",
     "Not connected": "No conectado"
+  },
+
+  pt: {
+    "Overview": "Visão Geral",
+    "Scripts": "Scripts",
+    "Connected Accounts": "Contas Conectadas",
+    "Dashboard": "Painel",
+    "Settings": "Configurações",
+    "Global Chat": "Chat Global",
+    "Marketplace": "Mercado",
+    "Private Chats": "Chats Privados",
+    "Report Bug": "Reportar Bug",
+    "Discord Server": "Servidor Discord",
+    "Free Tier Access": "Acesso Gratuito",
+    "Enter your Free Key to check your remaining time:": "Insira sua Chave Gratuita para verificar o tempo restante:",
+    "Check Remaining Time": "Verificar Tempo Restante",
+    "Status": "Status",
+    "Expiry": "Expiração",
+    "Project": "Projeto",
+    "Key Status": "Status da Chave",
+    "Resets Today": "Resets Hoje",
+    "Executions": "Execuções",
+    "Unlimited resets": "Resets Ilimitados",
+    "Unlimited": "Ilimitado",
+    "Free script access": "Acesso gratuito ao script",
+    "Free Tier": "Nível Gratuito",
+    "total runs": "execuções totais",
+    "Your Scripts": "Seus Scripts",
+    "Click to copy": "Clique para copiar",
+    "Copy": "Copiar",
+    "Copied!": "Copiado!",
+    "Profile Settings": "Configurações do Perfil",
+    "Manage your account preferences and integrations.": "Gerencie suas preferências de conta e integrações.",
+    "Avatar URL (Image/GIF)": "URL do Avatar (Imagem/GIF)",
+    "Link to any direct image or GIF URL to use as your profile picture.": "Link para qualquer URL de imagem ou GIF para usar como foto de perfil.",
+    "Discord ID": "ID do Discord",
+    "Connect your Discord account to sync roles or use Discord avatars in the future.": "Conecte sua conta Discord para sincronizar cargos ou usar avatares no futuro.",
+    "Language": "Idioma",
+    "Save Changes": "Salvar Alterações",
+    "Save Settings": "Salvar Configurações",
+    "Update Profile": "Atualizar Perfil",
+    "Discord Connection": "Conexão com Discord",
+    "Not connected": "Não conectado"
+  },
+
+  fr: {
+    "Overview": "Aperçu",
+    "Scripts": "Scripts",
+    "Connected Accounts": "Comptes Connectés",
+    "Dashboard": "Tableau de Bord",
+    "Settings": "Paramètres",
+    "Global Chat": "Chat Global",
+    "Marketplace": "Marché",
+    "Private Chats": "Chats Privés",
+    "Report Bug": "Signaler un Bug",
+    "Discord Server": "Serveur Discord",
+    "Free Tier Access": "Accès Gratuit",
+    "Enter your Free Key to check your remaining time:": "Entrez votre clé gratuite pour vérifier le temps restant :",
+    "Check Remaining Time": "Vérifier le Temps Restant",
+    "Status": "Statut",
+    "Expiry": "Expiration",
+    "Project": "Projet",
+    "Key Status": "Statut de la Clé",
+    "Resets Today": "Réinitialisations Aujourd'hui",
+    "Executions": "Exécutions",
+    "Unlimited resets": "Réinitialisations Illimitées",
+    "Unlimited": "Illimité",
+    "Free script access": "Accès gratuit au script",
+    "Free Tier": "Niveau Gratuit",
+    "total runs": "exécutions totales",
+    "Your Scripts": "Vos Scripts",
+    "Click to copy": "Cliquez pour copier",
+    "Copy": "Copier",
+    "Copied!": "Copié !",
+    "Profile Settings": "Paramètres du Profil",
+    "Manage your account preferences and integrations.": "Gérez vos préférences de compte et intégrations.",
+    "Avatar URL (Image/GIF)": "URL Avatar (Image/GIF)",
+    "Link to any direct image or GIF URL to use as your profile picture.": "Lien vers une URL d'image ou GIF à utiliser comme photo de profil.",
+    "Discord ID": "ID Discord",
+    "Connect your Discord account to sync roles or use Discord avatars in the future.": "Connectez votre Discord pour synchroniser les rôles ou utiliser des avatars à l'avenir.",
+    "Language": "Langue",
+    "Save Changes": "Enregistrer",
+    "Save Settings": "Sauvegarder",
+    "Update Profile": "Mettre à Jour le Profil",
+    "Discord Connection": "Connexion Discord",
+    "Not connected": "Non connecté"
+  },
+
+  de: {
+    "Overview": "Übersicht",
+    "Scripts": "Skripte",
+    "Connected Accounts": "Verbundene Konten",
+    "Dashboard": "Dashboard",
+    "Settings": "Einstellungen",
+    "Global Chat": "Globaler Chat",
+    "Marketplace": "Marktplatz",
+    "Private Chats": "Private Chats",
+    "Report Bug": "Fehler melden",
+    "Discord Server": "Discord-Server",
+    "Free Tier Access": "Kostenloser Zugang",
+    "Enter your Free Key to check your remaining time:": "Gib deinen Gratis-Schlüssel ein, um deine Restzeit zu prüfen:",
+    "Check Remaining Time": "Restzeit prüfen",
+    "Status": "Status",
+    "Expiry": "Ablauf",
+    "Project": "Projekt",
+    "Key Status": "Schlüssel-Status",
+    "Resets Today": "Resets Heute",
+    "Executions": "Ausführungen",
+    "Unlimited resets": "Unbegrenzte Resets",
+    "Unlimited": "Unbegrenzt",
+    "Free script access": "Kostenloser Skript-Zugang",
+    "Free Tier": "Gratis-Stufe",
+    "total runs": "Gesamt-Ausführungen",
+    "Your Scripts": "Deine Skripte",
+    "Click to copy": "Zum Kopieren klicken",
+    "Copy": "Kopieren",
+    "Copied!": "Kopiert!",
+    "Profile Settings": "Profileinstellungen",
+    "Manage your account preferences and integrations.": "Verwalte deine Kontoeinstellungen und Integrationen.",
+    "Avatar URL (Image/GIF)": "Avatar-URL (Bild/GIF)",
+    "Link to any direct image or GIF URL to use as your profile picture.": "Link zu einem Bild oder GIF als Profilbild.",
+    "Discord ID": "Discord-ID",
+    "Connect your Discord account to sync roles or use Discord avatars in the future.": "Verbinde Discord, um Rollen zu synchronisieren oder Avatare zu verwenden.",
+    "Language": "Sprache",
+    "Save Changes": "Änderungen speichern",
+    "Save Settings": "Einstellungen speichern",
+    "Update Profile": "Profil aktualisieren",
+    "Discord Connection": "Discord-Verbindung",
+    "Not connected": "Nicht verbunden"
+  },
+
+  ru: {
+    "Overview": "Обзор",
+    "Scripts": "Скрипты",
+    "Connected Accounts": "Подключённые аккаунты",
+    "Dashboard": "Панель",
+    "Settings": "Настройки",
+    "Global Chat": "Общий чат",
+    "Marketplace": "Магазин",
+    "Private Chats": "Личные чаты",
+    "Report Bug": "Сообщить об ошибке",
+    "Discord Server": "Discord-сервер",
+    "Free Tier Access": "Бесплатный доступ",
+    "Enter your Free Key to check your remaining time:": "Введите бесплатный ключ для проверки оставшегося времени:",
+    "Check Remaining Time": "Проверить время",
+    "Status": "Статус",
+    "Expiry": "Истекает",
+    "Project": "Проект",
+    "Key Status": "Статус ключа",
+    "Resets Today": "Сбросы сегодня",
+    "Executions": "Запусков",
+    "Unlimited resets": "Безлимитные сбросы",
+    "Unlimited": "Безлимитно",
+    "Free script access": "Бесплатный доступ к скриптам",
+    "Free Tier": "Бесплатный уровень",
+    "total runs": "всего запусков",
+    "Your Scripts": "Ваши скрипты",
+    "Click to copy": "Нажмите, чтобы скопировать",
+    "Copy": "Копировать",
+    "Copied!": "Скопировано!",
+    "Profile Settings": "Настройки профиля",
+    "Manage your account preferences and integrations.": "Управляйте настройками аккаунта и интеграциями.",
+    "Avatar URL (Image/GIF)": "URL аватара (изображение/GIF)",
+    "Link to any direct image or GIF URL to use as your profile picture.": "Ссылка на изображение или GIF для фото профиля.",
+    "Discord ID": "Discord ID",
+    "Connect your Discord account to sync roles or use Discord avatars in the future.": "Подключите Discord для синхронизации ролей и аватаров.",
+    "Language": "Язык",
+    "Save Changes": "Сохранить изменения",
+    "Save Settings": "Сохранить настройки",
+    "Update Profile": "Обновить профиль",
+    "Discord Connection": "Подключение Discord",
+    "Not connected": "Не подключено"
+  },
+
+  zh: {
+    "Overview": "总览",
+    "Scripts": "脚本",
+    "Connected Accounts": "关联账户",
+    "Dashboard": "控制面板",
+    "Settings": "设置",
+    "Global Chat": "全球聊天",
+    "Marketplace": "市场",
+    "Private Chats": "私信",
+    "Report Bug": "报告错误",
+    "Discord Server": "Discord 服务器",
+    "Free Tier Access": "免费访问",
+    "Enter your Free Key to check your remaining time:": "输入免费密钥以查看剩余时间：",
+    "Check Remaining Time": "查看剩余时间",
+    "Status": "状态",
+    "Expiry": "到期",
+    "Project": "项目",
+    "Key Status": "密钥状态",
+    "Resets Today": "今日重置次数",
+    "Executions": "执行次数",
+    "Unlimited resets": "无限次重置",
+    "Unlimited": "无限",
+    "Free script access": "免费脚本访问",
+    "Free Tier": "免费层级",
+    "total runs": "总运行次数",
+    "Your Scripts": "你的脚本",
+    "Click to copy": "点击复制",
+    "Copy": "复制",
+    "Copied!": "已复制！",
+    "Profile Settings": "个人资料设置",
+    "Manage your account preferences and integrations.": "管理您的账户偏好和集成。",
+    "Avatar URL (Image/GIF)": "头像链接（图片/GIF）",
+    "Link to any direct image or GIF URL to use as your profile picture.": "粘贴任意图片或GIF链接作为头像。",
+    "Discord ID": "Discord ID",
+    "Connect your Discord account to sync roles or use Discord avatars in the future.": "连接Discord以同步角色或使用Discord头像。",
+    "Language": "语言",
+    "Save Changes": "保存更改",
+    "Save Settings": "保存设置",
+    "Update Profile": "更新资料",
+    "Discord Connection": "Discord 连接",
+    "Not connected": "未连接"
+  },
+
+  ar: {
+    "Overview": "نظرة عامة",
+    "Scripts": "النصوص البرمجية",
+    "Connected Accounts": "الحسابات المرتبطة",
+    "Dashboard": "لوحة التحكم",
+    "Settings": "الإعدادات",
+    "Global Chat": "الدردشة العامة",
+    "Marketplace": "السوق",
+    "Private Chats": "المحادثات الخاصة",
+    "Report Bug": "الإبلاغ عن خطأ",
+    "Discord Server": "خادم Discord",
+    "Free Tier Access": "الوصول المجاني",
+    "Enter your Free Key to check your remaining time:": "أدخل مفتاحك المجاني للتحقق من الوقت المتبقي:",
+    "Check Remaining Time": "تحقق من الوقت المتبقي",
+    "Status": "الحالة",
+    "Expiry": "انتهاء الصلاحية",
+    "Project": "المشروع",
+    "Key Status": "حالة المفتاح",
+    "Resets Today": "إعادة تعيين اليوم",
+    "Executions": "التشغيلات",
+    "Unlimited resets": "إعادة تعيين غير محدودة",
+    "Unlimited": "غير محدود",
+    "Free script access": "وصول مجاني للنصوص",
+    "Free Tier": "المستوى المجاني",
+    "total runs": "إجمالي التشغيلات",
+    "Your Scripts": "نصوصك البرمجية",
+    "Click to copy": "انقر للنسخ",
+    "Copy": "نسخ",
+    "Copied!": "تم النسخ!",
+    "Profile Settings": "إعدادات الملف الشخصي",
+    "Manage your account preferences and integrations.": "إدارة تفضيلات حسابك والتكاملات.",
+    "Avatar URL (Image/GIF)": "رابط الصورة الرمزية (صورة/GIF)",
+    "Link to any direct image or GIF URL to use as your profile picture.": "أدخل رابط صورة مباشر لاستخدامه كصورة شخصية.",
+    "Discord ID": "معرّف Discord",
+    "Connect your Discord account to sync roles or use Discord avatars in the future.": "اربط حسابك على Discord لمزامنة الأدوار أو استخدام الصور الرمزية.",
+    "Language": "اللغة",
+    "Save Changes": "حفظ التغييرات",
+    "Save Settings": "حفظ الإعدادات",
+    "Update Profile": "تحديث الملف الشخصي",
+    "Discord Connection": "اتصال Discord",
+    "Not connected": "غير متصل"
   }
 };
 
 window.currentLanguage = window.currentLanguage || 'en';
 
-window.applyTranslations = function() {
-  if (window.currentLanguage === 'en') return;
-  const dict = translations[window.currentLanguage];
+/* Direction map for RTL languages */
+const RTL_LANGS = new Set(['ar']);
+
+window.applyTranslations = function(lang) {
+  lang = lang || window.currentLanguage;
+  if (lang === 'en') {
+    document.documentElement.removeAttribute('dir');
+    return;
+  }
+  const dict = translations[lang];
   if (!dict) return;
+
+  /* RTL support */
+  if (RTL_LANGS.has(lang)) {
+    document.documentElement.setAttribute('dir', 'rtl');
+  } else {
+    document.documentElement.removeAttribute('dir');
+  }
 
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
-    if (dict[key]) {
-      if (el.tagName === 'INPUT' && el.getAttribute('placeholder')) {
-        el.setAttribute('placeholder', dict[key]);
-      } else {
-        el.innerText = dict[key];
-      }
+    if (!dict[key]) return;
+    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+      el.setAttribute('placeholder', dict[key]);
+    } else {
+      el.innerText = dict[key];
     }
   });
 };
 
-document.addEventListener('DOMContentLoaded', window.applyTranslations);
+document.addEventListener('DOMContentLoaded', () => window.applyTranslations());

@@ -46,7 +46,15 @@ const pool = new Pool({
   connectionString: DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
 });
+
+/* Prevent unhandled 'error' events from idle client drops crashing the process */
+pool.on('error', (err, client) => {
+  console.error('[Pool] Unexpected error on idle client — connection will be discarded:', err.message);
+});
+
 const db = {
   query: (text, params) => pool.query(text, params),
   one:   async (text, params) => { const r = await pool.query(text, params); return r.rows[0] || null; },
@@ -524,7 +532,7 @@ app.post('/register', registerLimiter, async (req, res) => {
   const username = (req.body.username || '').trim().toLowerCase();
   const password = (req.body.password || '').trim();
   const confirm  = (req.body.confirm  || '').trim();
-  const key      = (req.body.key      || '').trim();
+  let   key      = (req.body.key      || '').trim();
 
   if (!username || !password)              return fail('Username and password are required.');
   if (!/^[a-z0-9_]{3,20}$/.test(username)) return fail('Username must be 3-20 chars (letters, numbers, underscore).');
@@ -534,14 +542,13 @@ app.post('/register', registerLimiter, async (req, res) => {
   const existsUser = await db.one('SELECT id FROM users WHERE username=$1', [username]);
   if (existsUser) return fail('That username is already taken.');
 
+  /* If the user accidentally pasted a FREE- key treat as free registration */
+  if (key && key.toUpperCase().startsWith('FREE-')) key = '';
+
   let finalKey = key;
   let finalProject = null;
   let finalDiscordId = '';
   let fullProject = null;
-
-  if (key && key.toUpperCase().startsWith('FREE-')) {
-    key = ''; // User accidentally entered a free key, treat as free registration
-  }
 
   if (key) {
     if (key.length < 6 || key.length > 256) return fail('Invalid Luarmor key length.');
@@ -1039,7 +1046,18 @@ app.post('/api/settings', auth, async (req, res) => {
   );
   req.session.user.discordId = discordId; // update session
   req.session.user.avatarUrl = avatarUrl;
+  req.session.user.language  = language;
   res.json({ success: true, message: 'Settings saved' });
+});
+
+/* Self-service password change */
+app.post('/api/user/change-password', auth, async (req, res) => {
+  const userId = req.session.user.id;
+  const pwd = (req.body.password || '').trim();
+  if (pwd.length < 8) return res.json({ success: false, message: 'Password must be at least 8 characters.' });
+  const hash = await bcrypt.hash(pwd, 12);
+  await db.query('UPDATE users SET password_hash=$1 WHERE id=$2', [hash, userId]);
+  res.json({ success: true, message: 'Password changed.' });
 });
 
 app.post('/api/user/check-free-key', auth, async (req, res) => {

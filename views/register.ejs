@@ -25,7 +25,79 @@
     <div class="auth-divider"></div>
 
     <h1 class="auth-heading">Create your account</h1>
-    <p class="auth-sub">You need a valid Luarmor key to register. Your key determines your project tier automatically.</p>
+
+    <!-- HOW IT WORKS — info box -->
+    <div style="
+      background: linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.06));
+      border: 1px solid rgba(139,92,246,0.22);
+      border-radius: 12px;
+      padding: 1rem 1.1rem;
+      margin-bottom: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+    ">
+      <div style="font-weight: 700; font-size: 0.8rem; color: var(--purple, #8b5cf6); text-transform: uppercase; letter-spacing: 0.06em; display:flex;align-items:center;gap:0.4rem;">
+        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-linecap="round" stroke-width="2" d="M12 8v4m0 4h.01"/></svg>
+        How Registration Works
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:0.55rem;">
+
+        <!-- Step: Premium -->
+        <div style="display:flex;align-items:flex-start;gap:0.75rem;">
+          <div style="
+            width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+            background: linear-gradient(135deg,#8b5cf6,#6366f1);
+            display:flex;align-items:center;justify-content:center;
+            font-size: 0.75rem; font-weight: 700; color:#fff;
+          ">⚡</div>
+          <div>
+            <div style="font-size:0.8rem;font-weight:600;color:var(--text);">Premium Account</div>
+            <div style="font-size:0.75rem;color:var(--text-3);margin-top:1px;">
+              Paste your <strong style="color:var(--text-2);">Luarmor key</strong> in the field below. Your key is provided when you purchase a plan from our
+              <a href="<%= discordUrl %>" target="_blank" rel="noopener" style="color:#818cf8;text-decoration:none;">Discord server</a>.
+              It unlocks daily resets, scripts, and features tied to your plan tier.
+            </div>
+          </div>
+        </div>
+
+        <!-- Step: Free -->
+        <div style="display:flex;align-items:flex-start;gap:0.75rem;">
+          <div style="
+            width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+            background: linear-gradient(135deg,#22c55e,#16a34a);
+            display:flex;align-items:center;justify-content:center;
+            font-size: 0.75rem; color:#fff;
+          ">🆓</div>
+          <div>
+            <div style="font-size:0.8rem;font-weight:600;color:var(--text);">Free Account</div>
+            <div style="font-size:0.75rem;color:var(--text-3);margin-top:1px;">
+              Leave the key field <strong style="color:var(--text-2);">blank</strong> to register with a free tier. Free accounts have limited access but can still use the dashboard and community features.
+            </div>
+          </div>
+        </div>
+
+        <!-- Step: Where to get key -->
+        <div style="display:flex;align-items:flex-start;gap:0.75rem;">
+          <div style="
+            width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+            background: linear-gradient(135deg,#5865f2,#4f46e5);
+            display:flex;align-items:center;justify-content:center;
+          ">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03z"/></svg>
+          </div>
+          <div>
+            <div style="font-size:0.8rem;font-weight:600;color:var(--text);">Where to get your Luarmor key?</div>
+            <div style="font-size:0.75rem;color:var(--text-3);margin-top:1px;">
+              Open our Discord → go to the <strong style="color:var(--text-2);">#buy-key</strong> or <strong style="color:var(--text-2);">#shop</strong> channel → purchase or request a key from staff. After payment you'll receive a key starting with a random string (not "FREE-").
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <!-- end HOW IT WORKS -->
 
     <% if (error) { %>
     <div class="alert alert-danger" style="margin-bottom:1.25rem;">
@@ -54,16 +126,26 @@
         </div>
 
         <div class="form-group" style="margin-bottom:0;">
-          <label class="label">Luarmor Key <span style="font-size: 0.75rem; color: var(--text-3);">(Optional)</span></label>
+          <label class="label">
+            Luarmor Key
+            <span id="key-badge" style="
+              display: inline-flex; align-items: center; gap: 3px;
+              font-size: 0.68rem; font-weight: 600; padding: 2px 7px;
+              border-radius: 20px; margin-left: 0.35rem;
+              background: rgba(34,197,94,0.12); color: #22c55e;
+              border: 1px solid rgba(34,197,94,0.25);
+              transition: all 0.25s;
+            ">Optional — Free Account</span>
+          </label>
           <div class="input-wrap">
             <svg class="input-icon" width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
             </svg>
             <input type="text" name="key" id="keyField" class="input input-icon-pad mono"
-              placeholder="Paste your key, or leave blank for Free Account…" minlength="6" maxlength="256"
+              placeholder="Paste your Luarmor key, or leave blank for Free Account…" minlength="6" maxlength="256"
               autocomplete="off" spellcheck="false" autocorrect="off" autocapitalize="off" />
           </div>
-          <div class="input-hint">Leave blank to register as a Free User</div>
+          <div class="input-hint" id="key-hint">Leave blank to register as a Free User with limited access</div>
         </div>
       </div>
 
@@ -204,17 +286,36 @@ pw2.addEventListener('input', function() {
   }
 });
 
-/* Key preview */
+/* Key badge + hint updates */
 const keyField = document.getElementById('keyField');
+const keyBadge = document.getElementById('key-badge');
+const keyHint  = document.getElementById('key-hint');
 const keyPreview = document.getElementById('key-preview');
-let keyTimer = null;
 
 keyField.addEventListener('input', function() {
-  clearTimeout(keyTimer);
   const val = this.value.trim();
-  if (val.length < 6) { keyPreview.style.display = 'none'; return; }
-  keyPreview.style.display = '';
-  keyPreview.innerHTML = '<div class="key-preview-inner"><div class="spinner" style="width:14px;height:14px;border-width:2px;flex-shrink:0;"></div><span class="dimmed t-sm">Key looks good — will be verified on submit</span></div>';
+  if (!val) {
+    keyBadge.style.background = 'rgba(34,197,94,0.12)';
+    keyBadge.style.color = '#22c55e';
+    keyBadge.style.borderColor = 'rgba(34,197,94,0.25)';
+    keyBadge.textContent = 'Optional — Free Account';
+    keyHint.textContent = 'Leave blank to register as a Free User with limited access';
+    keyPreview.style.display = 'none';
+    return;
+  }
+  /* Has something typed */
+  keyBadge.style.background = 'rgba(139,92,246,0.12)';
+  keyBadge.style.color = '#a78bfa';
+  keyBadge.style.borderColor = 'rgba(139,92,246,0.25)';
+  keyBadge.textContent = '⚡ Premium Key';
+  keyHint.textContent = 'Your Luarmor key will be verified on submit.';
+
+  if (val.length >= 6) {
+    keyPreview.style.display = '';
+    keyPreview.innerHTML = '<div class="key-preview-inner"><div class="spinner" style="width:14px;height:14px;border-width:2px;flex-shrink:0;"></div><span class="dimmed t-sm">Key detected — will be verified with Luarmor on submit</span></div>';
+  } else {
+    keyPreview.style.display = 'none';
+  }
 });
 
 /* Submit */
@@ -228,7 +329,8 @@ document.getElementById('regForm').addEventListener('submit', function(e) {
   }
   const btn = document.getElementById('regBtn');
   btn.disabled = true;
-  btn.innerHTML = '<div class="spinner"></div> Verifying key with Luarmor…';
+  const hasKey = document.getElementById('keyField').value.trim().length > 0;
+  btn.innerHTML = '<div class="spinner"></div> ' + (hasKey ? 'Verifying key with Luarmor…' : 'Creating Free Account…');
 });
 
 /* ─── Auth Particle Canvas ─── */

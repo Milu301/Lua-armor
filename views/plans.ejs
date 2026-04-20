@@ -35,41 +35,46 @@
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.25rem;">
       <% plans.forEach((p, idx) => { %>
       <div class="plan-card" id="plan-card-<%= p.id %>" style="
-        background: var(--bg-card);
+        background: var(--bg-raised);
         border: 1px solid var(--border-md);
-        border-radius: 16px;
+        border-radius: 20px;
         overflow: hidden;
         display: flex;
         flex-direction: column;
-        transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         animation: slideUp <%= 0.15 + idx * 0.07 %>s ease both;
         cursor: pointer;
         position: relative;
-      " onmouseenter="this.style.transform='translateY(-4px)';this.style.boxShadow='0 12px 40px rgba(0,0,0,0.3)';this.style.borderColor='<%= p.color %>55';"
-         onmouseleave="this.style.transform='';this.style.boxShadow='';this.style.borderColor='';">
+        backdrop-filter: blur(20px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      " onmouseenter="this.style.transform='translateY(-8px) scale(1.02)'; this.style.boxShadow='0 20px 40px rgba(0,0,0,0.4), 0 0 20px <%= p.color %>33'; this.style.borderColor='<%= p.color %>';"
+         onmouseleave="this.style.transform=''; this.style.boxShadow='0 4px 20px rgba(0,0,0,0.2)'; this.style.borderColor='var(--border-md)';">
+         
+         <!-- Ambient Glow Background -->
+         <div style="position: absolute; top: -50px; left: -50px; width: 100px; height: 100px; background: <%= p.color %>; opacity: 0.15; filter: blur(40px); z-index: 0; border-radius: 50%;"></div>
 
         <!-- Top gradient bar -->
         <div style="height:4px;background:<%= p.gradient %>;"></div>
 
         <div style="padding:1.5rem;flex:1;display:flex;flex-direction:column;gap:0.75rem;">
           <!-- Icon + name -->
-          <div style="display:flex;align-items:center;gap:0.75rem;">
-            <div style="width:42px;height:42px;border-radius:12px;background:<%= p.gradient %>;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">
+          <div style="display:flex;align-items:center;gap:0.75rem; z-index: 1;">
+            <div style="width:48px;height:48px;border-radius:14px;background:<%= p.gradient %>;display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0; box-shadow: 0 0 15px <%= p.color %>66;">
               <%= p.icon %>
             </div>
             <div>
-              <div style="font-weight:800;font-size:1rem;color:var(--text);"><%= p.name %></div>
+              <div style="font-weight:800;font-size:1.1rem;color:var(--text); text-shadow: 0 0 10px <%= p.color %>88;"><%= p.name %></div>
               <% if (p.project_name) { %>
-              <div style="font-size:0.7rem;color:var(--text-3);">Project: <%= p.project_name %></div>
+              <div style="font-size:0.75rem;color:var(--text-3);">Project: <span style="color:var(--text-2);font-weight:600;"><%= p.project_name %></span></div>
               <% } %>
             </div>
           </div>
 
           <!-- Price -->
-          <div style="margin:0.25rem 0;">
-            <span style="font-size:2rem;font-weight:900;color:var(--text);">$<%= Number(p.price_usd).toFixed(2) %></span>
-            <span style="font-size:0.8rem;color:var(--text-3);margin-left:4px;">USD</span>
-            <div style="font-size:0.72rem;color:var(--text-3);margin-top:2px;"><%= p.duration_days %> days of access</div>
+          <div style="margin:0.25rem 0; z-index: 1;">
+            <span style="font-size:2.5rem;font-weight:900;color:var(--text); text-shadow: 0 0 20px rgba(255,255,255,0.2);">$<%= Number(p.price_usd).toFixed(2) %></span>
+            <span style="font-size:0.85rem;color:var(--text-3);margin-left:4px;font-weight:600;">USD</span>
+            <div style="font-size:0.75rem;color:var(--accent-3);margin-top:2px;font-weight:600;letter-spacing:0.02em;"><%= p.duration_days %> days of access</div>
           </div>
 
           <!-- Description -->
@@ -95,12 +100,12 @@
         </div>
 
         <!-- Buy button -->
-        <div style="padding:0 1.5rem 1.5rem;">
+        <div style="padding:0 1.5rem 1.5rem; z-index: 1;">
           <% if (boldEnabled && user) { %>
           <button class="btn btn-primary btn-full" id="buy-btn-<%= p.id %>"
             onclick="startCheckout(<%= p.id %>, '<%= p.name %>', this)"
-            style="background:<%= p.gradient %>;border:none;font-weight:700;">
-            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+            style="background:<%= p.gradient %>;border:none;font-weight:800; padding:0.8rem; font-size:0.95rem; box-shadow: 0 4px 15px <%= p.color %>66;">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
             Buy Now
           </button>
           <% } else if (!user) { %>

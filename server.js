@@ -467,7 +467,7 @@ app.get('/home', async (req, res) => {
   if (req.session.user?.projectId) {
     project = await db.one('SELECT id, name, icon, daily_reset_limit FROM projects WHERE id=$1', [req.session.user.projectId]);
   }
-  res.render('home', { project });
+  res.render('home', { project, disableAds: true });
 });
 
 app.get('/login', (req, res) => {
@@ -640,7 +640,7 @@ app.get('/dashboard', auth, async (req, res) => {
   res.render('dashboard', {
     dbUser, proj, luaUser,
     resetsToday, resetsLeft, dailyLimit, pct, pfClass, ringOffset,
-    announcements, history, liveSessions, userKeys,
+    announcements, history, liveSessions, userKeys, disableAds: true
   });
 });
 
@@ -663,7 +663,7 @@ app.get('/bugs', auth, async (req, res) => {
     'SELECT id, title, description, status, admin_note, created_at FROM bug_reports WHERE user_id=$1 ORDER BY created_at DESC LIMIT 30',
     [id]
   );
-  res.render('bugs', { reports, page: 'bugs', success: null, error: null });
+  res.render('bugs', { reports, page: 'bugs', success: null, error: null, disableAds: true });
 });
 
 app.post('/bugs', auth, async (req, res) => {
@@ -675,10 +675,10 @@ app.post('/bugs', auth, async (req, res) => {
     [id]
   );
   if (!title || !description) {
-    return res.render('bugs', { reports: await fetchReports(), page: 'bugs', success: null, error: 'Title and description are required.' });
+    return res.render('bugs', { reports: await fetchReports(), page: 'bugs', success: null, error: 'Title and description are required.', disableAds: true });
   }
   await db.query('INSERT INTO bug_reports (user_id, username, title, description) VALUES ($1,$2,$3,$4)', [id, username, title, description]);
-  res.render('bugs', { reports: await fetchReports(), page: 'bugs', success: 'Report submitted! Staff will review it shortly.', error: null });
+  res.render('bugs', { reports: await fetchReports(), page: 'bugs', success: 'Report submitted! Staff will review it shortly.', error: null, disableAds: true });
 });
 
 /* ── Mod Panel ───────────────────────────────────── */
@@ -690,7 +690,7 @@ app.get('/mod', auth, modOrAdmin, async (req, res) => {
     LEFT JOIN projects p ON p.id = u.project_id
     ORDER BY u.created_at DESC LIMIT 200
   `);
-  res.render('mod', { users, page: 'mod' });
+  res.render('mod', { users, page: 'mod', disableAds: true });
 });
 
 /* ── Mod API ─────────────────────────────────────── */
@@ -755,6 +755,7 @@ app.get('/admin', auth, adminOnly, async (req, res) => {
     settings: { ...dynSettings },
     chatMessages: chatMessages.reverse(),
     bugReports,
+    disableAds: true
   });
 });
 
@@ -1023,7 +1024,7 @@ app.patch('/api/admin/bug-reports/:id', apiAuth, adminApiOnly, async (req, res) 
 ───────────────────────────────────── */
 app.get('/settings', auth, async (req, res) => {
   const dbUser = await db.one('SELECT * FROM users WHERE id=$1', [req.session.user.id]);
-  res.render('settings', { user: req.session.user, dbUser, page: 'settings' });
+  res.render('settings', { user: req.session.user, dbUser, page: 'settings', disableAds: true });
 });
 
 app.post('/api/settings', auth, async (req, res) => {
@@ -1039,6 +1040,25 @@ app.post('/api/settings', auth, async (req, res) => {
   req.session.user.discordId = discordId; // update session
   req.session.user.avatarUrl = avatarUrl;
   res.json({ success: true, message: 'Settings saved' });
+});
+
+app.post('/api/user/check-free-key', auth, async (req, res) => {
+  const { key } = req.body;
+  if (!key) return res.json({ success: false, message: 'Key required.' });
+  try {
+    const found = await findProjectForKey(key);
+    if (!found) return res.json({ success: false, message: 'Key not found in any active project.' });
+    const { project, luaUser } = found;
+    res.json({
+      success: true,
+      auth_expire: luaUser.auth_expire,
+      project_name: project.name,
+      status: luaUser.status,
+      banned: luaUser.banned
+    });
+  } catch (e) {
+    res.json({ success: false, message: e.message });
+  }
 });
 
 /* ─────────────────────────────────────

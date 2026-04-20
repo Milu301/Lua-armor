@@ -180,17 +180,90 @@ const isFreeUser   = !!(proj && proj.is_free) || !!(user && user.luarmorKey && u
           </div>
         </div>
         <div style="padding:1.5rem;">
-          <p style="margin-bottom:1rem; color:var(--text-2);" data-i18n="Here is your auto-generated Free Tier Key. Please copy this and provide it to an Administrator so they can register you to a project and assign your time limit.">
-            Here is your auto-generated Free Tier Key. Please copy this and provide it to an Administrator so they can register you to a project and assign your time limit.
-          </p>
-          <div class="chip" style="user-select:all; cursor:text; padding:1rem; font-size:1.1rem; justify-content:center; border:1px dashed var(--cyan);">
-            <%= user.luarmorKey %>
+          <form id="freeKeyForm" onsubmit="checkFreeKey(event)" style="display:flex; flex-direction:column; gap:1rem;">
+             <p style="margin-bottom:0.5rem; color:var(--text-2);" data-i18n="Enter your Free Key to check your remaining time:">
+               Enter your Free Key to check your remaining time:
+             </p>
+             <input type="text" class="input" id="freeKeyInput" placeholder="Paste your Luarmor Free Key here..." required style="padding: 1rem; font-size: 1rem;" autocomplete="off" spellcheck="false" />
+             <button type="submit" class="btn btn-primary" id="freeKeyBtn" style="padding: 1rem; font-weight: 600; font-size: 1rem; background: var(--cyan); border-color: var(--cyan); color: white;">
+                <span data-i18n="Check Remaining Time">Check Remaining Time</span>
+             </button>
+          </form>
+          <div id="freeKeyResult" style="margin-top: 1rem; display:none; padding: 1.5rem; border-radius: 12px; background: var(--bg-raised); border: 1px solid var(--border-md); animation: fadeIn 0.4s ease;">
+             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem;">
+               <div style="color:var(--text-3); font-size:0.85rem; text-transform:uppercase; letter-spacing:0.05em;" data-i18n="Status">Status</div>
+               <div id="fk-status" class="badge"></div>
+             </div>
+             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem;">
+               <div style="color:var(--text-3); font-size:0.85rem; text-transform:uppercase; letter-spacing:0.05em;" data-i18n="Expiry">Expiry</div>
+               <div id="fk-expiry" style="font-weight:600; color:var(--blue);"></div>
+             </div>
+             <div style="display:flex; justify-content:space-between; align-items:center;">
+               <div style="color:var(--text-3); font-size:0.85rem; text-transform:uppercase; letter-spacing:0.05em;" data-i18n="Project">Project</div>
+               <div id="fk-project" style="font-weight:600;"></div>
+             </div>
           </div>
-          <p style="margin-top:1rem; font-size:0.85rem; color:var(--text-3); text-align:center;" data-i18n="Once an admin registers your key, you will see your script access and time remaining here.">
-            Once an admin registers your key, you will see your script access and time remaining here.
-          </p>
         </div>
       </div>
+      
+      <script>
+        async function checkFreeKey(e) {
+          e.preventDefault();
+          const btn = document.getElementById('freeKeyBtn');
+          const input = document.getElementById('freeKeyInput');
+          const result = document.getElementById('freeKeyResult');
+          
+          btn.disabled = true;
+          btn.innerHTML = '<span class="spinner"></span>';
+          
+          try {
+            const res = await fetch('/api/user/check-free-key', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ key: input.value.trim() })
+            });
+            const data = await res.json();
+            
+            result.style.display = 'block';
+            
+            if (!data.success) {
+              document.getElementById('fk-status').className = 'badge badge-red';
+              document.getElementById('fk-status').innerText = 'Error';
+              document.getElementById('fk-expiry').innerText = data.message;
+              document.getElementById('fk-expiry').className = 'c-red';
+              document.getElementById('fk-project').innerText = 'N/A';
+            } else {
+              const b = data.banned ? 'Banned' : data.status;
+              document.getElementById('fk-status').className = data.banned ? 'badge badge-red' : (data.status === 'active' ? 'badge badge-green' : 'badge badge-yellow');
+              document.getElementById('fk-status').innerText = b.toUpperCase();
+              
+              document.getElementById('fk-project').innerText = data.project_name;
+              
+              if (!data.auth_expire || data.auth_expire <= 0) {
+                 document.getElementById('fk-expiry').innerText = 'Never Expires';
+              } else {
+                 const diff = data.auth_expire - Math.floor(Date.now() / 1000);
+                 if (diff <= 0) {
+                   document.getElementById('fk-expiry').innerText = 'Expired';
+                   document.getElementById('fk-expiry').className = 'c-red';
+                 } else {
+                   const d = Math.floor(diff / 86400);
+                   const h = Math.floor((diff % 86400) / 3600);
+                   const m = Math.floor((diff % 3600) / 60);
+                   document.getElementById('fk-expiry').innerText = (d > 0 ? d + 'd ' : '') + h + 'h ' + m + 'm left';
+                   document.getElementById('fk-expiry').className = 'c-green';
+                 }
+              }
+            }
+          } catch(err) {
+            alert('Network error');
+          } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<span data-i18n="Check Remaining Time">Check Remaining Time</span>';
+            if(window.applyTranslations) window.applyTranslations();
+          }
+        }
+      </script>
       <% } %>
 
       </div> <!-- End tab-overview -->

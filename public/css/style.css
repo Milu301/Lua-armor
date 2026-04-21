@@ -7,41 +7,41 @@
   --accent:        #8b5cf6;
   --accent-2:      #6366f1;
   --accent-3:      #a78bfa;
-  --accent-dim:    rgba(139,92,246,0.10);
+  --accent-dim:    rgba(139,92,246,0.12);
   --accent-dim2:   rgba(139,92,246,0.06);
-  --accent-glow:   rgba(139,92,246,0.30);
-  --accent-border: rgba(139,92,246,0.22);
+  --accent-glow:   rgba(139,92,246,0.40);
+  --accent-border: rgba(139,92,246,0.30);
 
-  --bg:            #030305;
-  --bg-card:       rgba(15, 15, 20, 0.5);
-  --bg-raised:     rgba(25, 25, 30, 0.5);
-  --bg-hover:      rgba(35, 35, 45, 0.6);
-  --bg-input:      rgba(0, 0, 0, 0.4);
-  --bg-glass:      rgba(15, 15, 20, 0.5);
+  --bg:            #07070f;
+  --bg-card:       rgba(18, 18, 26, 0.6);
+  --bg-raised:     rgba(28, 28, 38, 0.6);
+  --bg-hover:      rgba(40, 40, 52, 0.7);
+  --bg-input:      rgba(0, 0, 0, 0.5);
+  --bg-glass:      rgba(18, 18, 26, 0.6);
 
-  --border:        rgba(255, 255, 255, 0.08);
-  --border-md:     rgba(255,255,255,0.08);
-  --border-acc:    rgba(139,92,246,0.20);
+  --border:        rgba(255, 255, 255, 0.1);
+  --border-md:     rgba(255,255,255,0.12);
+  --border-acc:    rgba(139,92,246,0.25);
 
-  --text:          #f2f2fb;
-  --text-2:        #8a8aaa;
-  --text-3:        #42425a;
+  --text:          #f8fafc;
+  --text-2:        #94a3b8;
+  --text-3:        #64748b;
 
-  --green:  #22c55e; --green-dim:  rgba(34,197,94,0.09);  --green-border: rgba(34,197,94,0.20);
-  --yellow: #f59e0b; --yellow-dim: rgba(245,158,11,0.09); --yellow-border:rgba(245,158,11,0.20);
-  --red:    #ef4444; --red-dim:    rgba(239,68,68,0.09);  --red-border:   rgba(239,68,68,0.20);
-  --blue:   #3b82f6; --blue-dim:   rgba(59,130,246,0.09); --blue-border:  rgba(59,130,246,0.20);
-  --cyan:   #06b6d4; --cyan-dim:   rgba(6,182,212,0.09);  --cyan-border:  rgba(6,182,212,0.20);
+  --green:  #10b981; --green-dim:  rgba(16,185,129,0.12);  --green-border: rgba(16,185,129,0.25);
+  --yellow: #f59e0b; --yellow-dim: rgba(245,158,11,0.12); --yellow-border:rgba(245,158,11,0.25);
+  --red:    #ef4444; --red-dim:    rgba(239,68,68,0.12);  --red-border:   rgba(239,68,68,0.25);
+  --blue:   #3b82f6; --blue-dim:   rgba(59,130,246,0.12); --blue-border:  rgba(59,130,246,0.25);
+  --cyan:   #06b6d4; --cyan-dim:   rgba(6,182,212,0.12);  --cyan-border:  rgba(6,182,212,0.25);
 
-  --r:   8px;
-  --rl:  14px;
-  --rxl: 20px;
+  --r:   10px;
+  --rl:  16px;
+  --rxl: 24px;
 
-  --shadow-sm: 0 2px 10px rgba(0,0,0,0.35);
-  --shadow:    0 8px 32px rgba(0,0,0,0.50);
-  --shadow-lg: 0 24px 64px rgba(0,0,0,0.65);
-  --glow-accent: 0 0 40px rgba(139,92,246,0.15);
-  --glow-green:  0 0 20px rgba(34,197,94,0.15);
+  --shadow-sm: 0 4px 15px rgba(0,0,0,0.4);
+  --shadow:    0 10px 40px rgba(0,0,0,0.6);
+  --shadow-lg: 0 30px 80px rgba(0,0,0,0.8);
+  --glow-accent: 0 0 50px rgba(139,92,246,0.2);
+  --glow-green:  0 0 30px rgba(16,185,129,0.2);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -2358,4 +2358,56 @@ a { color: inherit; text-decoration: none; }
   .landing-list {
     grid-template-columns: 1fr;
   }
+}
+
+/* ═══ MOBILE SIDEBAR OVERLAY ═══ */
+.sidebar-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  z-index: 99;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.sidebar-overlay.open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+@media (max-width: 1023px) {
+  .sidebar {
+    position: fixed;
+    left: -280px;
+    top: 0;
+    bottom: 0;
+    width: 280px;
+    z-index: 100;
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    border-right: 1px solid var(--border-md);
+  }
+  .sidebar.open {
+    left: 0;
+  }
+  .mobile-menu-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    cursor: pointer;
+    margin-right: 1rem;
+    padding: 0.5rem;
+    border-radius: var(--r);
+  }
+  .mobile-menu-btn:hover {
+    background: var(--bg-hover);
+  }
+}
+@media (min-width: 1024px) {
+  .mobile-menu-btn { display: none; }
 }

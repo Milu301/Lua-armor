@@ -1,84 +1,163 @@
 <%- include('partials/head', { title: 'Sign In — ' + panelName }) %>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600;700;800;900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+/* Remove inline Google Fonts imports since they are in head.ejs */
 
 :root {
-  --bg: #030305;
-  --surface: #0a0a0f;
-  --primary: #7c3aed;
+  --bg: #07070f;
+  --surface: rgba(18, 18, 26, 0.6);
+  --primary: #8b5cf6;
   --primary-light: #a78bfa;
-  --border: rgba(255, 255, 255, 0.08);
+  --border: rgba(255, 255, 255, 0.12);
   --text: #f8fafc;
   --text-dim: #94a3b8;
 }
 
 body {
-  font-family: 'Inter', sans-serif;
-  background-color: var(--bg);
-  color: var(--text);
   margin: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
   overflow: hidden;
+  background-color: var(--bg);
 }
 
-/* Ambient Background */
-.ambient-bg {
-  position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -2;
-  background: 
-    radial-gradient(circle at 10% 20%, rgba(124, 58, 237, 0.2) 0%, transparent 50%),
-    radial-gradient(circle at 90% 80%, rgba(14, 165, 233, 0.15) 0%, transparent 50%);
-  filter: blur(80px);
-}
-.noise-overlay {
-  position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
-  opacity: 0.04; pointer-events: none;
-  background-image: url('data:image/svg+xml,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)"/%3E%3C/svg%3E');
+.auth-container {
+  display: flex;
+  width: 100%;
+  max-width: 1200px;
+  height: 100vh;
+  position: relative;
+  z-index: 10;
 }
 
-/* Auth Card Container */
-.auth-wrapper {
-  width: 100%; max-width: 440px; padding: 2rem; position: relative; z-index: 10;
-  animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+/* Left Panel (Branding) */
+.auth-left {
+  flex: 1;
+  display: none; /* hidden on mobile */
+  flex-direction: column;
+  justify-content: center;
+  padding: 4rem;
+  position: relative;
+}
+
+@media (min-width: 1024px) {
+  .auth-left {
+    display: flex;
+  }
+}
+
+.auth-left h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 3.5rem;
+  font-weight: 800;
+  line-height: 1.1;
+  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, #fff, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.auth-left p {
+  font-size: 1.1rem;
+  color: var(--text-dim);
+  max-width: 400px;
+  line-height: 1.6;
+  margin-bottom: 3rem;
+}
+
+.feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.feature-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(139,92,246,0.15);
+  color: var(--primary-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  border: 1px solid rgba(139,92,246,0.3);
+}
+
+/* Right Panel (Form) */
+.auth-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
 }
 
 .auth-card {
-  background: rgba(15, 15, 20, 0.5);
-  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  width: 100%;
+  max-width: 440px;
+  background: var(--surface);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   border: 1px solid var(--border);
-  border-radius: 24px; padding: 2.5rem;
-  box-shadow: 0 25px 50px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.05);
-  position: relative; overflow: hidden;
+  border-radius: 24px;
+  padding: 2.5rem;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.8), inset 0 1px 1px rgba(255,255,255,0.05);
+  position: relative;
+  overflow: hidden;
+  animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Glowing top edge */
 .auth-card::before {
   content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px;
   background: linear-gradient(90deg, transparent, var(--primary-light), transparent);
   opacity: 0.5;
 }
 
-/* Brand */
-.brand-header {
+.brand-header-mobile {
   display: flex; align-items: center; justify-content: center; flex-direction: column;
   margin-bottom: 2.5rem;
 }
-.brand-header img {
-  width: 56px; height: 56px; border-radius: 16px; margin-bottom: 1rem;
-  box-shadow: 0 0 20px rgba(124, 58, 237, 0.4); border: 1px solid var(--border);
+@media (min-width: 1024px) {
+  .brand-header-mobile { display: none; }
 }
-.brand-header h1 {
+
+.brand-header-mobile img {
+  width: 56px; height: 56px; border-radius: 16px; margin-bottom: 1rem;
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.4); border: 1px solid var(--border);
+}
+.brand-header-mobile h2 {
   font-family: 'Space Grotesk', sans-serif; font-size: 1.8rem; font-weight: 800; margin: 0 0 0.5rem; letter-spacing: -0.5px;
 }
-.brand-header p {
+.brand-header-mobile p {
   color: var(--text-dim); font-size: 0.95rem; margin: 0; text-align: center;
 }
 
-/* Form Styles */
+.form-title {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .form-title {
+    display: block;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+  }
+  .form-subtitle {
+    color: var(--text-dim);
+    margin-bottom: 2rem;
+  }
+}
+
 .form-group { margin-bottom: 1.5rem; }
 .form-label {
   display: flex; justify-content: space-between; align-items: center;
@@ -94,13 +173,13 @@ body {
   transition: 0.3s;
 }
 .form-input {
-  width: 100%; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border);
+  width: 100%; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--border);
   border-radius: 12px; padding: 0.8rem 1rem 0.8rem 2.8rem;
   color: #fff; font-size: 1rem; font-family: 'Inter', sans-serif; transition: 0.3s;
 }
 .form-input:focus {
-  outline: none; border-color: var(--primary); background: rgba(0,0,0,0.6);
-  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
+  outline: none; border-color: var(--primary); background: rgba(0,0,0,0.7);
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15);
 }
 .form-input:focus + i { color: var(--primary-light); }
 .eye-btn {
@@ -109,20 +188,18 @@ body {
 }
 .eye-btn:hover { color: #fff; }
 
-/* Button */
 .btn-submit {
-  width: 100%; background: linear-gradient(135deg, var(--primary), #4f46e5);
+  width: 100%; background: linear-gradient(135deg, var(--primary), #6366f1);
   color: #fff; border: none; padding: 1rem; border-radius: 12px;
   font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.1rem;
   cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 0.5rem;
-  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.3); margin-top: 1rem;
+  box-shadow: 0 8px 20px rgba(139, 92, 246, 0.3); margin-top: 1rem;
 }
 .btn-submit:hover {
-  transform: translateY(-2px); box-shadow: 0 12px 25px rgba(124, 58, 237, 0.5);
+  transform: translateY(-2px); box-shadow: 0 12px 25px rgba(139, 92, 246, 0.5);
 }
 .btn-submit:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
 
-/* Footer Links */
 .auth-footer {
   margin-top: 2rem; text-align: center; color: var(--text-dim); font-size: 0.95rem;
 }
@@ -135,7 +212,6 @@ body {
 }
 .auth-footer a:hover::after { width: 100%; }
 
-/* Discord Strip */
 .discord-strip {
   margin-top: 2rem; background: rgba(88, 101, 242, 0.1); border: 1px solid rgba(88, 101, 242, 0.2);
   border-radius: 12px; padding: 1rem; display: flex; align-items: center; gap: 1rem;
@@ -160,63 +236,87 @@ body {
 @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 
-<script src="https://unpkg.com/@phosphor-icons/web"></script>
-
-<div class="ambient-bg"></div>
-<div class="noise-overlay"></div>
-
-<div class="auth-wrapper">
-  <div class="auth-card">
-    <div class="brand-header">
-      <img src="<%= typeof panelLogo !== 'undefined' ? panelLogo : '/logo.png' %>" alt="Logo" onerror="this.src='https://ui-avatars.com/api/?name=AH&background=7c3aed&color=fff'">
-      <h1>Welcome Back</h1>
-      <p>Sign in to manage your keys & HWID</p>
-    </div>
-
-    <% if (error) { %>
-    <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; padding: 0.8rem 1rem; border-radius: 10px; font-size: 0.9rem; display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1.5rem;">
-      <i class="ph-fill ph-warning-circle" style="font-size: 1.2rem;"></i>
-      <span><%= error %></span>
-    </div>
-    <% } %>
-
-    <form action="/login" method="POST" id="loginForm" autocomplete="off">
-      <div class="form-group">
-        <div class="form-label">Username</div>
-        <div class="input-wrapper">
-          <input type="text" name="username" class="form-input" placeholder="your_username" required minlength="3" maxlength="32" autocomplete="username" spellcheck="false" />
-          <i class="ph ph-user"></i>
+<div class="auth-container">
+  <!-- Left Branding Panel -->
+  <div class="auth-left">
+    <h1>Experience the<br>Next Generation</h1>
+    <p>Manage your keys, HWID, and access all our premium tools in one streamlined, secure dashboard.</p>
+    
+    <div class="feature-list">
+      <div class="feature-item">
+        <div class="feature-icon"><i class="ph-bold ph-shield-check"></i></div>
+        <div>
+          <div style="color: #fff; font-weight: 600; margin-bottom: 0.2rem;">Enterprise Security</div>
+          <div style="color: var(--text-dim); font-size: 0.85rem;">Advanced encryption and HWID protection</div>
         </div>
       </div>
-
-      <div class="form-group">
-        <div class="form-label">
-          <span>Password</span>
-          <a href="<%= typeof discordUrl !== 'undefined' ? discordUrl : '#' %>" target="_blank">Forgot it?</a>
-        </div>
-        <div class="input-wrapper">
-          <input type="password" name="password" id="pwField" class="form-input" placeholder="••••••••" required minlength="8" autocomplete="current-password" />
-          <i class="ph ph-lock-key"></i>
-          <button type="button" class="eye-btn" onclick="togglePw()" title="Toggle Password">
-            <i class="ph ph-eye" id="eye-icon"></i>
-          </button>
+      <div class="feature-item">
+        <div class="feature-icon"><i class="ph-bold ph-lightning"></i></div>
+        <div>
+          <div style="color: #fff; font-weight: 600; margin-bottom: 0.2rem;">Lightning Fast</div>
+          <div style="color: var(--text-dim); font-size: 0.85rem;">Instant key delivery and global chat</div>
         </div>
       </div>
-
-      <button type="submit" class="btn-submit" id="loginBtn">
-        Sign In <i class="ph-bold ph-arrow-right"></i>
-      </button>
-    </form>
-
-    <div class="auth-footer">
-      New here? <a href="/register">Create an account</a><br>
-      <a href="/home" style="color: var(--text-dim); font-size: 0.85rem; font-weight: 400; margin-top: 0.8rem; display: inline-block;">← Back to Home</a>
     </div>
+  </div>
 
-    <div class="discord-strip">
-      <i class="ph-fill ph-discord-logo"></i>
-      <div class="discord-text">Need a key? Join Discord.</div>
-      <a href="<%= typeof discordUrl !== 'undefined' ? discordUrl : '#' %>" target="_blank" class="btn-discord">Join</a>
+  <!-- Right Form Panel -->
+  <div class="auth-right">
+    <div class="auth-card">
+      <div class="brand-header-mobile">
+        <img src="<%= typeof panelLogo !== 'undefined' ? panelLogo : '/logo.png' %>" alt="Logo" onerror="this.src='https://ui-avatars.com/api/?name=AH&background=8b5cf6&color=fff'">
+        <h2>Welcome Back</h2>
+        <p>Sign in to your account</p>
+      </div>
+
+      <div class="form-title">Welcome Back</div>
+      <div class="form-subtitle">Sign in to your account to continue</div>
+
+      <% if (error) { %>
+      <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; padding: 0.8rem 1rem; border-radius: 10px; font-size: 0.9rem; display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1.5rem;">
+        <i class="ph-fill ph-warning-circle" style="font-size: 1.2rem;"></i>
+        <span><%= error %></span>
+      </div>
+      <% } %>
+
+      <form action="/login" method="POST" id="loginForm" autocomplete="off">
+        <div class="form-group">
+          <div class="form-label">Username</div>
+          <div class="input-wrapper">
+            <input type="text" name="username" class="form-input" placeholder="your_username" required minlength="3" maxlength="32" autocomplete="username" spellcheck="false" />
+            <i class="ph ph-user"></i>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <div class="form-label">
+            <span>Password</span>
+            <a href="<%= typeof discordUrl !== 'undefined' ? discordUrl : '#' %>" target="_blank">Forgot it?</a>
+          </div>
+          <div class="input-wrapper">
+            <input type="password" name="password" id="pwField" class="form-input" placeholder="••••••••" required minlength="8" autocomplete="current-password" />
+            <i class="ph ph-lock-key"></i>
+            <button type="button" class="eye-btn" onclick="togglePw()" title="Toggle Password">
+              <i class="ph ph-eye" id="eye-icon"></i>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit" id="loginBtn">
+          Sign In <i class="ph-bold ph-arrow-right"></i>
+        </button>
+      </form>
+
+      <div class="auth-footer">
+        New here? <a href="/register">Create an account</a><br>
+        <a href="/home" style="color: var(--text-dim); font-size: 0.85rem; font-weight: 400; margin-top: 0.8rem; display: inline-block;">← Back to Home</a>
+      </div>
+
+      <div class="discord-strip">
+        <i class="ph-fill ph-discord-logo"></i>
+        <div class="discord-text">Need a key? Join Discord.</div>
+        <a href="<%= typeof discordUrl !== 'undefined' ? discordUrl : '#' %>" target="_blank" class="btn-discord">Join</a>
+      </div>
     </div>
   </div>
 </div>

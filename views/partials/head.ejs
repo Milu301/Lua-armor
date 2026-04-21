@@ -1,14 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<%= typeof user !== 'undefined' && user && user.language ? user.language : 'en' %>">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#07070f" />
   <title><%= title || panelName %></title>
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
   <meta name="googlebot" content="noindex, nofollow" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;600;700;800;900&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700;800&display=swap" />
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   <link rel="stylesheet" href="/css/style.css" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔑</text></svg>" />
@@ -21,46 +22,25 @@
 </head>
 <body>
 
-<!-- Global Ultra-Premium Background -->
 <div class="ambient-bg"></div>
 <div class="noise-overlay"></div>
-
 <div class="scroll-progress" id="scrollProgress"></div>
 
 <script src="/socket.io/socket.io.js"></script>
 
 <script>
-/* ═══════════════════════════════════════════
-   SOURCE PROTECTION — disable common inspect shortcuts
-   ═══════════════════════════════════════════ */
+/* ═══ SOURCE PROTECTION ═══ */
 (function() {
-  // Disable right-click context menu
-  document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
-
-  // Disable keyboard shortcuts: F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U, Ctrl+Shift+C
-  document.addEventListener('keydown', function(e) {
-    // F12
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('keydown', e => {
     if (e.key === 'F12') { e.preventDefault(); return false; }
-    // Ctrl+Shift+I / Ctrl+Shift+J / Ctrl+Shift+C
-    if (e.ctrlKey && e.shiftKey && ['I','i','J','j','C','c'].includes(e.key)) {
-      e.preventDefault(); return false;
-    }
-    // Ctrl+U (view source)
-    if (e.ctrlKey && (e.key === 'U' || e.key === 'u')) {
-      e.preventDefault(); return false;
-    }
-    // Ctrl+S (save page)
-    if (e.ctrlKey && (e.key === 'S' || e.key === 's')) {
-      e.preventDefault(); return false;
-    }
+    if (e.ctrlKey && e.shiftKey && ['I','i','J','j','C','c'].includes(e.key)) { e.preventDefault(); return false; }
+    if (e.ctrlKey && (e.key === 'U' || e.key === 'u')) { e.preventDefault(); return false; }
+    if (e.ctrlKey && (e.key === 'S' || e.key === 's')) { e.preventDefault(); return false; }
   });
 })();
 
-/* ═══════════════════════════════════════════
-   GLOBAL ENHANCEMENTS — Scroll, Ripple, Reveal, Clock
-   ═══════════════════════════════════════════ */
-
-/* Scroll progress bar */
+/* ═══ SCROLL PROGRESS ═══ */
 window.addEventListener('scroll', () => {
   const el = document.getElementById('scrollProgress');
   if (!el) return;
@@ -68,33 +48,29 @@ window.addEventListener('scroll', () => {
   el.style.width = Math.min(100, pct) + '%';
 }, { passive: true });
 
-/* Ripple effect */
+/* ═══ RIPPLE ═══ */
 document.addEventListener('click', e => {
   const btn = e.target.closest('.btn, .hwid-btn, .btn-kick, .chat-send-btn');
   if (!btn || btn.disabled) return;
-  const rect  = btn.getBoundingClientRect();
-  const size  = Math.max(rect.width, rect.height) * 2;
-  const x     = e.clientX - rect.left - size / 2;
-  const y     = e.clientY - rect.top  - size / 2;
-  const wave  = document.createElement('span');
+  const rect = btn.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height) * 2;
+  const x = e.clientX - rect.left - size / 2;
+  const y = e.clientY - rect.top  - size / 2;
+  const wave = document.createElement('span');
   wave.className = 'ripple-wave';
   wave.style.cssText = `width:${size}px;height:${size}px;left:${x}px;top:${y}px;`;
   btn.appendChild(wave);
   setTimeout(() => wave.remove(), 700);
 });
 
-/* Scroll Reveal */
+/* ═══ SCROLL REVEAL ═══ */
 (function initReveal() {
   if (!window.IntersectionObserver) return;
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('revealed');
-        observer.unobserve(entry.target);
-      }
+      if (entry.isIntersecting) { entry.target.classList.add('revealed'); observer.unobserve(entry.target); }
     });
   }, { threshold: 0.04, rootMargin: '0px 0px -20px 0px' });
-
   function observeAll() {
     const els = document.querySelectorAll('.card, .stat, .welcome-banner, .hwid-card, .announce-item, .account-card, .auth-card, .login-card, .settings-card');
     els.forEach((el, i) => {
@@ -104,15 +80,11 @@ document.addEventListener('click', e => {
     });
     setTimeout(() => { els.forEach(el => el.classList.add('revealed')); }, 900);
   }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', observeAll);
-  } else {
-    requestAnimationFrame(() => requestAnimationFrame(observeAll));
-  }
+  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', observeAll); }
+  else { requestAnimationFrame(() => requestAnimationFrame(observeAll)); }
 })();
 
-/* Count-up animation */
+/* ═══ COUNT-UP ═══ */
 function countUp(el, target, duration) {
   duration = duration || 1200;
   const start = performance.now();
@@ -120,8 +92,7 @@ function countUp(el, target, duration) {
   function step(now) {
     const progress = Math.min((now - start) / duration, 1);
     const ease = 1 - Math.pow(1 - progress, 3);
-    const val  = Math.round(from + (target - from) * ease);
-    el.textContent = val.toLocaleString();
+    el.textContent = Math.round(from + (target - from) * ease).toLocaleString();
     if (progress < 1) requestAnimationFrame(step);
     else el.classList.add('bump');
   }
@@ -129,7 +100,7 @@ function countUp(el, target, duration) {
 }
 window.countUp = countUp;
 
-/* Clock */
+/* ═══ CLOCK ═══ */
 function updateClock() {
   const el = document.getElementById('topbar-clock');
   if (!el) return;
@@ -142,71 +113,55 @@ function updateClock() {
 setInterval(updateClock, 1000);
 updateClock();
 
-/* Toast helper */
+/* ═══ TOAST ═══ */
 function toast(msg, type) {
   type = type || 'ok';
   const wrap = document.getElementById('toast-wrap') || (function() {
     const w = document.createElement('div');
-    w.id = 'toast-wrap';
-    w.className = 'toast-wrap';
-    document.body.appendChild(w);
-    return w;
+    w.id = 'toast-wrap'; w.className = 'toast-wrap';
+    document.body.appendChild(w); return w;
   })();
   const t = document.createElement('div');
   t.className = 'toast ' + type;
   const icons = { ok: '✓', err: '✕', warn: '⚠' };
-  t.innerHTML = '<span style="font-weight:700;font-size:0.9rem;">' + (icons[type]||'ℹ') + '</span><span>' + msg + '</span>';
+  t.innerHTML = '<span class="toast-icon">' + (icons[type]||'ℹ') + '</span><span>' + msg + '</span>';
   wrap.appendChild(t);
   setTimeout(() => {
-    t.style.animation = 'toastOut 0.25s ease forwards';
-    setTimeout(() => t.remove(), 260);
-  }, 3200);
+    t.style.animation = 'toastOut 0.3s ease forwards';
+    setTimeout(() => t.remove(), 310);
+  }, 3500);
 }
 window.toast = toast;
 
-/* Mobile Sidebar Toggle */
+/* ═══ MOBILE SIDEBAR ═══ */
 document.addEventListener('DOMContentLoaded', () => {
+  const sidebar  = document.querySelector('.sidebar');
   const topbarLeft = document.querySelector('.topbar-left');
-  if (topbarLeft) {
-    const btn = document.createElement('button');
-    btn.className = 'mobile-menu-btn';
-    btn.innerHTML = `<svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>`;
-    btn.style.cssText = 'background:none; border:none; color:var(--text); cursor:pointer; margin-right:1rem; display:none;';
-    topbarLeft.insertBefore(btn, topbarLeft.firstChild);
+  if (!sidebar || !topbarLeft) return;
 
-    // Mobile specific styles dynamically injected
-    const style = document.createElement('style');
-    style.textContent = `
-      @media (max-width: 768px) {
-        .mobile-menu-btn { display: block !important; }
-        .sidebar {
-          position: fixed; left: -280px; top: 0; bottom: 0; width: 260px; z-index: 9999;
-          display: flex !important; flex-direction: column; transition: left 0.3s ease;
-          box-shadow: 10px 0 30px rgba(0,0,0,0.5);
-        }
-        .sidebar.open { left: 0; }
-        .sidebar-overlay {
-          position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5);
-          z-index: 9998; display: none; backdrop-filter: blur(4px);
-        }
-        .sidebar-overlay.open { display: block; }
-      }
-    `;
-    document.head.appendChild(style);
+  /* Hamburger button */
+  const btn = document.createElement('button');
+  btn.className = 'mobile-menu-btn';
+  btn.id = 'mobile-menu-btn';
+  btn.setAttribute('aria-label', 'Open menu');
+  btn.innerHTML = `<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>`;
+  topbarLeft.insertBefore(btn, topbarLeft.firstChild);
 
-    const overlay = document.createElement('div');
-    overlay.className = 'sidebar-overlay';
-    document.body.appendChild(overlay);
+  /* Overlay */
+  const overlay = document.createElement('div');
+  overlay.className = 'sidebar-overlay';
+  overlay.id = 'sidebar-overlay';
+  document.body.appendChild(overlay);
 
-    const sidebar = document.querySelector('.sidebar');
-    
-    function toggleSidebar() {
-      sidebar.classList.toggle('open');
-      overlay.classList.toggle('open');
-    }
-    
-    btn.addEventListener('click', toggleSidebar);
-    overlay.addEventListener('click', toggleSidebar);
-  }
+  function openSidebar()  { sidebar.classList.add('open'); overlay.classList.add('open'); document.body.style.overflow = 'hidden'; }
+  function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('open'); document.body.style.overflow = ''; }
+
+  btn.addEventListener('click', () => sidebar.classList.contains('open') ? closeSidebar() : openSidebar());
+  overlay.addEventListener('click', closeSidebar);
+
+  /* Close on nav link click (mobile) */
+  sidebar.querySelectorAll('.sb-link').forEach(link => {
+    link.addEventListener('click', () => { if (window.innerWidth < 1024) closeSidebar(); });
+  });
 });
 </script>

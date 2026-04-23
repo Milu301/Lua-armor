@@ -118,8 +118,7 @@
               </div>
               <% if (msg.content) { %>
               <div class="cp-text" id="msg-text-<%= msg.id %>"><%= msg.content %></div>
-              <button class="cp-translate-btn" onclick="translateMsg(<%= msg.id %>, '<%= msg.content.replace(/'/g, &quot;\\&quot;').replace(/
-/g,'\\n') %>', this)" title="Translate">🌐</button>
+              <button class="cp-translate-btn" data-id="<%= msg.id %>" onclick="translateMsg(this)" title="Translate">🌐</button>
               <% } %>
               <% if (msg.image_url) { %>
               <div style="margin-top: 0.5rem;">
@@ -301,7 +300,7 @@ function buildMsg(msg) {
       </div>
       ${msg.content ? `
         <div class="cp-text" id="msg-text-${msg.id}">${escH(msg.content)}</div>
-        <button class="cp-translate-btn" onclick="translateMsg(${msg.id}, ${JSON.stringify(msg.content)}, this)" title="Translate">🌐</button>
+        <button class="cp-translate-btn" data-id="${msg.id}" onclick="translateMsg(this)" title="Translate">🌐</button>
       ` : ''}
       ${msg.image_url ? `<div style="margin-top:0.4rem;"><img src="${msg.image_url}" class="cp-img" onclick="openLb('${msg.image_url}')" loading="eager" decoding="async" onerror="this.style.opacity='0.3';this.title='Image not found'"/></div>` : ''}
     </div>`;
@@ -387,7 +386,8 @@ function escH(s) {
 }
 
 /* ── Translate ── */
-async function translateMsg(id, text, btn) {
+async function translateMsg(btn) {
+  const id = btn.dataset.id;
   const textEl = document.getElementById('msg-text-' + id);
   if (!textEl) return;
   // Toggle back if already translated
@@ -400,14 +400,16 @@ async function translateMsg(id, text, btn) {
     if (lbl && lbl.classList.contains('cp-translated-label')) lbl.remove();
     return;
   }
+  const text = textEl.textContent;
+  if (!text.trim()) return;
   btn.textContent = '⏳';
   btn.disabled = true;
   try {
     const userLang = '<%= typeof user !== "undefined" && user && user.language ? user.language : "en" %>';
-    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=autodetect|${userLang}`;
+    const url = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=autodetect|' + userLang;
     const res = await fetch(url);
     const data = await res.json();
-    const translated = data?.responseData?.translatedText;
+    const translated = data && data.responseData && data.responseData.translatedText;
     if (translated && translated !== text) {
       btn.dataset.original = textEl.textContent;
       textEl.textContent = translated;
@@ -420,7 +422,7 @@ async function translateMsg(id, text, btn) {
     } else {
       btn.textContent = '✓';
     }
-  } catch {
+  } catch (e) {
     btn.textContent = '❌';
   }
   btn.disabled = false;

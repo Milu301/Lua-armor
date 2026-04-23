@@ -1,62 +1,57 @@
 <%- include('partials/head', { title: group.name + ' — ' + panelName }) %>
 
 <style>
-.gc-layout { display: flex; height: calc(100vh - 70px); gap: 1.5rem; padding: 1.5rem; overflow: hidden; background: transparent; }
-.gc-main { flex: 1; display: flex; flex-direction: column; background: var(--bg-card); border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); border: 1px solid var(--border-md); overflow: hidden; position: relative; backdrop-filter: blur(20px); }
-.gc-main::before { content: ''; position: absolute; top:0; left:0; width:100%; height:4px; background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899); z-index: 10; box-shadow: 0 0 15px var(--accent);}
-
-.gc-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-md); display: flex; justify-content: space-between; align-items: center; background: linear-gradient(to right, rgba(139, 92, 246, 0.05), transparent); }
-.gc-title-group { display: flex; align-items: center; gap: 1rem; }
-.gc-title { font-size: 1.3rem; font-weight: 800; color: var(--text); }
-
-.gc-btn-voice { background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); transition: all 0.2s; }
-.gc-btn-voice:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4); }
-.gc-btn-voice.active { background: linear-gradient(135deg, #ef4444, #b91c1c); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); }
-
-/* Voice Room Overlay */
-.gc-voice-room { display: none; padding: 1.5rem; background: var(--bg-raised); border-bottom: 1px solid var(--border-md); flex-direction: column; gap: 1rem; }
+.gc-layout { display: flex; height: calc(100vh - 70px); gap: 1rem; padding: 1rem; overflow: hidden; }
+.gc-main { flex: 1; display: flex; flex-direction: column; background: var(--bg-card); border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); border: 1px solid var(--border-md); overflow: hidden; position: relative; }
+.gc-main::before { content: ''; position: absolute; top:0; left:0; width:100%; height:4px; background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899); z-index:10; }
+.gc-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-md); display: flex; justify-content: space-between; align-items: center; background: rgba(139,92,246,0.04); flex-shrink: 0; }
+.gc-title-group { display: flex; align-items: center; gap: 0.75rem; }
+.gc-title { font-size: 1.2rem; font-weight: 800; }
+.gc-voice-room { display: none; flex-direction: column; gap: 1rem; padding: 1rem 1.5rem; background: rgba(0,0,0,0.25); border-bottom: 1px solid var(--border-md); flex-shrink: 0; }
 .gc-voice-room.active { display: flex; animation: slideDown 0.3s ease; }
-@keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
-.gc-voice-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem; }
-.gc-voice-peer { background: var(--bg-card); border: 2px solid var(--border); border-radius: 16px; padding: 1.5rem; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; position: relative; transition: all 0.2s; }
-.gc-voice-peer.speaking { border-color: #10b981; box-shadow: 0 0 15px rgba(16, 185, 129, 0.3); }
-.gc-voice-avatar { width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #ec4899); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; color: white; }
-.gc-voice-name { font-weight: 600; font-size: 0.9rem; }
-.gc-voice-controls { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
-.gc-v-btn { background: var(--bg-body); border: 1px solid var(--border-md); color: var(--text); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; }
-.gc-v-btn:hover { background: var(--bg-hover); color: var(--accent); border-color: var(--accent); }
-.gc-v-btn.muted { background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: #ef4444; }
-
-/* Screenshare container */
-.gc-screenshare { width: 100%; max-height: 400px; background: #000; border-radius: 12px; overflow: hidden; display: none; }
-.gc-screenshare.active { display: block; }
-.gc-screenshare video { width: 100%; height: 100%; object-fit: contain; }
-
-/* Chat Area */
-.gc-messages { flex: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem; }
-.gc-msg { display: flex; gap: 1rem; animation: fadeIn 0.3s; }
-.gc-avatar { width: 40px; height: 40px; border-radius: 12px; background: var(--border-md); display: flex; align-items: center; justify-content: center; font-weight: bold; }
-.gc-bubble { flex: 1; max-width: 80%; }
-.gc-meta { display: flex; gap: 0.5rem; margin-bottom: 0.4rem; font-size: 0.85rem; }
-.gc-name { font-weight: 700; color: var(--text); }
-.gc-time { color: var(--text-3); }
-.gc-text { background: var(--bg-raised); padding: 1rem; border-radius: 4px 16px 16px 16px; font-size: 0.95rem; border: 1px solid var(--border-md); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-
-.gc-input-bar { display: flex; gap: 0.75rem; padding: 1.25rem; background: var(--bg-card); border-top: 1px solid var(--border); }
-.gc-input { flex: 1; background: var(--bg-body); border: 1px solid var(--border-md); border-radius: 20px; padding: 0.8rem 1.25rem; color: var(--text); font-family: inherit; resize: none; overflow-y: hidden; }
-.gc-input:focus { outline: none; border-color: var(--accent); }
-
-/* Sidebar */
-.gc-side { width: 280px; background: var(--bg-card); border-radius: 20px; border: 1px solid var(--border-md); display: flex; flex-direction: column; overflow: hidden; }
-.gc-side-header { padding: 1.25rem; border-bottom: 1px solid var(--border-md); font-weight: 800; display: flex; justify-content: space-between; }
-.gc-members { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
-.gc-member { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; border-radius: 12px; background: rgba(0,0,0,0.2); transition: all 0.2s; }
-.gc-member:hover { background: var(--bg-raised); transform: translateX(4px); }
-
-.gc-add-btn { width: 100%; padding: 0.75rem; border: 1px dashed var(--border-md); border-radius: 12px; background: transparent; color: var(--text-2); font-weight: 600; cursor: pointer; transition: all 0.2s; margin-top: auto; }
-.gc-add-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(139, 92, 246, 0.05); }
+@keyframes slideDown { from { transform:translateY(-15px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+.gc-voice-bar { display: flex; justify-content: space-between; align-items: center; }
+.gc-voice-label { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; color: #10b981; font-size: 0.9rem; }
+.gc-voice-actions { display: flex; gap: 0.5rem; }
+.gc-v-btn { background: rgba(255,255,255,0.07); border: 1px solid var(--border-md); color: var(--text); border-radius: 10px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; }
+.gc-v-btn:hover { background: rgba(139,92,246,0.2); border-color: var(--accent); color: var(--accent); }
+.gc-v-btn.muted { background: rgba(239,68,68,0.15); color: #ef4444; border-color: rgba(239,68,68,0.4); }
+.gc-v-btn.screen-on { background: rgba(59,130,246,0.15); color: #60a5fa; border-color: rgba(59,130,246,0.4); }
+.gc-voice-grid { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.gc-voice-peer { background: rgba(255,255,255,0.04); border: 2px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 1rem 1.5rem; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; transition: all 0.3s; min-width: 100px; }
+.gc-voice-peer.speaking { border-color: #10b981; box-shadow: 0 0 20px rgba(16,185,129,0.3); background: rgba(16,185,129,0.07); }
+.gc-voice-avatar { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #ec4899); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; font-weight: bold; color: white; }
+.gc-voice-name { font-weight: 600; font-size: 0.82rem; color: var(--text-2); }
+.gc-screenshare { display: none; width: 100%; max-height: 350px; border-radius: 12px; overflow: hidden; background: #000; border: 1px solid var(--border-md); }
+.gc-screenshare video { width: 100%; height: 100%; object-fit: contain; display: block; }
+.gc-messages { flex: 1; overflow-y: auto; padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 1rem; scroll-behavior: smooth; }
+.gc-msg { display: flex; gap: 0.85rem; animation: fadeInUp 0.3s ease; }
+@keyframes fadeInUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.gc-av-wrap { position: relative; flex-shrink: 0; }
+.gc-avatar { width: 38px; height: 38px; border-radius: 11px; background: var(--border-md); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; }
+.gc-bubble { flex: 1; max-width: 78%; }
+.gc-meta { display: flex; gap: 0.5rem; align-items: baseline; margin-bottom: 0.3rem; }
+.gc-name { font-weight: 700; font-size: 0.88rem; }
+.gc-time { color: var(--text-3); font-size: 0.75rem; }
+.gc-text { background: var(--bg-raised); padding: 0.75rem 1rem; border-radius: 4px 16px 16px 16px; font-size: 0.93rem; line-height: 1.5; border: 1px solid var(--border-md); word-break: break-word; }
+.gc-input-bar { display: flex; gap: 0.75rem; padding: 1rem 1.25rem; background: var(--bg-card); border-top: 1px solid var(--border); flex-shrink: 0; }
+.gc-input { flex: 1; background: var(--bg-body); border: 1px solid var(--border-md); border-radius: 20px; padding: 0.75rem 1.25rem; color: var(--text); font-family: inherit; font-size: 0.93rem; resize: none; overflow-y: auto; max-height: 120px; transition: border-color 0.2s; }
+.gc-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(139,92,246,0.12); }
+.gc-send { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #6366f1); color: white; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s; flex-shrink: 0; box-shadow: 0 4px 12px rgba(139,92,246,0.35); }
+.gc-send:hover { transform: scale(1.1); }
+.gc-side { width: 250px; display: flex; flex-direction: column; background: var(--bg-card); border-radius: 20px; border: 1px solid var(--border-md); overflow: hidden; flex-shrink: 0; }
+.gc-side-header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-md); font-weight: 800; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; }
+.gc-members { flex: 1; overflow-y: auto; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.4rem; }
+.gc-member { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0.75rem; border-radius: 12px; background: rgba(0,0,0,0.15); transition: all 0.2s; }
+.gc-member:hover { background: var(--bg-raised); transform: translateX(3px); }
+.gc-add-btn { margin: 0.75rem; padding: 0.65rem; border: 1px dashed var(--border-md); border-radius: 12px; background: transparent; color: var(--text-2); font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; }
+.gc-add-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(139,92,246,0.06); }
+.status-dot { width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--bg-card); position: absolute; bottom: -1px; right: -1px; }
+.gc-btn-join { background: linear-gradient(135deg,#10b981,#059669); color: white; border: none; padding: 0.5rem 1rem; border-radius: 10px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; box-shadow: 0 4px 12px rgba(16,185,129,0.3); transition: all 0.2s; }
+.gc-btn-join:hover { transform: translateY(-1px); }
+.gc-btn-join.active { background: linear-gradient(135deg,#ef4444,#b91c1c); box-shadow: 0 4px 12px rgba(239,68,68,0.3); }
 </style>
+
 
 <div class="layout">
   <%- include('partials/sidebar', { page: 'social' }) %>
@@ -78,28 +73,25 @@
 
         <!-- Voice / Video Room Area -->
         <div class="gc-voice-room" id="voiceRoom">
-          <div class="gc-voice-controls" style="justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <div style="font-weight: 700; color: #10b981; display: flex; align-items: center; gap: 0.5rem;">
-              <div class="pulse-dot" style="background: #10b981;"></div> Voice Connected
+          <div class="gc-voice-bar">
+            <div class="gc-voice-label">
+              <div class="pulse-dot" style="background:#10b981;"></div> Voice Connected
             </div>
-            <div style="display: flex; gap: 0.5rem;">
-              <button class="gc-v-btn" id="btnMute" onclick="toggleMute()" title="Mute Microphone">
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+            <div class="gc-voice-actions">
+              <button class="gc-v-btn" id="btnMute" onclick="toggleMute()" title="Mute">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
               </button>
               <button class="gc-v-btn" id="btnScreen" onclick="toggleScreenShare()" title="Share Screen">
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
               </button>
             </div>
           </div>
-          
           <div class="gc-screenshare" id="screenShareContainer">
             <video id="screenShareVideo" autoplay playsinline></video>
           </div>
-
           <div class="gc-voice-grid" id="voiceGrid">
-            <!-- Self -->
             <div class="gc-voice-peer" id="peer-self">
-              <div class="gc-voice-avatar" style="<%= user.avatarUrl ? 'background: url('+user.avatarUrl+') center/cover; color: transparent;' : '' %>"><%= user.avatarUrl ? '' : user.username.charAt(0).toUpperCase() %></div>
+              <div class="gc-voice-avatar" style="<%= user.avatarUrl ? 'background:url('+user.avatarUrl+') center/cover;color:transparent;' : '' %>"><%= user.avatarUrl ? '' : user.username.charAt(0).toUpperCase() %></div>
               <div class="gc-voice-name"><%= user.username %> (You)</div>
             </div>
           </div>
@@ -109,7 +101,9 @@
         <div class="gc-messages" id="msgContainer">
           <% messages.forEach(m => { %>
             <div class="gc-msg">
-              <div class="gc-avatar" style="<%= m.avatar_url ? 'background: url('+m.avatar_url+') center/cover; color: transparent;' : '' %>"><%= m.avatar_url ? '' : m.username.charAt(0).toUpperCase() %></div>
+              <div class="gc-av-wrap">
+                <div class="gc-avatar" style="<%= m.avatar_url ? 'background:url('+m.avatar_url+') center/cover;color:transparent;' : '' %>"><%= m.avatar_url ? '' : m.username.charAt(0).toUpperCase() %></div>
+              </div>
               <div class="gc-bubble">
                 <div class="gc-meta">
                   <span class="gc-name"><%= m.username %></span>
@@ -123,27 +117,40 @@
         </div>
 
         <div class="gc-input-bar">
-          <textarea id="msgInput" class="gc-input" placeholder="Message <%= group.name %>..." rows="1" onkeydown="onKey(event)"></textarea>
-          <button class="gc-btn-voice" style="background: var(--accent);" onclick="sendMsg()">Send</button>
+          <textarea id="msgInput" class="gc-input" placeholder="Message #<%= group.name %>..." rows="1" onkeydown="onKey(event)" oninput="autoGrow(this)"></textarea>
+          <button class="gc-send" onclick="sendMsg()" title="Send">
+            <svg width="17" height="17" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+          </button>
         </div>
       </div>
 
       <!-- Members Sidebar -->
       <div class="gc-side">
         <div class="gc-side-header">
-          Members <span class="badge" style="background: var(--bg-raised);"><%= members.length %></span>
+          <span>Members</span>
+          <span class="badge" style="background: var(--bg-raised); font-size: 0.7rem;"><%= members.length %></span>
         </div>
         <div class="gc-members">
           <% members.forEach(m => { %>
-            <div class="gc-member">
-              <div class="gc-avatar" style="width: 32px; height: 32px; font-size: 0.8rem; <%= m.avatar_url ? 'background: url('+m.avatar_url+') center/cover; color: transparent;' : '' %>"><%= m.avatar_url ? '' : m.username.charAt(0).toUpperCase() %></div>
-              <span style="font-weight: 600; font-size: 0.9rem;"><%= m.username %></span>
+            <div class="gc-member" data-uid="<%= m.id %>">
+              <div style="position:relative;flex-shrink:0;">
+                <div class="gc-avatar" style="width:32px;height:32px;font-size:0.82rem;<%= m.avatar_url ? 'background:url('+m.avatar_url+') center/cover;color:transparent;' : '' %>"><%= m.avatar_url ? '' : m.username.charAt(0).toUpperCase() %></div>
+                <div class="status-dot" style="background:<%= m.online_status === 'idle' ? '#f59e0b' : m.online_status === 'dnd' ? '#ef4444' : m.online_status === 'offline' ? '#6b7280' : '#22c55e' %>;"></div>
+              </div>
+              <span style="font-weight:600;font-size:0.87rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><%= m.username %></span>
+              <% if (m.is_admin) { %>
+                <span style="font-size:0.62rem;font-weight:700;background:rgba(139,92,246,0.15);color:var(--accent);border:1px solid rgba(139,92,246,0.3);border-radius:5px;padding:1px 5px;flex-shrink:0;">ADMIN</span>
+              <% } else if (isGroupAdmin && m.id !== user.id) { %>
+                <button onclick="setAdmin(<%= m.id %>, '<%= m.username %>')" title="Make Admin" style="background:none;border:none;color:var(--text-3);cursor:pointer;padding:2px;border-radius:4px;flex-shrink:0;transition:color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-3)'">
+                  <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+                </button>
+              <% } %>
             </div>
           <% }) %>
         </div>
-        <div style="padding: 1rem; border-top: 1px solid var(--border-md);">
-          <button class="gc-add-btn" onclick="addFriendToGroup()">+ Add Friend</button>
-        </div>
+        <% if (isGroupAdmin) { %>
+        <button class="gc-add-btn" onclick="addFriendToGroup()">+ Add Friend</button>
+        <% } %>
       </div>
     </div>
   </div>
@@ -151,14 +158,15 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-const GROUP_ID = <%= group.id %>;
-const MY_ID = <%= user.id %>;
-const MY_NAME = "<%= user.username %>";
+const GROUP_ID      = <%= group.id %>;
+const MY_ID         = <%= user.id %>;
+const MY_NAME       = "<%= user.username %>";
+const IS_GROUP_ADMIN = <%= isGroupAdmin ? 'true' : 'false' %>;
 
-/* ── Chat Logic ── */
+/* ── Chat ── */
 const msgContainer = document.getElementById('msgContainer');
-const msgInput = document.getElementById('msgInput');
-const socket = io({ transports: ['websocket','polling'] });
+const msgInput     = document.getElementById('msgInput');
+const socket       = io({ transports: ['websocket','polling'] });
 
 socket.on('group_message', msg => {
   if (msg.group_id !== GROUP_ID) return;
@@ -195,214 +203,141 @@ async function sendMsg() {
 function onKey(e) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
 }
+function autoGrow(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
 msgContainer.scrollTop = msgContainer.scrollHeight;
 
 async function addFriendToGroup() {
   const username = prompt("Enter friend's username to add:");
-  if(!username) return;
-  const res = await fetch('/api/groups/' + GROUP_ID + '/add', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  if (!username) return;
+  const res  = await fetch('/api/groups/' + GROUP_ID + '/add', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username })
   });
   const data = await res.json();
-  alert(data.message);
-  if(data.success) location.reload();
+  if (window.toast) toast(data.message, data.success ? 'ok' : 'err'); else alert(data.message);
+  if (data.success) location.reload();
 }
 
-/* ── WebRTC Voice & Screen Sharing Logic ── */
-let inVoice = false;
-let localStream = null;
-let screenStream = null;
-let peerConnections = {}; // userId -> RTCPeerConnection
-let isMuted = false;
+async function setAdmin(userId, username) {
+  if (!confirm('Promote ' + username + ' to group admin?')) return;
+  const res  = await fetch('/api/groups/' + GROUP_ID + '/set-admin', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: userId, is_admin: true })
+  });
+  const data = await res.json();
+  if (window.toast) toast(data.message, data.success ? 'ok' : 'err'); else alert(data.message);
+  if (data.success) location.reload();
+}
 
-const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+/* ═══ VOICE — BroadcastChannel → hidden iframe ═══ */
+let inVoice  = false;
+let isMuted  = false;
+let screenOn = false;
+let _bc      = null;
+
+function getBC() {
+  if (_bc) return _bc;
+  if (window.voicePersist) { _bc = window.voicePersist.getBC(); }
+  return _bc;
+}
+
+/* Handle events FROM the iframe */
+window._vcHandleMsg = function(data) {
+  if (data.type === 'self_speaking') {
+    const s = document.getElementById('peer-self');
+    if (s) s.classList.toggle('speaking', data.speaking);
+  }
+  if (data.type === 'peer_joined') { addPeerUI(data.userId, data.username, data.avatarUrl); }
+  if (data.type === 'peer_left')   { removePeerUI(data.userId); }
+  if (data.type === 'peer_speaking') {
+    const p = document.getElementById('peer-' + data.userId);
+    if (p) p.classList.toggle('speaking', data.speaking);
+  }
+  if (data.type === 'screen_started') {
+    screenOn = true;
+    document.getElementById('btnScreen').classList.add('screen-on');
+    document.getElementById('screenShareContainer').style.display = 'block';
+  }
+  if (data.type === 'screen_ended') {
+    screenOn = false;
+    document.getElementById('btnScreen').classList.remove('screen-on');
+    document.getElementById('screenShareContainer').style.display = 'none';
+  }
+  if (data.type === 'error') { if (window.toast) toast(data.msg, 'err'); else alert(data.msg); }
+};
+
+function addPeerUI(id, name, avatarUrl) {
+  if (document.getElementById('peer-' + id)) return;
+  const div = document.createElement('div');
+  div.className = 'gc-voice-peer'; div.id = 'peer-' + id;
+  div.innerHTML =
+    '<div class="gc-voice-avatar" style="' + (avatarUrl ? 'background:url(' + avatarUrl + ') center/cover;color:transparent;' : '') + '">' +
+      (avatarUrl ? '' : name.charAt(0).toUpperCase()) + '</div>' +
+    '<div class="gc-voice-name">' + name + '</div>';
+  document.getElementById('voiceGrid').appendChild(div);
+}
+
+function removePeerUI(id) {
+  const el = document.getElementById('peer-' + id);
+  if (el) el.remove();
+}
+
+function cleanupVoiceUI() {
+  inVoice = false; isMuted = false; screenOn = false;
+  document.getElementById('voiceRoom').classList.remove('active');
+  document.getElementById('btnVoice').classList.remove('active');
+  document.getElementById('voiceBtnText').textContent = 'Join Voice';
+  document.querySelectorAll('.gc-voice-peer:not(#peer-self)').forEach(e => e.remove());
+  document.getElementById('screenShareContainer').style.display = 'none';
+}
 
 async function toggleVoice() {
   if (inVoice) {
-    // Leave Voice
-    socket.emit('leave-voice', GROUP_ID);
-    if(localStream) localStream.getTracks().forEach(t => t.stop());
-    if(screenStream) screenStream.getTracks().forEach(t => t.stop());
-    Object.values(peerConnections).forEach(pc => pc.close());
-    peerConnections = {};
-    
-    document.getElementById('voiceRoom').classList.remove('active');
-    const btn = document.getElementById('btnVoice');
-    btn.classList.remove('active');
-    document.getElementById('voiceBtnText').textContent = 'Join Voice';
-    
-    // Clear peer UIs
-    document.querySelectorAll('.gc-voice-peer:not(#peer-self)').forEach(el => el.remove());
-    document.getElementById('screenShareContainer').style.display = 'none';
-    
-    inVoice = false;
+    window.voicePersist && window.voicePersist.clear();
+    cleanupVoiceUI();
   } else {
-    // Join Voice
-    try {
-      localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-    } catch(e) {
-      alert("Microphone access denied or not available.");
-      return;
-    }
-    
-    socket.emit('join-voice', GROUP_ID);
-    
+    /* Initialize iframe + BC via voicePersist */
+    window.voicePersist && window.voicePersist.save(GROUP_ID, '<%= group.name %>');
+
+    /* Wait for BC then send start command */
+    let tries = 0;
+    const wait = setInterval(() => {
+      const bc = window.voicePersist && window.voicePersist.getBC();
+      if (bc || tries++ > 20) {
+        clearInterval(wait);
+        if (bc) {
+          _bc = bc;
+          _bc.onmessage = (e) => window._vcHandleMsg(e.data);
+          _bc.postMessage({ type: 'start' });
+        }
+      }
+    }, 150);
+
     document.getElementById('voiceRoom').classList.add('active');
-    const btn = document.getElementById('btnVoice');
-    btn.classList.add('active');
+    document.getElementById('btnVoice').classList.add('active');
     document.getElementById('voiceBtnText').textContent = 'Leave Voice';
-    document.getElementById('peer-self').classList.add('speaking');
-    
     inVoice = true;
   }
 }
 
 function toggleMute() {
-  if(!localStream) return;
+  if (!inVoice) return;
   isMuted = !isMuted;
-  localStream.getAudioTracks()[0].enabled = !isMuted;
-  const btn = document.getElementById('btnMute');
-  if(isMuted) {
-    btn.classList.add('muted');
-    document.getElementById('peer-self').classList.remove('speaking');
-  } else {
-    btn.classList.remove('muted');
-    document.getElementById('peer-self').classList.add('speaking');
-  }
+  const bc = getBC();
+  if (bc) bc.postMessage({ type: isMuted ? 'mute' : 'unmute' });
+  document.getElementById('btnMute').classList.toggle('muted', isMuted);
 }
 
-async function toggleScreenShare() {
-  if(!inVoice) return;
-  if (screenStream) {
-    // Stop sharing
-    screenStream.getTracks().forEach(t => t.stop());
-    screenStream = null;
-    document.getElementById('screenShareContainer').style.display = 'none';
-    
-    // Replace track back to local audio (or just remove the video track from peers)
-    // For simplicity in this demo, screen sharing is broadcasted via the same peer connection
-    // Let's renegotiate
-  } else {
-    try {
-      screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      const videoEl = document.getElementById('screenShareVideo');
-      videoEl.srcObject = screenStream;
-      document.getElementById('screenShareContainer').style.display = 'block';
-      
-      // Add track to all peers
-      const screenTrack = screenStream.getVideoTracks()[0];
-      screenTrack.onended = () => toggleScreenShare(); // Handle native stop button
-      
-      Object.values(peerConnections).forEach(pc => {
-        pc.addTrack(screenTrack, screenStream);
-      });
-      // Need renegotiation logic if we were building a full SFU, but P2P works for small groups
-    } catch(e) {
-      console.error(e);
-    }
-  }
+function toggleScreenShare() {
+  if (!inVoice) return;
+  const bc = getBC();
+  if (!bc) return;
+  bc.postMessage({ type: screenOn ? 'screen_stop' : 'screen_start' });
 }
 
-/* Signaling Event Handlers */
-socket.on('user-joined-voice', async (data) => {
-  if(!inVoice) return;
-  const pc = createPeerConnection(data.userId, data.username, data.avatarUrl);
-  
-  if(localStream) {
-    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-  }
-  if(screenStream) {
-    screenStream.getTracks().forEach(t => pc.addTrack(t, screenStream));
-  }
-  
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-  
-  socket.emit('webrtc-offer', { groupId: GROUP_ID, offer, target: data.userId });
-});
-
-socket.on('user-left-voice', (data) => {
-  if(peerConnections[data.userId]) {
-    peerConnections[data.userId].close();
-    delete peerConnections[data.userId];
-  }
-  const el = document.getElementById('peer-' + data.userId);
-  if(el) el.remove();
-});
-
-socket.on('webrtc-offer', async (data) => {
-  if(!inVoice) return;
-  const pc = createPeerConnection(data.userId, data.username, data.avatarUrl);
-  await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-  
-  if(localStream) {
-    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-  }
-  
-  const answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
-  
-  socket.emit('webrtc-answer', { groupId: GROUP_ID, answer, target: data.userId });
-});
-
-socket.on('webrtc-answer', async (data) => {
-  if(peerConnections[data.userId]) {
-    await peerConnections[data.userId].setRemoteDescription(new RTCSessionDescription(data.answer));
-  }
-});
-
-socket.on('webrtc-ice-candidate', async (data) => {
-  if(peerConnections[data.userId]) {
-    await peerConnections[data.userId].addIceCandidate(new RTCIceCandidate(data.candidate));
-  }
-});
-
-function createPeerConnection(id, name, avatarUrl) {
-  const pc = new RTCPeerConnection(config);
-  peerConnections[id] = pc;
-  
-  pc.onicecandidate = e => {
-    if(e.candidate) {
-      socket.emit('webrtc-ice-candidate', { groupId: GROUP_ID, candidate: e.candidate, target: id });
-    }
-  };
-  
-  pc.ontrack = e => {
-    // Add audio element
-    if(e.track.kind === 'audio') {
-      let audio = document.getElementById('audio-' + id);
-      if(!audio) {
-        audio = document.createElement('audio');
-        audio.id = 'audio-' + id;
-        audio.autoplay = true;
-        document.body.appendChild(audio);
-      }
-      audio.srcObject = e.streams[0];
-      
-      // UI Update
-      let peerUI = document.getElementById('peer-' + id);
-      if(!peerUI) {
-        peerUI = document.createElement('div');
-        peerUI.className = 'gc-voice-peer speaking';
-        peerUI.id = 'peer-' + id;
-        peerUI.innerHTML = `
-          <div class="gc-voice-avatar" style="${avatarUrl ? 'background: url('+avatarUrl+') center/cover; color: transparent;' : ''}">${avatarUrl ? '' : name.charAt(0).toUpperCase()}</div>
-          <div class="gc-voice-name">${name}</div>
-        `;
-        document.getElementById('voiceGrid').appendChild(peerUI);
-      }
-    } else if (e.track.kind === 'video') {
-      // Show remote screen share
-      const videoEl = document.getElementById('screenShareVideo');
-      videoEl.srcObject = e.streams[0];
-      document.getElementById('screenShareContainer').style.display = 'block';
-    }
-  };
-  
-  return pc;
-}
 </script>
 </body>
 </html>

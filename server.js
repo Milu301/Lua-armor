@@ -140,6 +140,7 @@ async function initDB() {
     );
     ALTER TABLE users ADD COLUMN IF NOT EXISTS script_token VARCHAR(32) UNIQUE;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT DEFAULT '';
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS online_status VARCHAR(16) DEFAULT 'online';
     ALTER TABLE users ADD COLUMN IF NOT EXISTS language VARCHAR(16) DEFAULT 'en';
     ALTER TABLE projects ADD COLUMN IF NOT EXISTS is_free BOOLEAN DEFAULT false;
     CREATE TABLE IF NOT EXISTS user_keys (
@@ -257,9 +258,11 @@ async function initDB() {
     CREATE TABLE IF NOT EXISTS chat_group_members (
       group_id INT NOT NULL REFERENCES chat_groups(id) ON DELETE CASCADE,
       user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      is_admin BOOL NOT NULL DEFAULT false,
       joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       PRIMARY KEY (group_id, user_id)
     );
+    ALTER TABLE chat_group_members ADD COLUMN IF NOT EXISTS is_admin BOOL NOT NULL DEFAULT false;
     CREATE TABLE IF NOT EXISTS chat_group_messages (
       id SERIAL PRIMARY KEY,
       group_id INT NOT NULL REFERENCES chat_groups(id) ON DELETE CASCADE,
@@ -530,8 +533,8 @@ io.on('connection', (socket) => {
   const sess = socket.request.session?.user;
   if (!sess) { socket.disconnect(true); return; }
 
-  const { id: userId, username, role, avatarUrl } = sess;
-  onlineUsers.set(userId, { username, role, avatarUrl, socketId: socket.id });
+  const { id: userId, username, role, avatarUrl, onlineStatus } = sess;
+  onlineUsers.set(userId, { username, role, avatarUrl, onlineStatus, socketId: socket.id });
   io.emit('online_count', onlineUsers.size);
 
   socket.on('disconnect', () => {
@@ -582,7 +585,8 @@ io.on('connection', (socket) => {
     socket.emit('online_list', Array.from(onlineUsers.values()).map(u => ({ 
       username: u.username, 
       role: u.role, 
-      avatarUrl: u.avatarUrl 
+      avatarUrl: u.avatarUrl,
+      onlineStatus: u.onlineStatus
     })));
   });
 });
@@ -635,6 +639,7 @@ app.post('/login', loginLimiter, async (req, res) => {
     discordId: user.discord_id || '',
     note: user.note || '', scriptToken,
     avatarUrl: user.avatar_url || '',
+    onlineStatus: user.online_status || 'online',
     language: user.language || 'en'
   };
   await db.query('UPDATE users SET last_login=NOW() WHERE id=$1', [user.id]);
@@ -716,6 +721,7 @@ app.post('/register', registerLimiter, async (req, res) => {
     discordId: finalDiscordId,
     note: '', scriptToken,
     avatarUrl: '',
+    onlineStatus: 'online',
     language: 'en'
   };
   res.redirect('/dashboard');
@@ -775,7 +781,7 @@ app.get('/dashboard', auth, async (req, res) => {
 
 app.get('/chat', auth, async (req, res) => {
   const messages = await db.all(`
-    SELECT m.id, m.username, m.role, m.content, m.image_url, m.created_at, u.avatar_url
+    SELECT m.id, m.username, m.role, m.content, m.image_url, m.created_at, u.avatar_url, u.online_status
     FROM chat_messages m
     LEFT JOIN users u ON m.user_id = u.id
     WHERE m.deleted = false
@@ -790,7 +796,7 @@ app.get('/social', auth, async (req, res) => {
   const { id } = req.session.user;
   // Get friends
   const friendsRaw = await db.all(`
-    SELECT f.status, u.id as user_id, u.username, u.role, u.avatar_url
+    SELECT f.status, u.id as user_id, u.username, u.role, u.avatar_url, u.online_status
     FROM friends f
     JOIN users u ON (f.user1_id = u.id OR f.user2_id = u.id)
     WHERE (f.user1_id = $1 OR f.user2_id = $1) AND u.id != $1
@@ -813,13 +819,29 @@ app.get('/social', auth, async (req, res) => {
   });
 });
 
+/* Voice frame — renders inside a hidden iframe to keep WebRTC alive across navigation */
+app.get('/voice-frame/:groupId', auth, async (req, res) => {
+  const groupId = Number(req.params.groupId);
+  const userId  = req.session.user.id;
+  const mem = await db.oneOrNone('SELECT 1 FROM chat_group_members WHERE group_id=$1 AND user_id=$2', [groupId, userId]);
+  if (!mem) return res.status(403).send('Forbidden');
+  res.render('voice_frame', {
+    groupId,
+    userId,
+    username:  req.session.user.username,
+    avatarUrl: req.session.user.avatarUrl || ''
+  });
+});
+
 app.get('/groups/:id', auth, async (req, res) => {
+
   const groupId = Number(req.params.id);
   const userId = req.session.user.id;
 
   // Verify membership
-  const member = await db.one('SELECT * FROM chat_group_members WHERE group_id=$1 AND user_id=$2', [groupId, userId]);
+  const member = await db.oneOrNone('SELECT * FROM chat_group_members WHERE group_id=$1 AND user_id=$2', [groupId, userId]);
   if (!member) return res.redirect('/social');
+  const isGroupAdmin = member.is_admin || false;
 
   const group = await db.one('SELECT * FROM chat_groups WHERE id=$1', [groupId]);
   const messages = await db.all(`
@@ -832,13 +854,14 @@ app.get('/groups/:id', auth, async (req, res) => {
   messages.reverse();
 
   const members = await db.all(`
-    SELECT u.id, u.username, u.role, u.avatar_url 
+    SELECT u.id, u.username, u.role, u.avatar_url, u.online_status, gm.is_admin
     FROM chat_group_members gm
     JOIN users u ON gm.user_id = u.id
     WHERE gm.group_id=$1
+    ORDER BY gm.is_admin DESC, u.username ASC
   `, [groupId]);
 
-  res.render('group_chat', { group, messages, members, page: 'social', disableAds: true });
+  res.render('group_chat', { group, messages, members, page: 'social', disableAds: true, isGroupAdmin });
 });
 
 /* ── Social API ──────────────────────────────────── */
@@ -882,7 +905,8 @@ app.post('/api/groups/create', apiAuth, async (req, res) => {
   if (!name) return res.json({ success: false, message: 'Group name required' });
 
   const g = await db.one('INSERT INTO chat_groups (name, creator_id) VALUES ($1, $2) RETURNING id', [name, userId]);
-  await db.query('INSERT INTO chat_group_members (group_id, user_id) VALUES ($1, $2)', [g.id, userId]);
+  // Creator is automatically group admin
+  await db.query('INSERT INTO chat_group_members (group_id, user_id, is_admin) VALUES ($1, $2, true)', [g.id, userId]);
 
   res.json({ success: true, groupId: g.id });
 });
@@ -892,20 +916,42 @@ app.post('/api/groups/:id/add', apiAuth, async (req, res) => {
   const friendUsername = (req.body.username || '').trim().toLowerCase();
   const userId = req.session.user.id;
 
-  const group = await db.one('SELECT * FROM chat_groups WHERE id=$1 AND creator_id=$2', [groupId, userId]);
-  if (!group) return res.json({ success: false, message: 'Not authorized or group not found' });
+  // Check requester is a group admin
+  const requester = await db.oneOrNone('SELECT is_admin FROM chat_group_members WHERE group_id=$1 AND user_id=$2', [groupId, userId]);
+  if (!requester || !requester.is_admin) return res.json({ success: false, message: 'Only group admins can add members' });
 
-  const target = await db.one('SELECT id FROM users WHERE username=$1', [friendUsername]);
+  const target = await db.oneOrNone('SELECT id FROM users WHERE lower(username)=$1', [friendUsername]);
   if (!target) return res.json({ success: false, message: 'User not found' });
 
-  // verify they are friends
+  // verify they are friends with the requester
   const u1 = Math.min(userId, target.id);
   const u2 = Math.max(userId, target.id);
-  const isFriend = await db.one('SELECT * FROM friends WHERE user1_id=$1 AND user2_id=$2 AND status=$3', [u1, u2, 'accepted']);
+  const isFriend = await db.oneOrNone('SELECT 1 FROM friends WHERE user1_id=$1 AND user2_id=$2 AND status=$3', [u1, u2, 'accepted']);
   if (!isFriend) return res.json({ success: false, message: 'You can only add friends to a group' });
 
   await db.query('INSERT INTO chat_group_members (group_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [groupId, target.id]);
-  res.json({ success: true, message: 'User added to group!' });
+  res.json({ success: true, message: `${target.username || friendUsername} added to group!` });
+});
+
+/* Set/unset group admin */
+app.post('/api/groups/:id/set-admin', apiAuth, async (req, res) => {
+  const groupId = Number(req.params.id);
+  const targetUserId = Number(req.body.user_id);
+  const makeAdmin = req.body.is_admin !== false;
+  const userId = req.session.user.id;
+
+  // Only group admin can designate others
+  const requester = await db.oneOrNone('SELECT is_admin FROM chat_group_members WHERE group_id=$1 AND user_id=$2', [groupId, userId]);
+  if (!requester || !requester.is_admin) return res.json({ success: false, message: 'Only group admins can change roles' });
+
+  // Cannot remove own admin (group creator safety)
+  if (targetUserId === userId) return res.json({ success: false, message: 'Cannot change your own role' });
+
+  const target = await db.oneOrNone('SELECT 1 FROM chat_group_members WHERE group_id=$1 AND user_id=$2', [groupId, targetUserId]);
+  if (!target) return res.json({ success: false, message: 'User is not in this group' });
+
+  await db.query('UPDATE chat_group_members SET is_admin=$1 WHERE group_id=$2 AND user_id=$3', [makeAdmin, groupId, targetUserId]);
+  res.json({ success: true, message: makeAdmin ? 'User promoted to admin' : 'Admin removed' });
 });
 
 app.post('/api/groups/:id/message', apiAuth, async (req, res) => {
@@ -1315,14 +1361,16 @@ app.post('/api/settings', auth, async (req, res) => {
   const avatarUrl = (req.body.avatar_url || '').trim().slice(0, 500);
   const language = (req.body.language || 'en').trim().slice(0, 16);
   const discordId = (req.body.discord_id || '').trim().slice(0, 32);
+  const onlineStatus = (req.body.online_status || 'online').trim().slice(0, 16);
 
   await db.query(
-    'UPDATE users SET avatar_url=$1, language=$2, discord_id=$3 WHERE id=$4',
-    [avatarUrl, language, discordId, userId]
+    'UPDATE users SET avatar_url=$1, language=$2, discord_id=$3, online_status=$4 WHERE id=$5',
+    [avatarUrl, language, discordId, onlineStatus, userId]
   );
   req.session.user.discordId = discordId; // update session
   req.session.user.avatarUrl = avatarUrl;
   req.session.user.language  = language;
+  req.session.user.onlineStatus = onlineStatus;
   res.json({ success: true, message: 'Settings saved' });
 });
 
@@ -1513,6 +1561,7 @@ app.post('/api/chat/message', apiAuth, chatLimiter, async (req, res) => {
     [userId, username, role, safe]
   );
   msg.avatar_url = req.session.user.avatarUrl;
+  msg.online_status = req.session.user.onlineStatus;
 
   io.emit('chat_message', msg);
   res.json({ success: true, message: msg });
@@ -1533,6 +1582,7 @@ app.post('/api/chat/image', apiAuth, chatLimiter, chatUpload.single('image'), as
     [userId, username, role, content, imageUrl]
   );
   msg.avatar_url = req.session.user.avatarUrl;
+  msg.online_status = req.session.user.onlineStatus;
 
   io.emit('chat_message', msg);
   res.json({ success: true, message: msg });

@@ -85,8 +85,12 @@
               <% } %>
               <% friends.forEach(f => { %>
                 <div class="s-card">
-                  <div class="s-avatar" style="<%= f.avatar_url ? 'background: url('+f.avatar_url+') center/cover;' : '' %>">
-                    <%= f.avatar_url ? '' : f.username.charAt(0).toUpperCase() %>
+                  <div style="position:relative;flex-shrink:0;">
+                    <div class="s-avatar" style="<%= f.avatar_url ? 'background: url('+f.avatar_url+') center/cover;color:transparent;' : '' %>">
+                      <%= f.avatar_url ? '' : f.username.charAt(0).toUpperCase() %>
+                    </div>
+                    <% const sc = f.online_status === 'idle' ? '#f59e0b' : f.online_status === 'dnd' ? '#ef4444' : f.online_status === 'offline' ? '#6b7280' : '#22c55e'; %>
+                    <div style="width:12px;height:12px;border-radius:50%;background:<%= sc %>;border:2px solid var(--bg-card);position:absolute;bottom:-2px;right:-2px;box-shadow:0 0 6px <%= sc %>88;"></div>
                   </div>
                   <div class="s-info">
                     <div class="s-name"><%= f.username %></div>

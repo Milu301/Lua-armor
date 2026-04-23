@@ -85,6 +85,31 @@
             <div class="t-xs muted" style="margin-top:0.5rem;" id="lang-hint">Translates the entire interface instantly. Saved with your profile.</div>
           </div>
 
+          <!-- Online Status -->
+          <div class="form-group">
+            <label class="label" data-i18n="Online Status">Online Status</label>
+            <div style="position:relative;">
+              <select class="input" id="set-status" style="appearance:none;padding-right:2.5rem;cursor:pointer;">
+                <option value="online"  <%= (dbUser && dbUser.online_status === 'online') || !dbUser?.online_status ? 'selected' : '' %>>🟢 Online</option>
+                <option value="idle"    <%= dbUser && dbUser.online_status === 'idle'    ? 'selected' : '' %>>🌙 Idle</option>
+                <option value="dnd"     <%= dbUser && dbUser.online_status === 'dnd'     ? 'selected' : '' %>>⛔ Do Not Disturb</option>
+                <option value="offline" <%= dbUser && dbUser.online_status === 'offline' ? 'selected' : '' %>>⚪ Invisible</option>
+              </select>
+              <svg style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--text-3);" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </div>
+            <div class="t-xs muted" style="margin-top:0.5rem;" data-i18n="How you appear to others in the Global Chat and Friends list.">How you appear to others in the Global Chat and Friends list.</div>
+          </div>
+
+          <!-- Mic Sensitivity -->
+          <div class="form-group">
+            <label class="label" data-i18n="Microphone Sensitivity (Voice Calls)">Microphone Sensitivity (Voice Calls)</label>
+            <div style="display:flex; align-items:center; gap: 1rem;">
+              <input type="range" id="set-mic-sens" min="0" max="100" value="50" style="flex:1; cursor:pointer;" oninput="document.getElementById('mic-val').textContent = this.value + '%'">
+              <span id="mic-val" style="width:40px; font-weight:600; text-align:right;">50%</span>
+            </div>
+            <div class="t-xs muted" style="margin-top:0.5rem;" data-i18n="Determines how loud you need to speak for your mic to activate in group calls. Saved locally.">Determines how loud you need to speak for your mic to activate in group calls. Saved locally.</div>
+          </div>
+
           <!-- Save -->
           <div style="border-top: 1px solid var(--border-md); padding-top: 1.25rem; display: flex; justify-content: flex-end; gap: 0.75rem;">
             <button class="btn btn-primary" id="save-btn" onclick="saveSettings(this)" data-i18n="Save Changes">
@@ -166,6 +191,11 @@ async function saveSettings(btn) {
   const avatarUrl = document.getElementById('set-avatar').value.trim();
   const discordId = document.getElementById('set-discord').value.trim();
   const language  = document.getElementById('set-language').value;
+  const onlineStatus = document.getElementById('set-status').value;
+  
+  // Save mic sensitivity to localStorage
+  const micSens = document.getElementById('set-mic-sens').value;
+  localStorage.setItem('micSensitivity', micSens);
 
   const orig = btn.innerHTML;
   btn.disabled = true;
@@ -175,7 +205,7 @@ async function saveSettings(btn) {
     const res  = await fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ avatar_url: avatarUrl, discord_id: discordId, language })
+      body: JSON.stringify({ avatar_url: avatarUrl, discord_id: discordId, language, online_status: onlineStatus })
     });
     const data = await res.json();
     if (data.success) {
@@ -231,6 +261,15 @@ if (currentLang && currentLang !== 'en') {
   window.currentLanguage = currentLang;
   document.addEventListener('DOMContentLoaded', () => window.applyTranslations(currentLang));
 }
+
+/* Load local mic sensitivity */
+document.addEventListener('DOMContentLoaded', () => {
+  const savedMic = localStorage.getItem('micSensitivity');
+  if (savedMic !== null) {
+    document.getElementById('set-mic-sens').value = savedMic;
+    document.getElementById('mic-val').textContent = savedMic + '%';
+  }
+});
 </script>
 </body>
 </html>

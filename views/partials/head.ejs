@@ -165,3 +165,111 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 </script>
+
+<style>
+@keyframes callPulse { 0%,100%{opacity:1;box-shadow:0 0 6px #10b981;} 50%{opacity:0.6;box-shadow:0 0 14px #10b981;} }
+@keyframes callBarIn  { from{transform:translateX(-50%) translateY(30px);opacity:0;} to{transform:translateX(-50%) translateY(0);opacity:1;} }
+@keyframes callBarOut { to{transform:translateX(-50%) translateY(30px);opacity:0;} }
+#float-call-bar { position:fixed;bottom:1.25rem;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(10,10,20,0.93);backdrop-filter:blur(20px);border:1px solid rgba(16,185,129,0.25);border-radius:16px;padding:0.75rem 1rem;display:flex;align-items:center;gap:0.75rem;box-shadow:0 8px 32px rgba(0,0,0,0.5);min-width:280px;max-width:380px;animation:callBarIn 0.4s cubic-bezier(0.16,1,0.3,1); }
+#float-call-bar .fcb-return { background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);color:#10b981;padding:0.35rem 0.75rem;border-radius:8px;font-weight:600;font-size:0.78rem;text-decoration:none;white-space:nowrap;transition:background 0.2s; }
+#float-call-bar .fcb-return:hover { background:rgba(16,185,129,0.28); }
+#float-call-bar .fcb-hang { background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#ef4444;width:32px;height:32px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background 0.2s; }
+#float-call-bar .fcb-hang:hover { background:rgba(239,68,68,0.28); }
+</style>
+
+<script>
+/* ═══ PERSISTENT VOICE CALL (iframe + BroadcastChannel) ═══ */
+(function() {
+  const CALL_KEY = 'activeVoiceCall';
+  let _bc = null;
+
+  window.voicePersist = {
+    save: function(groupId, groupName) {
+      sessionStorage.setItem(CALL_KEY, JSON.stringify({ groupId: groupId, groupName: groupName }));
+      /* Inject hidden iframe if not already there */
+      if (!document.getElementById('voice-iframe')) {
+        const fr = document.createElement('iframe');
+        fr.id = 'voice-iframe';
+        fr.src = '/voice-frame/' + groupId;
+        fr.style.cssText = 'position:fixed;width:0;height:0;border:0;opacity:0;pointer-events:none;';
+        fr.allow = 'microphone; display-capture';
+        document.body.appendChild(fr);
+        /* Start voice in iframe once loaded */
+        fr.addEventListener('load', function() {
+          _bc = new BroadcastChannel('vc_' + groupId);
+          _bc.postMessage({ type: 'start' });
+          _bc.onmessage = function(e) { window._vcHandleMsg && window._vcHandleMsg(e.data); };
+        });
+      } else {
+        /* iframe already exists, just ensure BC is open */
+        if (!_bc) {
+          _bc = new BroadcastChannel('vc_' + groupId);
+          _bc.onmessage = function(e) { window._vcHandleMsg && window._vcHandleMsg(e.data); };
+        }
+      }
+    },
+    clear: function() {
+      sessionStorage.removeItem(CALL_KEY);
+      if (_bc) { _bc.postMessage({ type: 'hangup' }); _bc.close(); _bc = null; }
+      const fr = document.getElementById('voice-iframe');
+      if (fr) fr.remove();
+      const bar = document.getElementById('float-call-bar');
+      if (bar) bar.remove();
+    },
+    get: function() {
+      try { return JSON.parse(sessionStorage.getItem(CALL_KEY)); } catch(e) { return null; }
+    },
+    sendCmd: function(cmd) { if (_bc) _bc.postMessage({ type: cmd }); },
+    getBC: function() { return _bc; }
+  };
+
+  /* ── Floating call bar ── */
+  function renderCallBar() {
+    const state = window.voicePersist.get();
+    if (!state) return;
+    if (window.location.pathname === '/groups/' + state.groupId) return;
+    if (document.getElementById('float-call-bar')) return;
+
+    const bar = document.createElement('div');
+    bar.id = 'float-call-bar';
+    bar.innerHTML =
+      '<div style="display:flex;align-items:center;gap:0.75rem;flex:1;min-width:0;">' +
+        '<div style="width:8px;height:8px;border-radius:50%;background:#10b981;box-shadow:0 0 8px #10b981;flex-shrink:0;animation:callPulse 1.5s infinite;"></div>' +
+        '<div style="min-width:0;"><div style="font-weight:700;font-size:0.82rem;color:#10b981;">In Voice Call</div>' +
+        '<div style="font-size:0.72rem;color:rgba(255,255,255,0.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (state.groupName || 'Group') + '</div></div>' +
+      '</div>' +
+      '<a href="/groups/' + state.groupId + '" class="fcb-return">↩ Return</a>' +
+      '<button class="fcb-hang" id="float-call-hang" title="Hang Up">' +
+        '<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>' +
+      '</button>';
+
+    document.body.appendChild(bar);
+
+    document.getElementById('float-call-hang').addEventListener('click', function() {
+      window.voicePersist.clear();
+    });
+
+    /* Restore iframe if navigated away */
+    if (!document.getElementById('voice-iframe')) {
+      const fr = document.createElement('iframe');
+      fr.id = 'voice-iframe';
+      fr.src = '/voice-frame/' + state.groupId;
+      fr.style.cssText = 'position:fixed;width:0;height:0;border:0;opacity:0;pointer-events:none;';
+      fr.allow = 'microphone; display-capture';
+      document.body.appendChild(fr);
+      fr.addEventListener('load', function() {
+        _bc = new BroadcastChannel('vc_' + state.groupId);
+        _bc.onmessage = function(e) { window._vcHandleMsg && window._vcHandleMsg(e.data); };
+        /* Don't auto-start on restore — user needs to re-join from the group page */
+      });
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', renderCallBar);
+  } else {
+    renderCallBar();
+  }
+})();
+</script>
+

@@ -5,6 +5,12 @@
 .cp-layout { display: flex; height: calc(100vh - 70px); gap: 1rem; padding: 1rem; overflow: hidden; background: transparent; }
 .cp-main { flex: 1; display: flex; flex-direction: column; background: var(--bg-card); border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); border: 1px solid var(--border-md); overflow: hidden; position: relative; backdrop-filter: blur(20px); }
 .cp-main::before { content: ''; position: absolute; top:0; left:0; width:100%; height:4px; background: linear-gradient(90deg, var(--accent), var(--blue), var(--cyan)); z-index: 10; box-shadow: 0 0 15px var(--accent);}
+.cp-av-wrap { position: relative; flex-shrink: 0; }
+.status-dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--bg-card); position: absolute; bottom: -1px; right: -1px; }
+.status-online  { background: #22c55e; box-shadow: 0 0 6px rgba(34,197,94,0.6); }
+.status-idle    { background: #f59e0b; box-shadow: 0 0 6px rgba(245,158,11,0.5); }
+.status-dnd     { background: #ef4444; box-shadow: 0 0 6px rgba(239,68,68,0.5); }
+.status-offline { background: #6b7280; }
 .cp-messages { flex: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem; scroll-behavior: smooth; }
 .cp-msg { display: flex; gap: 1rem; animation: slideInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; transform: translateY(15px); }
 @keyframes slideInUp { to { opacity: 1; transform: translateY(0); } }
@@ -82,8 +88,11 @@
           <% } %>
           <% messages.forEach(function(msg, index) { %>
           <div class="cp-msg" data-id="<%= msg.id %>" style="animation-delay: <%= Math.min(index * 0.05, 0.5) %>s;">
-            <div class="cp-avatar <%= msg.role === 'admin' ? 'cp-avatar-admin' : msg.role === 'mod' ? 'cp-avatar-mod' : '' %>" style="<%= msg.avatar_url ? 'background: url(' + msg.avatar_url + ') center/cover;' : '' %>">
-              <%= msg.avatar_url ? '' : msg.username.charAt(0).toUpperCase() %>
+            <div class="cp-av-wrap">
+              <div class="cp-avatar <%= msg.role === 'admin' ? 'cp-avatar-admin' : msg.role === 'mod' ? 'cp-avatar-mod' : '' %>" style="<%= msg.avatar_url ? 'background: url(' + msg.avatar_url + ') center/cover; color:transparent;' : '' %>">
+                <%= msg.avatar_url ? '' : msg.username.charAt(0).toUpperCase() %>
+              </div>
+              <div class="status-dot status-<%= msg.online_status || 'online' %>"></div>
             </div>
             <div class="cp-bubble">
               <div class="cp-meta">
@@ -190,14 +199,17 @@ socket.on('online_list', list => {
     el.innerHTML = '<div class="dimmed t-xs" style="padding:0.5rem 0;">No one else here</div>';
     return;
   }
-  el.innerHTML = list.map(u => `
-    <div class="cp-user-row">
-      <div class="cp-user-av ${u.role === 'admin' ? 'cp-avatar-admin' : u.role === 'mod' ? 'cp-avatar-mod' : ''}" style="${u.avatarUrl ? 'background: url('+u.avatarUrl+') center/cover;' : ''}">
-        ${u.avatarUrl ? '' : escH(u.username.charAt(0).toUpperCase())}
+  el.innerHTML = list.map(u => {
+    const sc = u.onlineStatus === 'idle' ? '#f59e0b' : u.onlineStatus === 'dnd' ? '#ef4444' : u.onlineStatus === 'offline' ? '#6b7280' : '#22c55e';
+    return `<div class="cp-user-row">
+      <div style="position:relative;flex-shrink:0;">
+        <div class="cp-user-av ${u.role === 'admin' ? 'cp-avatar-admin' : u.role === 'mod' ? 'cp-avatar-mod' : ''}" style="${u.avatarUrl ? 'background:url('+u.avatarUrl+') center/cover;color:transparent;' : ''}">${u.avatarUrl ? '' : escH(u.username.charAt(0).toUpperCase())}</div>
+        <div style="width:9px;height:9px;border-radius:50%;background:${sc};border:2px solid var(--bg-card);position:absolute;bottom:-1px;right:-1px;"></div>
       </div>
       <span class="cp-user-name">${escH(u.username)}</span>
       ${u.role === 'admin' ? '<span class="cp-tag cp-tag-admin">ADMIN</span>' : u.role === 'mod' ? '<span class="cp-tag cp-tag-mod">MOD</span>' : ''}
-    </div>`).join('');
+    </div>`;
+  }).join('');
 });
 
 socket.on('chat_message', msg => {
@@ -225,11 +237,15 @@ function buildMsg(msg) {
          <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
        </button>` : '';
   const time = new Date(msg.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  const sc = msg.online_status === 'idle' ? '#f59e0b' : msg.online_status === 'dnd' ? '#ef4444' : msg.online_status === 'offline' ? '#6b7280' : '#22c55e';
   const div  = document.createElement('div');
   div.className = 'cp-msg'; div.dataset.id = msg.id;
   div.innerHTML = `
-    <div class="cp-avatar ${isAdmin ? 'cp-avatar-admin' : isMod ? 'cp-avatar-mod' : ''}" style="${msg.avatar_url ? 'background: url('+msg.avatar_url+') center/cover; color: transparent;' : ''}">
-      ${msg.avatar_url ? '' : escH(msg.username.charAt(0).toUpperCase())}
+    <div class="cp-av-wrap">
+      <div class="cp-avatar ${isAdmin ? 'cp-avatar-admin' : isMod ? 'cp-avatar-mod' : ''}" style="${msg.avatar_url ? 'background:url('+msg.avatar_url+') center/cover;color:transparent;' : ''}">
+        ${msg.avatar_url ? '' : escH(msg.username.charAt(0).toUpperCase())}
+      </div>
+      <div style="width:10px;height:10px;border-radius:50%;background:${sc};border:2px solid var(--bg-card);position:absolute;bottom:-1px;right:-1px;"></div>
     </div>
     <div class="cp-bubble">
       <div class="cp-meta">

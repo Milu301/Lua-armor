@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Voice Frame</title>
+<style>html,body{margin:0;padding:0;background:transparent;overflow:hidden;}</style>
+</head>
+<body>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+/* ═══ PERSISTENT VOICE FRAME ═══
+   This page runs inside a hidden iframe in head.ejs.
+   It keeps WebRTC connections alive while the user navigates.
+   Communicates with the parent via BroadcastChannel.
+*/
+const GROUP_ID   = <%= groupId %>;
+const MY_ID      = <%= userId %>;
+const MY_NAME    = "<%= username %>";
+const MY_AVATAR  = "<%= avatarUrl %>";
+const bc         = new BroadcastChannel('vc_' + GROUP_ID);
+
+let localStream   = null;
+let screenStream  = null;
+let peerConns     = {};   // peerId -> RTCPeerConnection
+let isMuted       = false;
+let audioCtx      = null;
+let speakInterval = null;
+
+const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+const socket = io({ transports: ['websocket', 'polling'] });
+
+/* ── Start mic & join room ── */
+async function startVoice() {
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+  } catch(e) {
+    bc.postMessage({ type: 'error', msg: 'Microphone access denied.' });
+    return;
+  }
+
+  /* Mic sensitivity via AudioContext */
+  const sens      = parseInt(localStorage.getItem('micSensitivity') || '50');
+  const threshold = (sens / 100) * 0.3;
+  audioCtx        = new (window.AudioContext || window.webkitAudioContext)();
+  const src       = audioCtx.createMediaStreamSource(localStream);
+  const analyser  = audioCtx.createAnalyser();
+  analyser.fftSize = 512;
+  src.connect(analyser);
+  const buf = new Uint8Array(analyser.frequencyBinCount);
+  speakInterval = setInterval(() => {
+    analyser.getByteFrequencyData(buf);
+    const avg = buf.reduce((a, b) => a + b, 0) / buf.length / 255;
+    bc.postMessage({ type: 'self_speaking', speaking: avg > threshold });
+  }, 100);
+
+  socket.emit('join-voice', GROUP_ID);
+  bc.postMessage({ type: 'joined' });
+}
+
+/* ── Leave ── */
+function leaveVoice() {
+  socket.emit('leave-voice', GROUP_ID);
+  if (localStream)  localStream.getTracks().forEach(t => t.stop());
+  if (screenStream) screenStream.getTracks().forEach(t => t.stop());
+  if (audioCtx)     { audioCtx.close(); audioCtx = null; }
+  if (speakInterval) { clearInterval(speakInterval); speakInterval = null; }
+  Object.values(peerConns).forEach(pc => pc.close());
+  peerConns = {};
+  bc.postMessage({ type: 'left' });
+}
+
+/* ── Commands from parent ── */
+bc.onmessage = async (e) => {
+  const msg = e.data;
+  if (msg.type === 'start')  startVoice();
+  if (msg.type === 'hangup') leaveVoice();
+  if (msg.type === 'mute') {
+    isMuted = true;
+    if (localStream) localStream.getAudioTracks().forEach(t => { t.enabled = false; });
+    bc.postMessage({ type: 'muted' });
+  }
+  if (msg.type === 'unmute') {
+    isMuted = false;
+    if (localStream) localStream.getAudioTracks().forEach(t => { t.enabled = true; });
+    bc.postMessage({ type: 'unmuted' });
+  }
+  if (msg.type === 'screen_start') {
+    try {
+      screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      const track = screenStream.getVideoTracks()[0];
+      track.onended = () => { bc.postMessage({ type: 'screen_ended' }); screenStream = null; };
+      Object.values(peerConns).forEach(pc => pc.addTrack(track, screenStream));
+      bc.postMessage({ type: 'screen_started' });
+    } catch(err) {
+      bc.postMessage({ type: 'screen_error' });
+    }
+  }
+  if (msg.type === 'screen_stop') {
+    if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
+    bc.postMessage({ type: 'screen_ended' });
+  }
+};
+
+/* ── WebRTC Signaling ── */
+socket.on('user-joined-voice', async (data) => {
+  const pc = createPC(data.userId, data.username, data.avatarUrl);
+  if (localStream)  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+  if (screenStream) screenStream.getTracks().forEach(t => pc.addTrack(t, screenStream));
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  socket.emit('webrtc-offer', { groupId: GROUP_ID, offer, target: data.userId });
+  bc.postMessage({ type: 'peer_joined', userId: data.userId, username: data.username, avatarUrl: data.avatarUrl });
+});
+
+socket.on('user-left-voice', (data) => {
+  if (peerConns[data.userId]) { peerConns[data.userId].close(); delete peerConns[data.userId]; }
+  removeAudio(data.userId);
+  bc.postMessage({ type: 'peer_left', userId: data.userId });
+});
+
+socket.on('webrtc-offer', async (data) => {
+  const pc = createPC(data.userId, data.username, data.avatarUrl);
+  await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+  if (localStream) localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  socket.emit('webrtc-answer', { groupId: GROUP_ID, answer, target: data.userId });
+  bc.postMessage({ type: 'peer_joined', userId: data.userId, username: data.username, avatarUrl: data.avatarUrl });
+});
+
+socket.on('webrtc-answer', async (data) => {
+  if (peerConns[data.userId]) await peerConns[data.userId].setRemoteDescription(new RTCSessionDescription(data.answer));
+});
+
+socket.on('webrtc-ice-candidate', async (data) => {
+  if (peerConns[data.userId]) await peerConns[data.userId].addIceCandidate(new RTCIceCandidate(data.candidate));
+});
+
+function createPC(id, name, avatarUrl) {
+  const pc = new RTCPeerConnection(config);
+  peerConns[id] = pc;
+
+  pc.onicecandidate = e => {
+    if (e.candidate) socket.emit('webrtc-ice-candidate', { groupId: GROUP_ID, candidate: e.candidate, target: id });
+  };
+
+  pc.ontrack = e => {
+    if (e.track.kind === 'audio') {
+      let audio = document.getElementById('audio-' + id);
+      if (!audio) {
+        audio = document.createElement('audio');
+        audio.id = 'audio-' + id;
+        audio.autoplay = true;
+        document.body.appendChild(audio);
+      }
+      audio.srcObject = e.streams[0];
+
+      /* Volume analyzer for speaking indicator */
+      const ac  = new AudioContext();
+      const src = ac.createMediaStreamSource(e.streams[0]);
+      const an  = ac.createAnalyser();
+      an.fftSize = 256;
+      src.connect(an);
+      const b = new Uint8Array(an.frequencyBinCount);
+      setInterval(() => {
+        an.getByteFrequencyData(b);
+        const avg = b.reduce((a, x) => a + x, 0) / b.length / 255;
+        bc.postMessage({ type: 'peer_speaking', userId: id, speaking: avg > 0.04 });
+      }, 100);
+    }
+  };
+
+  pc.onconnectionstatechange = () => {
+    bc.postMessage({ type: 'peer_state', userId: id, state: pc.connectionState });
+  };
+
+  return pc;
+}
+
+function removeAudio(id) {
+  const el = document.getElementById('audio-' + id);
+  if (el) el.remove();
+}
+</script>
+</body>
+</html>

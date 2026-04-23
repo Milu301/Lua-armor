@@ -823,7 +823,7 @@ app.get('/social', auth, async (req, res) => {
 app.get('/voice-frame/:groupId', auth, async (req, res) => {
   const groupId = Number(req.params.groupId);
   const userId  = req.session.user.id;
-  const mem = await db.oneOrNone('SELECT 1 FROM chat_group_members WHERE group_id=$1 AND user_id=$2', [groupId, userId]);
+  const mem = await db.one('SELECT 1 FROM chat_group_members WHERE group_id=$1 AND user_id=$2', [groupId, userId]);
   if (!mem) return res.status(403).send('Forbidden');
   res.render('voice_frame', {
     groupId,
@@ -839,7 +839,7 @@ app.get('/groups/:id', auth, async (req, res) => {
   const userId = req.session.user.id;
 
   // Verify membership
-  const member = await db.oneOrNone('SELECT * FROM chat_group_members WHERE group_id=$1 AND user_id=$2', [groupId, userId]);
+  const member = await db.one('SELECT * FROM chat_group_members WHERE group_id=$1 AND user_id=$2', [groupId, userId]);
   if (!member) return res.redirect('/social');
   const isGroupAdmin = member.is_admin || false;
 
@@ -917,16 +917,16 @@ app.post('/api/groups/:id/add', apiAuth, async (req, res) => {
   const userId = req.session.user.id;
 
   // Check requester is a group admin
-  const requester = await db.oneOrNone('SELECT is_admin FROM chat_group_members WHERE group_id=$1 AND user_id=$2', [groupId, userId]);
+  const requester = await db.one('SELECT is_admin FROM chat_group_members WHERE group_id=$1 AND user_id=$2', [groupId, userId]);
   if (!requester || !requester.is_admin) return res.json({ success: false, message: 'Only group admins can add members' });
 
-  const target = await db.oneOrNone('SELECT id FROM users WHERE lower(username)=$1', [friendUsername]);
+  const target = await db.one('SELECT id FROM users WHERE lower(username)=$1', [friendUsername]);
   if (!target) return res.json({ success: false, message: 'User not found' });
 
   // verify they are friends with the requester
   const u1 = Math.min(userId, target.id);
   const u2 = Math.max(userId, target.id);
-  const isFriend = await db.oneOrNone('SELECT 1 FROM friends WHERE user1_id=$1 AND user2_id=$2 AND status=$3', [u1, u2, 'accepted']);
+  const isFriend = await db.one('SELECT 1 FROM friends WHERE user1_id=$1 AND user2_id=$2 AND status=$3', [u1, u2, 'accepted']);
   if (!isFriend) return res.json({ success: false, message: 'You can only add friends to a group' });
 
   await db.query('INSERT INTO chat_group_members (group_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [groupId, target.id]);
@@ -941,13 +941,13 @@ app.post('/api/groups/:id/set-admin', apiAuth, async (req, res) => {
   const userId = req.session.user.id;
 
   // Only group admin can designate others
-  const requester = await db.oneOrNone('SELECT is_admin FROM chat_group_members WHERE group_id=$1 AND user_id=$2', [groupId, userId]);
+  const requester = await db.one('SELECT is_admin FROM chat_group_members WHERE group_id=$1 AND user_id=$2', [groupId, userId]);
   if (!requester || !requester.is_admin) return res.json({ success: false, message: 'Only group admins can change roles' });
 
   // Cannot remove own admin (group creator safety)
   if (targetUserId === userId) return res.json({ success: false, message: 'Cannot change your own role' });
 
-  const target = await db.oneOrNone('SELECT 1 FROM chat_group_members WHERE group_id=$1 AND user_id=$2', [groupId, targetUserId]);
+  const target = await db.one('SELECT 1 FROM chat_group_members WHERE group_id=$1 AND user_id=$2', [groupId, targetUserId]);
   if (!target) return res.json({ success: false, message: 'User is not in this group' });
 
   await db.query('UPDATE chat_group_members SET is_admin=$1 WHERE group_id=$2 AND user_id=$3', [makeAdmin, groupId, targetUserId]);

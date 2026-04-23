@@ -113,7 +113,7 @@
               <% } %>
               <% if (msg.image_url) { %>
               <div style="margin-top: 0.5rem;">
-                <img src="<%= msg.image_url %>" class="cp-img" onclick="openLb('<%= msg.image_url %>')" loading="lazy" />
+                <img src="<%= msg.image_url %>" class="cp-img" onclick="openLb('<%= msg.image_url %>')" loading="eager" decoding="async" />
               </div>
               <% } %>
             </div>
@@ -254,7 +254,7 @@ function buildMsg(msg) {
         ${delBtn}
       </div>
       ${msg.content  ? `<div class="cp-text">${escH(msg.content)}</div>` : ''}
-      ${msg.image_url ? `<img src="${msg.image_url}" class="cp-img" onclick="openLb('${msg.image_url}')" loading="lazy"/>` : ''}
+      ${msg.image_url ? `<div style="margin-top:0.4rem;"><img src="${msg.image_url}" class="cp-img" onclick="openLb('${msg.image_url}')" loading="eager" decoding="async" onerror="this.style.opacity='0.3';this.title='Image not found'"/></div>` : ''}
     </div>`;
   return div;
 }

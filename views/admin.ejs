@@ -1618,7 +1618,7 @@ async function loadTutorialsTab() {
           ${t.description ? `<div style="font-size:0.78rem;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:0.8rem;">${t.description}</div>` : '<div style="margin-bottom:0.8rem;"></div>'}
           <div style="display:flex;gap:0.4rem;">
             <button class="btn btn-sm" style="flex:1;padding:4px;font-size:0.7rem;background:${t.is_active ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)'};border:1px solid ${t.is_active ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)'};color:${t.is_active ? '#f87171' : '#4ade80'};" onclick="toggleTutorial(${t.id})">${t.is_active ? '🙈 Hide' : '👁 Show'}</button>
-            <button class="btn btn-sm" style="flex:1;padding:4px;font-size:0.7rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;" onclick="deleteTutorial(${t.id}, '${t.title.replace(/'/g,"\\\\'")}')">🗑 Delete</button>
+            <button class="btn btn-sm" style="flex:1;padding:4px;font-size:0.7rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;" onclick="deleteTutorial(${t.id}, '${t.title.replace(/'/g,"\\\\'").replace(/"/g, "&quot;")}')">🗑 Delete</button>
           </div>
         </div>
       </div>

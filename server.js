@@ -2332,7 +2332,7 @@ app.delete('/api/admin/tutorials/:id', apiAuth, adminApiOnly, async (req, res) =
     res.json({ success: true });
   } catch (err) {
     console.error('Error deleting tutorial:', err);
-    res.json({ success: false, message: 'Server error while deleting tutorial' });
+    res.json({ success: false, message: 'Server error: ' + err.message });
   }
 });
 

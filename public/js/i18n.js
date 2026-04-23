@@ -39,6 +39,14 @@ const translations = {
     "Create a Private Group": "Crear un Grupo Privado", "Members": "Miembros",
     "Join Voice": "Unirse a Voz", "Leave Voice": "Salir de Voz",
     "Voice Connected": "Voz Conectada", "Make Group Admin": "Hacer Admin del Grupo",
+    /* Leaderboard */
+    "Leaderboard": "Tabla de Clasificación", "Global Rankings": "Clasificación Global",
+    "Farming Leaderboard": "Tabla de Farmeo", "Gold Rankings": "Clasificación de Oro",
+    "Total Fruit Rankings": "Clasificación de Frutas", "Players": "Jugadores",
+    "Total Sessions": "Sesiones Totales", "Gold Farmed": "Oro Farmeado",
+    "Fruit Farmed": "Frutas Farmeadas", "Loading rankings…": "Cargando clasificación…",
+    "Top farmers across all Booga Booga sessions. Stats update in real-time as you play.": "Los mejores granjeros en todas las sesiones de Booga Booga. Las estadísticas se actualizan en tiempo real.",
+    "Total Fruit": "Total de Frutas",
   },
 
   pt: {
@@ -58,6 +66,12 @@ const translations = {
     "Social Hub": "Hub Social", "Friends": "Amigos", "Private Groups": "Grupos Privados",
     "New Group": "Novo Grupo", "Members": "Membros", "Join Voice": "Entrar na Voz",
     "Leave Voice": "Sair da Voz", "Make Group Admin": "Tornar Admin do Grupo",
+    "Leaderboard": "Classificação", "Global Rankings": "Classificação Global",
+    "Farming Leaderboard": "Classificação de Farming", "Gold Rankings": "Classificação de Ouro",
+    "Total Fruit Rankings": "Classificação de Frutas", "Players": "Jogadores",
+    "Total Sessions": "Sessões Totais", "Gold Farmed": "Ouro Farmado",
+    "Fruit Farmed": "Frutas Farmadas", "Loading rankings…": "Carregando classificação…",
+    "Total Fruit": "Total de Frutas",
   },
 
   fr: {
@@ -78,6 +92,12 @@ const translations = {
     "Social Hub": "Hub Social", "Friends": "Amis", "Private Groups": "Groupes Privés",
     "New Group": "Nouveau Groupe", "Members": "Membres", "Join Voice": "Rejoindre la Voix",
     "Leave Voice": "Quitter la Voix", "Make Group Admin": "Promouvoir Admin",
+    "Leaderboard": "Classement", "Global Rankings": "Classement Mondial",
+    "Farming Leaderboard": "Classement Farming", "Gold Rankings": "Classement Or",
+    "Total Fruit Rankings": "Classement Fruits", "Players": "Joueurs",
+    "Total Sessions": "Sessions Totales", "Gold Farmed": "Or Farmé",
+    "Fruit Farmed": "Fruits Farmés", "Loading rankings…": "Chargement…",
+    "Total Fruit": "Total des Fruits",
   },
 
   de: {
@@ -98,6 +118,12 @@ const translations = {
     "Social Hub": "Sozial-Hub", "Friends": "Freunde", "Private Groups": "Private Gruppen",
     "New Group": "Neue Gruppe", "Members": "Mitglieder", "Join Voice": "Voice beitreten",
     "Leave Voice": "Voice verlassen", "Make Group Admin": "Zum Gruppenadmin machen",
+    "Leaderboard": "Rangliste", "Global Rankings": "Globale Rangliste",
+    "Farming Leaderboard": "Farming-Rangliste", "Gold Rankings": "Gold-Rangliste",
+    "Total Fruit Rankings": "Frucht-Rangliste", "Players": "Spieler",
+    "Total Sessions": "Gesamte Sitzungen", "Gold Farmed": "Gold gefarmt",
+    "Fruit Farmed": "Früchte gefarmt", "Loading rankings…": "Laden…",
+    "Total Fruit": "Gesamte Früchte",
   },
 
   ru: {
@@ -118,6 +144,12 @@ const translations = {
     "Social Hub": "Социальный хаб", "Friends": "Друзья", "Private Groups": "Приватные группы",
     "New Group": "Новая группа", "Members": "Участники", "Join Voice": "Войти в голос",
     "Leave Voice": "Выйти из голоса", "Make Group Admin": "Назначить админом",
+    "Leaderboard": "Таблица лидеров", "Global Rankings": "Глобальный рейтинг",
+    "Farming Leaderboard": "Рейтинг фарма", "Gold Rankings": "Рейтинг золота",
+    "Total Fruit Rankings": "Рейтинг фруктов", "Players": "Игроки",
+    "Total Sessions": "Всего сессий", "Gold Farmed": "Золото нафармлено",
+    "Fruit Farmed": "Фрукты нафармлено", "Loading rankings…": "Загрузка…",
+    "Total Fruit": "Всего фруктов",
   },
 
   zh: {
@@ -138,6 +170,12 @@ const translations = {
     "Social Hub": "社交中心", "Friends": "好友", "Private Groups": "私人群组",
     "New Group": "新建群组", "Members": "成员", "Join Voice": "加入语音",
     "Leave Voice": "离开语音", "Make Group Admin": "设为群管理员",
+    "Leaderboard": "排行榜", "Global Rankings": "全球排名",
+    "Farming Leaderboard": "农场排行榜", "Gold Rankings": "黄金排名",
+    "Total Fruit Rankings": "水果排名", "Players": "玩家",
+    "Total Sessions": "总会话", "Gold Farmed": "获得黄金",
+    "Fruit Farmed": "获得水果", "Loading rankings…": "加载中…",
+    "Total Fruit": "水果总数",
   },
 
   ar: {
@@ -158,6 +196,12 @@ const translations = {
     "Social Hub": "المركز الاجتماعي", "Friends": "الأصدقاء", "Private Groups": "المجموعات الخاصة",
     "New Group": "مجموعة جديدة", "Members": "الأعضاء", "Join Voice": "انضم للصوت",
     "Leave Voice": "مغادرة الصوت", "Make Group Admin": "تعيين كمشرف",
+    "Leaderboard": "لوحة المتصدرين", "Global Rankings": "التصنيف العالمي",
+    "Farming Leaderboard": "تصنيف الزراعة", "Gold Rankings": "تصنيف الذهب",
+    "Total Fruit Rankings": "تصنيف الفواكه", "Players": "اللاعبون",
+    "Total Sessions": "إجمالي الجلسات", "Gold Farmed": "الذهب المحصود",
+    "Fruit Farmed": "الفواكه المحصودة", "Loading rankings…": "جاري التحميل…",
+    "Total Fruit": "إجمالي الفواكه",
   },
 
   it: {
@@ -178,6 +222,12 @@ const translations = {
     "Social Hub": "Hub Social", "Friends": "Amici", "Private Groups": "Gruppi Privati",
     "New Group": "Nuovo Gruppo", "Members": "Membri", "Join Voice": "Unisciti alla Voce",
     "Leave Voice": "Lascia la Voce", "Make Group Admin": "Promuovi ad Admin",
+    "Leaderboard": "Classifica", "Global Rankings": "Classifica Globale",
+    "Farming Leaderboard": "Classifica Farming", "Gold Rankings": "Classifica Oro",
+    "Total Fruit Rankings": "Classifica Frutta", "Players": "Giocatori",
+    "Total Sessions": "Sessioni Totali", "Gold Farmed": "Oro Raccolto",
+    "Fruit Farmed": "Frutta Raccolta", "Loading rankings…": "Caricamento…",
+    "Total Fruit": "Frutta Totale",
   },
 
   tr: {
@@ -198,6 +248,12 @@ const translations = {
     "Social Hub": "Sosyal Hub", "Friends": "Arkadaşlar", "Private Groups": "Özel Gruplar",
     "New Group": "Yeni Grup", "Members": "Üyeler", "Join Voice": "Sese Katıl",
     "Leave Voice": "Sesten Çık", "Make Group Admin": "Grup Admini Yap",
+    "Leaderboard": "Sıralama", "Global Rankings": "Küresel Sıralama",
+    "Farming Leaderboard": "Farming Sıralaması", "Gold Rankings": "Altın Sıralaması",
+    "Total Fruit Rankings": "Meyve Sıralaması", "Players": "Oyuncular",
+    "Total Sessions": "Toplam Oturum", "Gold Farmed": "Toplanan Altın",
+    "Fruit Farmed": "Toplanan Meyve", "Loading rankings…": "Yükleniyor…",
+    "Total Fruit": "Toplam Meyve",
   },
 
   pl: {
@@ -218,6 +274,12 @@ const translations = {
     "Social Hub": "Hub Społeczności", "Friends": "Znajomi", "Private Groups": "Prywatne Grupy",
     "New Group": "Nowa Grupa", "Members": "Członkowie", "Join Voice": "Dołącz do Głosu",
     "Leave Voice": "Opuść Głos", "Make Group Admin": "Mianuj Adminem Grupy",
+    "Leaderboard": "Ranking", "Global Rankings": "Globalny Ranking",
+    "Farming Leaderboard": "Ranking Farmienia", "Gold Rankings": "Ranking Złota",
+    "Total Fruit Rankings": "Ranking Owoców", "Players": "Gracze",
+    "Total Sessions": "Łączne Sesje", "Gold Farmed": "Złoto Zebrane",
+    "Fruit Farmed": "Owoce Zebrane", "Loading rankings…": "Ładowanie…",
+    "Total Fruit": "Łączne Owoce",
   },
 
   hi: {
@@ -238,27 +300,43 @@ const translations = {
     "Social Hub": "सोशल हब", "Friends": "दोस्त", "Private Groups": "निजी समूह",
     "New Group": "नया समूह", "Members": "सदस्य", "Join Voice": "वॉयस में शामिल हों",
     "Leave Voice": "वॉयस छोड़ें", "Make Group Admin": "समूह व्यवस्थापक बनाएं",
+    "Leaderboard": "लीडरबोर्ड", "Global Rankings": "वैश्विक रैंकिंग",
+    "Farming Leaderboard": "फार्मिंग लीडरबोर्ड", "Gold Rankings": "गोल्ड रैंकिंग",
+    "Total Fruit Rankings": "फल रैंकिंग", "Players": "खिलाड़ी",
+    "Total Sessions": "कुल सत्र", "Gold Farmed": "सोना एकत्रित",
+    "Fruit Farmed": "फल एकत्रित", "Loading rankings…": "लोड हो रहा है…",
+    "Total Fruit": "कुल फल",
   }
 };
 
-window.currentLanguage = window.currentLanguage || 'en';
+/* Ensure currentLanguage is always a valid string */
+window.currentLanguage = (window.currentLanguage && window.currentLanguage.trim() && window.currentLanguage !== 'undefined' && window.currentLanguage !== 'null')
+  ? window.currentLanguage.trim()
+  : 'en';
+
 const RTL_LANGS = new Set(['ar']);
 
 window.applyTranslations = function(lang) {
-  lang = lang || window.currentLanguage;
-  if (lang === 'en') { document.documentElement.removeAttribute('dir'); return; }
-  const dict = translations[lang];
-  if (!dict) return;
+  lang = lang || window.currentLanguage || 'en';
+  /* Sanitize */
+  if (!lang || lang === 'undefined' || lang === 'null') lang = 'en';
 
+  /* RTL handling */
   if (RTL_LANGS.has(lang)) {
     document.documentElement.setAttribute('dir', 'rtl');
   } else {
     document.documentElement.removeAttribute('dir');
   }
 
+  /* English = default, no translation needed */
+  if (lang === 'en') return;
+
+  const dict = translations[lang];
+  if (!dict) return;
+
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
-    if (!dict[key]) return;
+    if (!key || !dict[key]) return;
     if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
       el.setAttribute('placeholder', dict[key]);
     } else {
@@ -267,4 +345,10 @@ window.applyTranslations = function(lang) {
   });
 };
 
-document.addEventListener('DOMContentLoaded', () => window.applyTranslations());
+/* Apply on load — use both DOMContentLoaded and a fallback */
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => window.applyTranslations());
+} else {
+  /* Page already loaded (e.g. script loaded late) */
+  window.applyTranslations();
+}

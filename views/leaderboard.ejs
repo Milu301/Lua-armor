@@ -3,77 +3,113 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&display=swap');
 :root {
-  --bg: #07070f; --surface: #12121a; --border: rgba(255,255,255,0.1);
-  --primary: #8b5cf6; --primary-light: #a78bfa; --gold: #f59e0b; --blood: #ef4444;
-  --text: #f8fafc; --text-dim: #94a3b8;
+  --bg: #07070f; --surface: #12121a; --border: rgba(255,255,255,0.08);
+  --primary: #8b5cf6; --primary-light: #a78bfa; --gold: #f59e0b; --gold-glow: rgba(245,158,11,.25);
+  --fruit: #10b981; --fruit-glow: rgba(16,185,129,.25);
+  --text: #f8fafc; --text-dim: #94a3b8; --text-muted: #64748b;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
-.ambient{position:fixed;inset:0;z-index:-1;
-  background:radial-gradient(circle at 20% 20%,rgba(139,92,246,.18) 0,transparent 45%),
-             radial-gradient(circle at 80% 80%,rgba(245,158,11,.12) 0,transparent 45%),
-             radial-gradient(circle at 50% 50%,rgba(239,68,68,.08) 0,transparent 55%);
-  filter:blur(60px);}
 
-/* Nav */
-nav{display:flex;align-items:center;justify-content:space-between;padding:1.2rem 2rem;border-bottom:1px solid var(--border);background:rgba(7,7,15,.8);backdrop-filter:blur(20px);position:sticky;top:0;z-index:100;}
-.nav-logo{display:flex;align-items:center;gap:.6rem;font-weight:800;font-size:1.1rem;}
-.nav-logo img{width:32px;height:32px;border-radius:8px;}
-.nav-links{display:flex;gap:1.5rem;align-items:center;}
-.nav-links a{color:var(--text-dim);text-decoration:none;font-size:.9rem;font-weight:600;transition:color .2s;}
-.nav-links a:hover,.nav-links a.active{color:#fff;}
-.btn-login{background:linear-gradient(135deg,var(--primary),#6366f1);color:#fff;padding:.5rem 1.2rem;border-radius:10px;font-weight:700;font-size:.85rem;text-decoration:none;transition:opacity .2s;}
-.btn-login:hover{opacity:.85;}
+/* Ambient glow */
+.lb-ambient{position:fixed;inset:0;z-index:-1;
+  background:radial-gradient(ellipse 60% 50% at 20% 20%,rgba(139,92,246,.15) 0,transparent 55%),
+             radial-gradient(ellipse 50% 60% at 80% 75%,rgba(245,158,11,.1) 0,transparent 50%),
+             radial-gradient(ellipse 40% 40% at 50% 50%,rgba(16,185,129,.07) 0,transparent 50%);
+  filter:blur(80px);animation:ambientShift 12s ease-in-out infinite alternate;}
+@keyframes ambientShift {
+  0%{filter:blur(80px) hue-rotate(0deg);}
+  100%{filter:blur(90px) hue-rotate(15deg);}
+}
 
-/* Page */
-.page{max-width:1000px;margin:0 auto;padding:3rem 1.5rem 4rem;}
-.page-header{text-align:center;margin-bottom:3rem;}
-.badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);border-radius:20px;padding:.4rem 1.2rem;margin-bottom:1.5rem;}
-.badge span{font-size:.8rem;font-weight:700;color:var(--gold);letter-spacing:1px;text-transform:uppercase;}
-.page-header h1{font-size:clamp(2rem,5vw,3.5rem);font-weight:800;background:linear-gradient(135deg,#fff 30%,var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.8rem;}
-.page-header p{color:var(--text-dim);font-size:1rem;max-width:500px;margin:0 auto;}
+/* Page container */
+.lb-page{max-width:980px;margin:0 auto;padding:2.5rem 1.25rem 5rem;}
+
+/* Header */
+.lb-header{text-align:center;margin-bottom:2.5rem;position:relative;}
+.lb-header::before{content:'';position:absolute;top:-40px;left:50%;transform:translateX(-50%);width:200px;height:200px;background:radial-gradient(circle,rgba(245,158,11,.15),transparent 70%);pointer-events:none;}
+.lb-badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:24px;padding:.45rem 1.4rem;margin-bottom:1.2rem;backdrop-filter:blur(10px);}
+.lb-badge span{font-size:.78rem;font-weight:700;color:var(--gold);letter-spacing:1.5px;text-transform:uppercase;}
+.lb-title{font-size:clamp(2rem,5vw,3.2rem);font-weight:800;background:linear-gradient(135deg,#fff 20%,var(--gold) 50%,var(--fruit) 80%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.7rem;line-height:1.15;}
+.lb-subtitle{color:var(--text-dim);font-size:.95rem;max-width:480px;margin:0 auto;line-height:1.5;}
 
 /* Tabs */
-.tabs{display:flex;gap:.5rem;justify-content:center;margin-bottom:2.5rem;}
-.tab-btn{padding:.65rem 1.8rem;border-radius:12px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text-dim);font-weight:700;font-size:.9rem;cursor:pointer;transition:all .2s;}
-.tab-btn.active{background:linear-gradient(135deg,var(--primary),#6366f1);border-color:transparent;color:#fff;box-shadow:0 4px 20px rgba(139,92,246,.35);}
-.tab-btn:not(.active):hover{border-color:var(--primary);color:#fff;}
+.lb-tabs{display:flex;gap:.5rem;justify-content:center;margin-bottom:2rem;position:relative;}
+.lb-tab{padding:.7rem 2rem;border-radius:14px;border:1px solid var(--border);background:rgba(255,255,255,.03);color:var(--text-dim);font-weight:700;font-size:.88rem;cursor:pointer;transition:all .3s cubic-bezier(.16,1,.3,1);position:relative;overflow:hidden;backdrop-filter:blur(8px);}
+.lb-tab::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity .3s;}
+.lb-tab.active-gold{background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.35);color:var(--gold);box-shadow:0 4px 24px var(--gold-glow);}
+.lb-tab.active-gold::before{opacity:1;background:linear-gradient(135deg,rgba(245,158,11,.08),transparent 60%);}
+.lb-tab.active-fruit{background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.35);color:var(--fruit);box-shadow:0 4px 24px var(--fruit-glow);}
+.lb-tab.active-fruit::before{opacity:1;background:linear-gradient(135deg,rgba(16,185,129,.08),transparent 60%);}
+.lb-tab:not([class*="active-"]):hover{border-color:rgba(255,255,255,.2);color:#fff;background:rgba(255,255,255,.05);}
+
+/* Stats summary */
+.lb-stats-strip{display:flex;gap:.5rem;justify-content:center;margin-bottom:2rem;flex-wrap:wrap;}
+.lb-stat-chip{display:flex;align-items:center;gap:.4rem;padding:.4rem .9rem;border-radius:10px;font-size:.78rem;font-weight:600;background:rgba(255,255,255,.03);border:1px solid var(--border);color:var(--text-dim);backdrop-filter:blur(8px);}
+.lb-stat-chip .num{color:#fff;font-weight:800;}
 
 /* Board */
-.board{display:flex;flex-direction:column;gap:.6rem;}
-.board-row{display:flex;align-items:center;gap:1rem;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:16px;padding:1rem 1.5rem;transition:all .2s;cursor:default;}
-.board-row:hover{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.15);transform:translateX(4px);}
-.board-row.top-1{background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(245,158,11,.04));border-color:rgba(245,158,11,.3);}
-.board-row.top-2{background:linear-gradient(135deg,rgba(148,163,184,.1),rgba(148,163,184,.03));border-color:rgba(148,163,184,.25);}
-.board-row.top-3{background:linear-gradient(135deg,rgba(205,127,50,.1),rgba(205,127,50,.03));border-color:rgba(205,127,50,.25);}
+.lb-board{display:flex;flex-direction:column;gap:.55rem;}
+.lb-row{display:flex;align-items:center;gap:1rem;background:rgba(255,255,255,.025);border:1px solid var(--border);border-radius:16px;padding:.9rem 1.3rem;transition:all .35s cubic-bezier(.16,1,.3,1);cursor:default;position:relative;overflow:hidden;opacity:0;transform:translateY(12px);animation:rowSlideIn .5s cubic-bezier(.16,1,.3,1) forwards;}
+.lb-row:hover{background:rgba(255,255,255,.055);border-color:rgba(255,255,255,.15);transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,.25);}
 
-.rank{font-size:1.1rem;font-weight:800;min-width:40px;text-align:center;}
-.rank.r1{color:var(--gold);} .rank.r2{color:#94a3b8;} .rank.r3{color:#cd7f32;}
-.rank-medal{font-size:1.4rem;}
+/* Top 3 special styles */
+.lb-row.top-1{background:linear-gradient(135deg,rgba(245,158,11,.1),rgba(245,158,11,.03));border-color:rgba(245,158,11,.25);box-shadow:0 0 30px rgba(245,158,11,.08);}
+.lb-row.top-1:hover{border-color:rgba(245,158,11,.45);box-shadow:0 0 40px rgba(245,158,11,.15);}
+.lb-row.top-2{background:linear-gradient(135deg,rgba(148,163,184,.08),rgba(148,163,184,.02));border-color:rgba(148,163,184,.2);}
+.lb-row.top-3{background:linear-gradient(135deg,rgba(205,127,50,.08),rgba(205,127,50,.02));border-color:rgba(205,127,50,.2);}
 
-.user-av{width:42px;height:42px;border-radius:12px;overflow:hidden;flex-shrink:0;border:2px solid rgba(255,255,255,.08);}
-.user-av img{width:100%;height:100%;object-fit:cover;}
-.user-av-ini{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;}
+/* Crown glow for #1 */
+.lb-row.top-1::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:conic-gradient(from 0deg,transparent,rgba(245,158,11,.06),transparent,rgba(245,158,11,.04),transparent);animation:crownRotate 8s linear infinite;}
+@keyframes crownRotate{to{transform:rotate(360deg);}}
 
-.user-info{flex:1;min-width:0;}
-.user-name{font-weight:700;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.user-name a{color:inherit;text-decoration:none;}
-.user-name a:hover{color:var(--primary-light);}
-.user-sub{font-size:.75rem;color:var(--text-dim);margin-top:2px;}
+@keyframes rowSlideIn{to{opacity:1;transform:translateY(0);}}
 
-.stat-val{font-size:1.25rem;font-weight:800;white-space:nowrap;}
-.stat-val.gold-val{color:var(--gold);}
-.stat-val.blood-val{color:var(--blood);}
-.stat-label{font-size:.7rem;color:var(--text-dim);text-align:right;}
+.lb-rank{font-size:1.1rem;font-weight:800;min-width:44px;text-align:center;position:relative;z-index:1;}
+.lb-rank.r1{color:var(--gold);text-shadow:0 0 12px var(--gold-glow);} 
+.lb-rank.r2{color:#94a3b8;} 
+.lb-rank.r3{color:#cd7f32;}
+.lb-medal{font-size:1.5rem;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3));}
 
-.empty{text-align:center;padding:4rem 2rem;color:var(--text-dim);}
-.empty-icon{font-size:3rem;margin-bottom:1rem;}
-.loading{text-align:center;padding:3rem;color:var(--text-dim);}
+.lb-avatar{width:44px;height:44px;border-radius:13px;overflow:hidden;flex-shrink:0;border:2px solid rgba(255,255,255,.06);transition:border-color .3s,box-shadow .3s;position:relative;z-index:1;}
+.lb-row:hover .lb-avatar{border-color:rgba(139,92,246,.4);box-shadow:0 0 12px rgba(139,92,246,.15);}
+.lb-avatar img{width:100%;height:100%;object-fit:cover;}
+.lb-avatar-ini{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.15rem;}
+
+.lb-info{flex:1;min-width:0;position:relative;z-index:1;}
+.lb-name{font-weight:700;font-size:.93rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.lb-name a{color:inherit;text-decoration:none;transition:color .2s;}
+.lb-name a:hover{color:var(--primary-light);}
+.lb-sub{font-size:.73rem;color:var(--text-muted);margin-top:2px;display:flex;align-items:center;gap:.4rem;}
+
+.lb-val{font-size:1.3rem;font-weight:800;white-space:nowrap;position:relative;z-index:1;letter-spacing:-.02em;}
+.lb-val.gold-val{color:var(--gold);text-shadow:0 0 15px var(--gold-glow);}
+.lb-val.fruit-val{color:var(--fruit);text-shadow:0 0 15px var(--fruit-glow);}
+.lb-val-label{font-size:.68rem;color:var(--text-muted);text-align:right;margin-top:2px;}
+
+/* Fruit icons strip */
+.fruit-icons{display:flex;gap:.25rem;font-size:.7rem;opacity:.7;}
+
+/* Role badges */
+.lb-role{font-size:.62rem;padding:1px 7px;border-radius:6px;font-weight:700;display:inline-flex;margin-left:.35rem;vertical-align:middle;}
+.lb-role-admin{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25);}
+.lb-role-mod{background:rgba(14,165,233,.12);color:#38bdf8;border:1px solid rgba(14,165,233,.25);}
+
+/* Empty / loading */
+.lb-empty{text-align:center;padding:4rem 2rem;color:var(--text-dim);border:1px dashed var(--border);border-radius:20px;background:rgba(255,255,255,.01);}
+.lb-empty-icon{font-size:3.5rem;margin-bottom:1rem;filter:grayscale(.3);}
+.lb-loading{text-align:center;padding:3rem;color:var(--text-dim);}
+.lb-loading-spinner{display:inline-block;width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:lbSpin .8s linear infinite;margin-bottom:.8rem;}
+@keyframes lbSpin{to{transform:rotate(360deg);}}
 
 /* Responsive */
-@media(max-width:600px){
-  .board-row{padding:.75rem 1rem;gap:.75rem;}
-  .stat-val{font-size:1rem;}
+@media(max-width:640px){
+  .lb-row{padding:.7rem .9rem;gap:.7rem;}
+  .lb-val{font-size:1.05rem;}
+  .lb-rank{min-width:32px;font-size:.95rem;}
+  .lb-avatar{width:36px;height:36px;border-radius:10px;}
+  .lb-tab{padding:.6rem 1.3rem;font-size:.82rem;}
+  .lb-stats-strip{gap:.35rem;}
 }
 </style>
 
@@ -84,50 +120,58 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:1.2rem
     <div class="topbar">
       <div class="topbar-left">
         <div class="pulse-dot"></div>
-        <div class="topbar-title">Leaderboard</div>
+        <div class="topbar-title" data-i18n="Leaderboard">Leaderboard</div>
       </div>
     </div>
 
-<div class="page">
-  <div class="page-header">
-    <div class="badge"><span>🏆 Global Rankings</span></div>
-    <h1>Farming Leaderboard</h1>
-    <p>Top farmers across all Booga Booga sessions. Stats update in real-time as you play.</p>
+<div class="lb-ambient"></div>
+<div class="lb-page">
+  <div class="lb-header">
+    <div class="lb-badge"><span>🏆 <span data-i18n="Global Rankings">Global Rankings</span></span></div>
+    <h1 class="lb-title" data-i18n="Farming Leaderboard">Farming Leaderboard</h1>
+    <p class="lb-subtitle" data-i18n="Top farmers across all Booga Booga sessions. Stats update in real-time as you play.">Top farmers across all Booga Booga sessions. Stats update in real-time as you play.</p>
   </div>
 
-  <div class="tabs">
-    <button class="tab-btn active" id="tab-gold" onclick="switchTab('gold')">
-      🪙 Gold Rankings
+  <!-- Stats strip -->
+  <div class="lb-stats-strip">
+    <div class="lb-stat-chip">👥 <span class="num" id="total-players">—</span> <span data-i18n="Players">Players</span></div>
+    <div class="lb-stat-chip">🎮 <span class="num" id="total-sessions">—</span> <span data-i18n="Total Sessions">Total Sessions</span></div>
+    <div class="lb-stat-chip">🪙 <span class="num" id="total-gold">—</span> <span data-i18n="Gold Farmed">Gold Farmed</span></div>
+    <div class="lb-stat-chip">🍇 <span class="num" id="total-fruit">—</span> <span data-i18n="Fruit Farmed">Fruit Farmed</span></div>
+  </div>
+
+  <div class="lb-tabs">
+    <button class="lb-tab active-gold" id="tab-gold" onclick="switchTab('gold')">
+      🪙 <span data-i18n="Gold Rankings">Gold Rankings</span>
     </button>
-    <button class="tab-btn" id="tab-blood" onclick="switchTab('blood')">
-      🩸 Bloodfruit Rankings
+    <button class="lb-tab" id="tab-fruit" onclick="switchTab('fruit')">
+      🍇 <span data-i18n="Total Fruit Rankings">Total Fruit Rankings</span>
     </button>
   </div>
 
-  <div id="board-gold" class="board">
-    <div class="loading">Loading rankings…</div>
+  <div id="board-gold" class="lb-board">
+    <div class="lb-loading"><div class="lb-loading-spinner"></div><br><span data-i18n="Loading rankings…">Loading rankings…</span></div>
   </div>
-  <div id="board-blood" class="board" style="display:none;">
-    <div class="loading">Loading rankings…</div>
+  <div id="board-fruit" class="lb-board" style="display:none;">
+    <div class="lb-loading"><div class="lb-loading-spinner"></div><br><span data-i18n="Loading rankings…">Loading rankings…</span></div>
   </div>
 </div>
 
-<script src="https://unpkg.com/@phosphor-icons/web"></script>
 <script>
-let goldData = [], bloodData = [];
-let loaded = false;
+let goldData = [], fruitData = [];
 
 function switchTab(type) {
-  document.getElementById('tab-gold').classList.toggle('active', type === 'gold');
-  document.getElementById('tab-blood').classList.toggle('active', type === 'blood');
+  document.getElementById('tab-gold').className = 'lb-tab' + (type === 'gold' ? ' active-gold' : '');
+  document.getElementById('tab-fruit').className = 'lb-tab' + (type === 'fruit' ? ' active-fruit' : '');
   document.getElementById('board-gold').style.display = type === 'gold' ? 'flex' : 'none';
-  document.getElementById('board-blood').style.display = type === 'blood' ? 'flex' : 'none';
+  document.getElementById('board-fruit').style.display = type === 'fruit' ? 'flex' : 'none';
   document.getElementById('board-gold').style.flexDirection = 'column';
-  document.getElementById('board-blood').style.flexDirection = 'column';
+  document.getElementById('board-fruit').style.flexDirection = 'column';
 }
 
 function fmt(n) {
   n = Number(n) || 0;
+  if (n >= 1e12) return (n/1e12).toFixed(1) + 'T';
   if (n >= 1e9) return (n/1e9).toFixed(1) + 'B';
   if (n >= 1e6) return (n/1e6).toFixed(1) + 'M';
   if (n >= 1e3) return (n/1e3).toFixed(1) + 'K';
@@ -135,51 +179,70 @@ function fmt(n) {
 }
 
 function medalFor(i) {
-  if (i === 0) return '<span class="rank-medal">🥇</span>';
-  if (i === 1) return '<span class="rank-medal">🥈</span>';
-  if (i === 2) return '<span class="rank-medal">🥉</span>';
-  return `<span class="rank r${i+1}">#${i+1}</span>`;
+  if (i === 0) return '<span class="lb-medal">🥇</span>';
+  if (i === 1) return '<span class="lb-medal">🥈</span>';
+  if (i === 2) return '<span class="lb-medal">🥉</span>';
+  return `<span class="lb-rank r${Math.min(i+1,4)}">#${i+1}</span>`;
 }
 
 function rowClass(i) {
-  if (i === 0) return 'board-row top-1';
-  if (i === 1) return 'board-row top-2';
-  if (i === 2) return 'board-row top-3';
-  return 'board-row';
+  if (i === 0) return 'lb-row top-1';
+  if (i === 1) return 'lb-row top-2';
+  if (i === 2) return 'lb-row top-3';
+  return 'lb-row';
 }
 
-function avatar(u, size=42) {
-  if (u.avatar_url) return `<img src="${u.avatar_url}" onerror="this.parentElement.innerHTML='<div class=user-av-ini style=background:${u.profile_color||'#8b5cf6'}22;color:${u.profile_color||'#8b5cf6'};>${u.username[0].toUpperCase()}</div>'">`;
+function avatar(u) {
+  if (u.avatar_url) return `<img src="${u.avatar_url}" onerror="this.parentElement.innerHTML='<div class=lb-avatar-ini style=background:${u.profile_color||'#8b5cf6'}22;color:${u.profile_color||'#8b5cf6'};>${u.username[0].toUpperCase()}</div>'">`;
   const c = u.profile_color || '#8b5cf6';
-  return `<div class="user-av-ini" style="background:${c}22;color:${c};">${u.username[0].toUpperCase()}</div>`;
+  return `<div class="lb-avatar-ini" style="background:${c}22;color:${c};">${u.username[0].toUpperCase()}</div>`;
 }
 
 function roleTag(role) {
-  if (role === 'admin') return ' <span style="background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3);font-size:.65rem;padding:1px 6px;border-radius:6px;font-weight:700;">ADMIN</span>';
-  if (role === 'mod') return ' <span style="background:rgba(14,165,233,.15);color:#38bdf8;border:1px solid rgba(14,165,233,.3);font-size:.65rem;padding:1px 6px;border-radius:6px;font-weight:700;">MOD</span>';
+  if (role === 'admin') return '<span class="lb-role lb-role-admin">ADMIN</span>';
+  if (role === 'mod') return '<span class="lb-role lb-role-mod">MOD</span>';
   return '';
 }
+
+const FRUIT_EMOJIS = '🩸🍋🫐🍇🍊🌽❄️☀️🍎🎃';
 
 function renderBoard(containerId, rows, statKey, statLabel, statClass) {
   const el = document.getElementById(containerId);
   if (!rows.length) {
-    el.innerHTML = '<div class="empty"><div class="empty-icon">🌾</div><p>No farming data yet.<br>Start playing Booga Booga to appear here!</p></div>';
+    el.innerHTML = '<div class="lb-empty"><div class="lb-empty-icon">🌾</div><p>No farming data yet.<br>Start playing Booga Booga to appear here!</p></div>';
     return;
   }
   el.innerHTML = rows.map((u, i) => `
-    <div class="${rowClass(i)}">
+    <div class="${rowClass(i)}" style="animation-delay:${i * 0.04}s;">
       ${medalFor(i)}
-      <div class="user-av">${avatar(u)}</div>
-      <div class="user-info">
-        <div class="user-name"><a href="/profile/${encodeURIComponent(u.username)}">${u.username}</a>${roleTag(u.role)}</div>
-        <div class="user-sub">${u.sessions || 0} sessions tracked</div>
+      <div class="lb-avatar">${avatar(u)}</div>
+      <div class="lb-info">
+        <div class="lb-name"><a href="/profile/${encodeURIComponent(u.username)}">${u.username}</a>${roleTag(u.role)}</div>
+        <div class="lb-sub">
+          <span>${u.sessions || 0} sessions</span>
+          ${statClass === 'fruit-val' ? '<span class="fruit-icons">' + FRUIT_EMOJIS + '</span>' : ''}
+        </div>
       </div>
       <div style="text-align:right;">
-        <div class="stat-val ${statClass}">${fmt(u[statKey])}</div>
-        <div class="stat-label">${statLabel}</div>
+        <div class="lb-val ${statClass}">${fmt(u[statKey])}</div>
+        <div class="lb-val-label">${statLabel}</div>
       </div>
     </div>
   `).join('');
+}
+
+function updateStatsStrip(goldRows, fruitRows) {
+  const allPlayers = new Set([...goldRows.map(u => u.username), ...fruitRows.map(u => u.username)]);
+  document.getElementById('total-players').textContent = allPlayers.size.toLocaleString();
+  
+  const totalSessions = goldRows.reduce((s, u) => s + (u.sessions || 0), 0);
+  document.getElementById('total-sessions').textContent = fmt(totalSessions);
+  
+  const totalGold = goldRows.reduce((s, u) => s + Number(u.gold_total || 0), 0);
+  document.getElementById('total-gold').textContent = fmt(totalGold);
+  
+  const totalFruit = fruitRows.reduce((s, u) => s + Number(u.fruit_total || 0), 0);
+  document.getElementById('total-fruit').textContent = fmt(totalFruit);
 }
 
 async function loadLeaderboard() {
@@ -188,16 +251,16 @@ async function loadLeaderboard() {
     const data = await res.json();
     if (!data.success) throw new Error(data.message);
     goldData = data.gold;
-    bloodData = data.blood;
+    fruitData = data.fruit;
     renderBoard('board-gold', goldData, 'gold_total', 'Gold Farmed', 'gold-val');
-    renderBoard('board-blood', bloodData, 'blood_total', 'Bloodfruit Farmed', 'blood-val');
+    renderBoard('board-fruit', fruitData, 'fruit_total', 'Total Fruit', 'fruit-val');
+    updateStatsStrip(goldData, fruitData);
   } catch (err) {
-    document.getElementById('board-gold').innerHTML = `<div class="empty"><p>Failed to load: ${err.message}</p></div>`;
+    document.getElementById('board-gold').innerHTML = `<div class="lb-empty"><p>Failed to load: ${err.message}</p></div>`;
   }
 }
 
 loadLeaderboard();
-// Auto-refresh every 30 seconds
 setInterval(loadLeaderboard, 30000);
 </script>
   </div> <!-- /.main -->

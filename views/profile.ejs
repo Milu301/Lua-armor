@@ -6,7 +6,7 @@
   --bg:#07070f;--surface:#12121a;--border:rgba(255,255,255,.1);
   --primary:<%- profileUser.profile_color || '#8b5cf6' %>;
   --primary-light:<%- profileUser.profile_color || '#a78bfa' %>;
-  --gold:#f59e0b;--blood:#ef4444;--text:#f8fafc;--text-dim:#94a3b8;
+  --gold:#f59e0b;--fruit:#10b981;--text:#f8fafc;--text-dim:#94a3b8;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
@@ -57,7 +57,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:1rem 2
 .stat-chip-val{font-size:1.3rem;font-weight:800;}
 .stat-chip-lbl{font-size:.72rem;color:var(--text-dim);margin-top:2px;text-transform:uppercase;letter-spacing:.5px;}
 .gold-chip .stat-chip-val{color:var(--gold);}
-.blood-chip .stat-chip-val{color:var(--blood);}
+.fruit-chip .stat-chip-val{color:var(--fruit);}
 
 /* Section */
 .section{padding:1.25rem 1.5rem;border-top:1px solid var(--border);}
@@ -160,9 +160,9 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:1rem 2
         <div class="stat-chip-val" id="s-gold"><%= Number(farmStats.gold_total || 0).toLocaleString() %></div>
         <div class="stat-chip-lbl">🪙 Gold Farmed</div>
       </div>
-      <div class="stat-chip blood-chip">
-        <div class="stat-chip-val" id="s-blood"><%= Number(farmStats.blood_total || 0).toLocaleString() %></div>
-        <div class="stat-chip-lbl">🩸 Bloodfruit</div>
+      <div class="stat-chip fruit-chip">
+        <div class="stat-chip-val" id="s-fruit"><%= Number(farmStats.fruit_total || 0).toLocaleString() %></div>
+        <div class="stat-chip-lbl">🍇 Total Fruit</div>
       </div>
       <div class="stat-chip">
         <div class="stat-chip-val"><%= friendCount %></div>

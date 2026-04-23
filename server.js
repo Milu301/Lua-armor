@@ -310,11 +310,11 @@ async function initDB() {
       created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
-    /* ── Farm stats leaderboard (Gold + Bloodfruit totals per user) ── */
+    /* ── Farm stats leaderboard (Gold + Total Fruit totals per user) ── */
     CREATE TABLE IF NOT EXISTS farm_stats (
       user_id      INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       gold_total   BIGINT NOT NULL DEFAULT 0,
-      blood_total  BIGINT NOT NULL DEFAULT 0,
+      blood_total  BIGINT NOT NULL DEFAULT 0,  /* now stores total fruit (all types summed) */
       sessions     INT NOT NULL DEFAULT 0,
       updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       PRIMARY KEY (user_id)
@@ -327,7 +327,7 @@ async function initDB() {
 
     /* ── Track previous inventory snapshot to compute farm diffs ── */
     ALTER TABLE live_sessions ADD COLUMN IF NOT EXISTS prev_gold BIGINT NOT NULL DEFAULT 0;
-    ALTER TABLE live_sessions ADD COLUMN IF NOT EXISTS prev_blood BIGINT NOT NULL DEFAULT 0;
+    ALTER TABLE live_sessions ADD COLUMN IF NOT EXISTS prev_blood BIGINT NOT NULL DEFAULT 0;  /* now stores prev total fruit */
 
     /* ── Migrations: rename columns if upgrading from old COP schema ── */
     DO $$ BEGIN
@@ -696,23 +696,23 @@ app.get('/api/leaderboard', async (req, res) => {
   try {
     const gold = await db.all(`
       SELECT u.username, u.avatar_url, u.profile_color, u.role,
-             f.gold_total, f.blood_total, f.sessions, f.updated_at
+             f.gold_total, f.blood_total AS fruit_total, f.sessions, f.updated_at
       FROM farm_stats f
       JOIN users u ON u.id = f.user_id
       WHERE u.is_active = true
       ORDER BY f.gold_total DESC
       LIMIT 100
     `);
-    const blood = await db.all(`
+    const fruit = await db.all(`
       SELECT u.username, u.avatar_url, u.profile_color, u.role,
-             f.gold_total, f.blood_total, f.sessions, f.updated_at
+             f.gold_total, f.blood_total AS fruit_total, f.sessions, f.updated_at
       FROM farm_stats f
       JOIN users u ON u.id = f.user_id
       WHERE u.is_active = true
       ORDER BY f.blood_total DESC
       LIMIT 100
     `);
-    res.json({ success: true, gold, blood });
+    res.json({ success: true, gold, fruit });
   } catch (err) {
     res.json({ success: false, message: err.message });
   }
@@ -753,7 +753,7 @@ app.get('/profile/:username', async (req, res) => {
 
     // Farm stats
     const farmStats = await db.one(
-      'SELECT gold_total, blood_total, sessions FROM farm_stats WHERE user_id=$1',
+      'SELECT gold_total, blood_total AS fruit_total, sessions FROM farm_stats WHERE user_id=$1',
       [profileUser.id]
     );
 
@@ -772,7 +772,7 @@ app.get('/profile/:username', async (req, res) => {
       profileUser,
       friendCount: Number(friendCount?.count || 0),
       mutualFriends,
-      farmStats: farmStats || { gold_total: 0, blood_total: 0, sessions: 0 },
+      farmStats: farmStats || { gold_total: 0, fruit_total: 0, sessions: 0 },
       friendStatus,
       isSelf: viewerUserId === profileUser.id,
       disableAds: true
@@ -2171,16 +2171,17 @@ app.get('/api/heartbeat', heartbeatLimiter, async (req, res) => {
   );
   const shouldKick = !!(existing && existing.kick_requested);
 
-  // Compute farm diffs for Gold and Bloodfruit
+  // Compute farm diffs for Gold and Total Fruit (all fruit types summed)
   const curGold  = Number(inventory['Gold']  || inventory['gold']  || 0);
-  const curBlood = Number(inventory['Bloodfruit'] || inventory['bloodfruit'] || 0);
+  const FRUIT_NAMES = ['Bloodfruit','Lemon','Bluefruit','Berry','Orange','Corn','Frostfruit','Sunfruit','Apple','Pumpkin'];
+  const curFruit = FRUIT_NAMES.reduce((sum, name) => sum + Number(inventory[name] || inventory[name.toLowerCase()] || 0), 0);
   const prevGold  = existing ? Number(existing.prev_gold  || 0) : 0;
-  const prevBlood = existing ? Number(existing.prev_blood || 0) : 0;
+  const prevFruit = existing ? Number(existing.prev_blood || 0) : 0;
   const diffGold  = Math.max(0, curGold  - prevGold);
-  const diffBlood = Math.max(0, curBlood - prevBlood);
+  const diffFruit = Math.max(0, curFruit - prevFruit);
 
   // Accumulate into farm_stats if user is linked and farmed something
-  if (userId && (diffGold > 0 || diffBlood > 0)) {
+  if (userId && (diffGold > 0 || diffFruit > 0)) {
     await db.query(`
       INSERT INTO farm_stats (user_id, gold_total, blood_total, sessions, updated_at)
       VALUES ($1, $2, $3, 1, NOW())
@@ -2189,7 +2190,7 @@ app.get('/api/heartbeat', heartbeatLimiter, async (req, res) => {
         blood_total = farm_stats.blood_total + $3,
         sessions    = farm_stats.sessions    + 1,
         updated_at  = NOW()
-    `, [userId, diffGold, diffBlood]);
+    `, [userId, diffGold, diffFruit]);
   }
 
   await db.query(`
@@ -2201,7 +2202,7 @@ app.get('/api/heartbeat', heartbeatLimiter, async (req, res) => {
       place_id=$4, place_name=$5, job_id=$6,
       inventory=$7, kick_requested=false, last_seen=NOW(),
       prev_gold=$8, prev_blood=$9
-  `, [robloxId, rn, userId, pi, pn, ji, JSON.stringify(inventory), curGold, curBlood]);
+  `, [robloxId, rn, userId, pi, pn, ji, JSON.stringify(inventory), curGold, curFruit]);
 
   res.json({ ok: true, kick: shouldKick });
 });

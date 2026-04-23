@@ -1,0 +1,174 @@
+<%- include('partials/head', { title: 'Social — ' + panelName }) %>
+
+<style>
+/* Premium Social Aesthetics */
+.social-layout { display: flex; height: calc(100vh - 70px); gap: 1.5rem; padding: 1.5rem; overflow: hidden; }
+.social-panel { flex: 1; display: flex; flex-direction: column; background: var(--bg-card); border-radius: 24px; box-shadow: 0 15px 50px rgba(0,0,0,0.5); border: 1px solid var(--border-md); overflow: hidden; position: relative; backdrop-filter: blur(25px); }
+.social-panel::before { content: ''; position: absolute; top:0; left:0; width:100%; height:5px; background: linear-gradient(90deg, #ec4899, #8b5cf6, #3b82f6); z-index: 10; box-shadow: 0 0 20px rgba(139, 92, 246, 0.5);}
+
+.social-header { padding: 1.5rem 2rem; border-bottom: 1px solid var(--border-md); background: linear-gradient(to bottom, rgba(255,255,255,0.03), transparent); display: flex; justify-content: space-between; align-items: center; }
+.social-title { font-size: 1.5rem; font-weight: 800; color: var(--text); background: -webkit-linear-gradient(45deg, #f8fafc, #cbd5e1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+.social-content { display: flex; flex: 1; overflow: hidden; }
+.social-col { flex: 1; padding: 1.5rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; }
+.social-col:not(:last-child) { border-right: 1px solid var(--border-md); }
+
+.s-section-title { font-size: 0.9rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+.s-section-title svg { color: var(--accent); }
+
+/* Cards */
+.s-card { background: rgba(0,0,0,0.2); border: 1px solid var(--border-md); border-radius: 16px; padding: 1.25rem; display: flex; align-items: center; gap: 1rem; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); cursor: pointer; position: relative; overflow: hidden; }
+.s-card::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,0.05), transparent); opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+.s-card:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 10px 30px rgba(0,0,0,0.3); border-color: var(--accent); background: var(--bg-raised); }
+.s-card:hover::after { opacity: 1; }
+
+.s-avatar { width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, var(--border-md), var(--border)); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; color: var(--text); box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+.s-avatar-group { background: linear-gradient(135deg, #ec4899, #8b5cf6); color: white; box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3); }
+
+.s-info { flex: 1; display: flex; flex-direction: column; }
+.s-name { font-weight: 700; font-size: 1.05rem; color: var(--text); }
+.s-status { font-size: 0.8rem; color: var(--text-3); font-weight: 500; margin-top: 2px; }
+.s-status-pending { color: #f59e0b; }
+
+.s-btn { padding: 0.5rem 1rem; border-radius: 10px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; border: none; display: flex; align-items: center; gap: 0.5rem; }
+.s-btn-primary { background: linear-gradient(135deg, var(--accent), #6366f1); color: white; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3); }
+.s-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4); }
+.s-btn-secondary { background: var(--bg-raised); color: var(--text); border: 1px solid var(--border-md); }
+.s-btn-secondary:hover { background: var(--bg-hover); border-color: var(--accent); }
+
+/* Inputs */
+.s-input-group { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
+.s-input { flex: 1; background: var(--bg-body); border: 1px solid var(--border-md); border-radius: 12px; padding: 0.75rem 1rem; color: var(--text); font-family: inherit; font-size: 0.95rem; transition: all 0.2s; }
+.s-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15); }
+</style>
+
+<div class="layout">
+  <%- include('partials/sidebar', { page: 'social' }) %>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="pulse-dot" style="background: #ec4899;"></div>
+        <div class="topbar-title">Social Center</div>
+      </div>
+    </div>
+
+    <div class="social-layout">
+      <div class="social-panel">
+        <div class="social-header">
+          <div class="social-title">Friends & Groups</div>
+          <button class="s-btn s-btn-primary" onclick="showCreateGroupModal()">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Create Group
+          </button>
+        </div>
+
+        <div class="social-content">
+          <!-- Friends Column -->
+          <div class="social-col">
+            <div class="s-section-title">
+              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+              Add Friend
+            </div>
+            <div class="s-input-group">
+              <input type="text" id="friendUsername" class="s-input" placeholder="Enter username...">
+              <button class="s-btn s-btn-primary" onclick="addFriend()">Send Request</button>
+            </div>
+
+            <div class="s-section-title" style="margin-top: 1rem;">
+              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              My Friends
+            </div>
+            <div id="friendsList" style="display: flex; flex-direction: column; gap: 0.75rem;">
+              <% if(friends.length === 0) { %>
+                <div class="dimmed t-sm">No friends yet. Add some!</div>
+              <% } %>
+              <% friends.forEach(f => { %>
+                <div class="s-card">
+                  <div class="s-avatar" style="<%= f.avatar_url ? 'background: url('+f.avatar_url+') center/cover;' : '' %>">
+                    <%= f.avatar_url ? '' : f.username.charAt(0).toUpperCase() %>
+                  </div>
+                  <div class="s-info">
+                    <div class="s-name"><%= f.username %></div>
+                    <div class="s-status <%= f.status.startsWith('pending') ? 's-status-pending' : '' %>">
+                      <%= f.status.startsWith('pending') ? 'Pending Request' : 'Friends' %>
+                    </div>
+                  </div>
+                  <% if(f.status.startsWith('pending') && f.status !== 'pending_'+user.id) { %>
+                    <button class="s-btn s-btn-primary" onclick="acceptFriend(<%= f.user_id %>)">Accept</button>
+                  <% } %>
+                </div>
+              <% }) %>
+            </div>
+          </div>
+
+          <!-- Groups Column -->
+          <div class="social-col">
+            <div class="s-section-title">
+              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"/></svg>
+              My Private Groups
+            </div>
+            <div id="groupsList" style="display: flex; flex-direction: column; gap: 0.75rem;">
+              <% if(groups.length === 0) { %>
+                <div class="dimmed t-sm">You are not in any groups.</div>
+              <% } %>
+              <% groups.forEach(g => { %>
+                <div class="s-card" onclick="window.location.href='/groups/<%= g.id %>'">
+                  <div class="s-avatar s-avatar-group"><%= g.name.charAt(0).toUpperCase() %></div>
+                  <div class="s-info">
+                    <div class="s-name"><%= g.name %></div>
+                    <div class="s-status"><%= new Date(g.created_at).toLocaleDateString() %></div>
+                  </div>
+                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--text-3);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </div>
+              <% }) %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+async function addFriend() {
+  const username = document.getElementById('friendUsername').value;
+  if(!username) return;
+  const res = await fetch('/api/friends/request', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username })
+  });
+  const data = await res.json();
+  alert(data.message);
+  if(data.success) location.reload();
+}
+
+async function acceptFriend(friendId) {
+  const res = await fetch('/api/friends/accept', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ friendId })
+  });
+  const data = await res.json();
+  if(data.success) location.reload();
+}
+
+async function showCreateGroupModal() {
+  const name = prompt("Enter Group Name:");
+  if(!name) return;
+  const res = await fetch('/api/groups/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name })
+  });
+  const data = await res.json();
+  if(data.success) {
+    window.location.href = '/groups/' + data.groupId;
+  } else {
+    alert(data.message);
+  }
+}
+</script>
+</body>
+</html>

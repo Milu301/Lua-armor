@@ -126,10 +126,17 @@ const isFreeUser   = !!(proj && proj.is_free) || !!(user && user.luarmorKey && u
       <!-- Welcome banner -->
       <div class="welcome-banner" style="animation: slideUp 0.6s ease; position: relative; overflow: hidden; border: 1px solid var(--accent-border); box-shadow: 0 10px 40px rgba(139, 92, 246, 0.15);">
         <div style="position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.1) 0%, transparent 60%); z-index: 0; pointer-events: none;"></div>
+        <% if (user && user.avatarUrl) { %>
+        <img
+          src="<%= user.avatarUrl %>"
+          class="welcome-avatar" alt="avatar" style="z-index: 1; border: 2px solid var(--accent); box-shadow: 0 0 15px var(--accent-glow); object-fit: cover;"
+        />
+        <% } else { %>
         <img
           src="https://cdn.discordapp.com/icons/1398423987817807934/a_6f62815e5aee24b4964bd4113626e3fe.webp?size=64"
           class="welcome-avatar" alt="logo" style="z-index: 1; border: 2px solid var(--accent); box-shadow: 0 0 15px var(--accent-glow);"
         />
+        <% } %>
         <div class="welcome-text" style="z-index: 1;">
           <div class="welcome-title"><span data-i18n="Welcome back">Welcome back</span>, <span style="color: var(--accent-3);"><%= user ? user.username : 'User' %></span> 👋</div>
           <div class="welcome-sub" style="margin-top:5px; font-weight: 600;">

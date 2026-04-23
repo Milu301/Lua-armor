@@ -239,6 +239,36 @@ async function initDB() {
     CREATE INDEX IF NOT EXISTS idx_payment_orders_ref    ON payment_orders(order_ref);
     CREATE INDEX IF NOT EXISTS idx_payment_orders_user   ON payment_orders(user_id);
     CREATE INDEX IF NOT EXISTS idx_payment_orders_status ON payment_orders(status);
+
+    CREATE TABLE IF NOT EXISTS friends (
+      user1_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      user2_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      status VARCHAR(16) NOT NULL DEFAULT 'pending',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (user1_id, user2_id)
+    );
+    CREATE TABLE IF NOT EXISTS chat_groups (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(64) NOT NULL,
+      creator_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      is_voice BOOL NOT NULL DEFAULT false,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS chat_group_members (
+      group_id INT NOT NULL REFERENCES chat_groups(id) ON DELETE CASCADE,
+      user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (group_id, user_id)
+    );
+    CREATE TABLE IF NOT EXISTS chat_group_messages (
+      id SERIAL PRIMARY KEY,
+      group_id INT NOT NULL REFERENCES chat_groups(id) ON DELETE CASCADE,
+      sender_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      content TEXT NOT NULL,
+      image_url TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
     /* ── Migrations: rename columns if upgrading from old COP schema ── */
     DO $$ BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='payment_plans' AND column_name='price_cop') THEN
@@ -500,8 +530,8 @@ io.on('connection', (socket) => {
   const sess = socket.request.session?.user;
   if (!sess) { socket.disconnect(true); return; }
 
-  const { id: userId, username, role } = sess;
-  onlineUsers.set(userId, { username, role, socketId: socket.id });
+  const { id: userId, username, role, avatarUrl } = sess;
+  onlineUsers.set(userId, { username, role, avatarUrl, socketId: socket.id });
   io.emit('online_count', onlineUsers.size);
 
   socket.on('disconnect', () => {
@@ -509,9 +539,51 @@ io.on('connection', (socket) => {
     io.emit('online_count', onlineUsers.size);
   });
 
+  /* WebRTC Signaling for Voice & Screen Sharing */
+  socket.on('join-voice', (groupId) => {
+    const room = 'voice-group-' + groupId;
+    socket.join(room);
+    socket.to(room).emit('user-joined-voice', { userId, username, avatarUrl });
+  });
+
+  socket.on('leave-voice', (groupId) => {
+    const room = 'voice-group-' + groupId;
+    socket.leave(room);
+    socket.to(room).emit('user-left-voice', { userId, username });
+  });
+
+  socket.on('webrtc-offer', (data) => {
+    socket.to('voice-group-' + data.groupId).emit('webrtc-offer', {
+      offer: data.offer,
+      userId,
+      username,
+      avatarUrl
+    });
+  });
+
+  socket.on('webrtc-answer', (data) => {
+    socket.to('voice-group-' + data.groupId).emit('webrtc-answer', {
+      answer: data.answer,
+      userId,
+      username
+    });
+  });
+
+  socket.on('webrtc-ice-candidate', (data) => {
+    socket.to('voice-group-' + data.groupId).emit('webrtc-ice-candidate', {
+      candidate: data.candidate,
+      userId,
+      username
+    });
+  });
+
   /* Client requests online users list */
   socket.on('get_online', () => {
-    socket.emit('online_list', Array.from(onlineUsers.values()).map(u => ({ username: u.username, role: u.role })));
+    socket.emit('online_list', Array.from(onlineUsers.values()).map(u => ({ 
+      username: u.username, 
+      role: u.role, 
+      avatarUrl: u.avatarUrl 
+    })));
   });
 });
 
@@ -703,14 +775,168 @@ app.get('/dashboard', auth, async (req, res) => {
 
 app.get('/chat', auth, async (req, res) => {
   const messages = await db.all(`
-    SELECT m.id, m.username, m.role, m.content, m.image_url, m.created_at
+    SELECT m.id, m.username, m.role, m.content, m.image_url, m.created_at, u.avatar_url
     FROM chat_messages m
+    LEFT JOIN users u ON m.user_id = u.id
     WHERE m.deleted = false
     ORDER BY m.created_at DESC LIMIT 80
   `);
   messages.reverse();
   const onlineCount = onlineUsers.size;
   res.render('chat', { messages, onlineCount, page: 'chat' });
+});
+/* ── Social (Friends & Groups) ───────────────────── */
+app.get('/social', auth, async (req, res) => {
+  const { id } = req.session.user;
+  // Get friends
+  const friendsRaw = await db.all(`
+    SELECT f.status, u.id as user_id, u.username, u.role, u.avatar_url
+    FROM friends f
+    JOIN users u ON (f.user1_id = u.id OR f.user2_id = u.id)
+    WHERE (f.user1_id = $1 OR f.user2_id = $1) AND u.id != $1
+  `, [id]);
+  
+  // Get groups
+  const groupsRaw = await db.all(`
+    SELECT g.id, g.name, g.creator_id, g.is_voice, g.created_at
+    FROM chat_groups g
+    JOIN chat_group_members gm ON g.id = gm.group_id
+    WHERE gm.user_id = $1
+    ORDER BY g.created_at DESC
+  `, [id]);
+
+  res.render('social', { 
+    friends: friendsRaw, 
+    groups: groupsRaw,
+    page: 'social',
+    disableAds: true 
+  });
+});
+
+app.get('/groups/:id', auth, async (req, res) => {
+  const groupId = Number(req.params.id);
+  const userId = req.session.user.id;
+
+  // Verify membership
+  const member = await db.one('SELECT * FROM chat_group_members WHERE group_id=$1 AND user_id=$2', [groupId, userId]);
+  if (!member) return res.redirect('/social');
+
+  const group = await db.one('SELECT * FROM chat_groups WHERE id=$1', [groupId]);
+  const messages = await db.all(`
+    SELECT m.id, m.content, m.image_url, m.created_at, u.username, u.role, u.avatar_url, m.sender_id
+    FROM chat_group_messages m
+    JOIN users u ON m.sender_id = u.id
+    WHERE m.group_id=$1
+    ORDER BY m.created_at DESC LIMIT 100
+  `, [groupId]);
+  messages.reverse();
+
+  const members = await db.all(`
+    SELECT u.id, u.username, u.role, u.avatar_url 
+    FROM chat_group_members gm
+    JOIN users u ON gm.user_id = u.id
+    WHERE gm.group_id=$1
+  `, [groupId]);
+
+  res.render('group_chat', { group, messages, members, page: 'social', disableAds: true });
+});
+
+/* ── Social API ──────────────────────────────────── */
+app.post('/api/friends/request', apiAuth, async (req, res) => {
+  const targetUsername = (req.body.username || '').trim().toLowerCase();
+  const userId = req.session.user.id;
+  
+  if (!targetUsername) return res.json({ success: false, message: 'Username required' });
+  const targetUser = await db.one('SELECT id FROM users WHERE username=$1', [targetUsername]);
+  if (!targetUser) return res.json({ success: false, message: 'User not found' });
+  if (targetUser.id === userId) return res.json({ success: false, message: 'Cannot add yourself' });
+
+  const u1 = Math.min(userId, targetUser.id);
+  const u2 = Math.max(userId, targetUser.id);
+
+  const existing = await db.one('SELECT * FROM friends WHERE user1_id=$1 AND user2_id=$2', [u1, u2]);
+  if (existing) return res.json({ success: false, message: 'Friend request already exists or you are already friends' });
+
+  // Assume the requester is user1 in our logical state if we want, but let's just make it 'pending'
+  // Actually we need to know who sent it, but keeping it simple: 'pending' means not accepted.
+  // Better: store status as 'pending_'+requester_id
+  await db.query('INSERT INTO friends (user1_id, user2_id, status) VALUES ($1, $2, $3)', [u1, u2, 'pending_' + userId]);
+  res.json({ success: true, message: 'Friend request sent!' });
+});
+
+app.post('/api/friends/accept', apiAuth, async (req, res) => {
+  const friendId = Number(req.body.friendId);
+  const userId = req.session.user.id;
+  const u1 = Math.min(userId, friendId);
+  const u2 = Math.max(userId, friendId);
+
+  await db.query('UPDATE friends SET status=$1 WHERE user1_id=$2 AND user2_id=$3 AND status LIKE $4', 
+    ['accepted', u1, u2, 'pending_%']);
+  
+  res.json({ success: true, message: 'Friend accepted!' });
+});
+
+app.post('/api/groups/create', apiAuth, async (req, res) => {
+  const name = (req.body.name || '').trim();
+  const userId = req.session.user.id;
+  if (!name) return res.json({ success: false, message: 'Group name required' });
+
+  const g = await db.one('INSERT INTO chat_groups (name, creator_id) VALUES ($1, $2) RETURNING id', [name, userId]);
+  await db.query('INSERT INTO chat_group_members (group_id, user_id) VALUES ($1, $2)', [g.id, userId]);
+
+  res.json({ success: true, groupId: g.id });
+});
+
+app.post('/api/groups/:id/add', apiAuth, async (req, res) => {
+  const groupId = Number(req.params.id);
+  const friendUsername = (req.body.username || '').trim().toLowerCase();
+  const userId = req.session.user.id;
+
+  const group = await db.one('SELECT * FROM chat_groups WHERE id=$1 AND creator_id=$2', [groupId, userId]);
+  if (!group) return res.json({ success: false, message: 'Not authorized or group not found' });
+
+  const target = await db.one('SELECT id FROM users WHERE username=$1', [friendUsername]);
+  if (!target) return res.json({ success: false, message: 'User not found' });
+
+  // verify they are friends
+  const u1 = Math.min(userId, target.id);
+  const u2 = Math.max(userId, target.id);
+  const isFriend = await db.one('SELECT * FROM friends WHERE user1_id=$1 AND user2_id=$2 AND status=$3', [u1, u2, 'accepted']);
+  if (!isFriend) return res.json({ success: false, message: 'You can only add friends to a group' });
+
+  await db.query('INSERT INTO chat_group_members (group_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [groupId, target.id]);
+  res.json({ success: true, message: 'User added to group!' });
+});
+
+app.post('/api/groups/:id/message', apiAuth, async (req, res) => {
+  const groupId = Number(req.params.id);
+  const content = (req.body.content || '').trim().slice(0, 1000);
+  const userId = req.session.user.id;
+
+  if (!content) return res.json({ success: false, message: 'Message cannot be empty' });
+
+  // verify membership
+  const member = await db.one('SELECT * FROM chat_group_members WHERE group_id=$1 AND user_id=$2', [groupId, userId]);
+  if (!member) return res.json({ success: false, message: 'Not authorized' });
+
+  const msg = await db.one(
+    'INSERT INTO chat_group_messages (group_id, sender_id, content) VALUES ($1, $2, $3) RETURNING id, created_at',
+    [groupId, userId, content]
+  );
+
+  // Broadcast to group
+  io.to('voice-group-' + groupId).emit('group_message', {
+    id: msg.id,
+    group_id: groupId,
+    sender_id: userId,
+    username: req.session.user.username,
+    role: req.session.user.role,
+    avatar_url: req.session.user.avatarUrl,
+    content,
+    created_at: msg.created_at
+  });
+
+  res.json({ success: true, message: 'Message sent' });
 });
 
 /* ── Bug Reports ─────────────────────────────────── */
@@ -1286,6 +1512,7 @@ app.post('/api/chat/message', apiAuth, chatLimiter, async (req, res) => {
      VALUES ($1,$2,$3,$4) RETURNING id, user_id, username, role, content, image_url, created_at`,
     [userId, username, role, safe]
   );
+  msg.avatar_url = req.session.user.avatarUrl;
 
   io.emit('chat_message', msg);
   res.json({ success: true, message: msg });
@@ -1305,6 +1532,7 @@ app.post('/api/chat/image', apiAuth, chatLimiter, chatUpload.single('image'), as
      VALUES ($1,$2,$3,$4,$5) RETURNING id, user_id, username, role, content, image_url, created_at`,
     [userId, username, role, content, imageUrl]
   );
+  msg.avatar_url = req.session.user.avatarUrl;
 
   io.emit('chat_message', msg);
   res.json({ success: true, message: msg });

@@ -1,0 +1,408 @@
+<%- include('partials/head', { title: group.name + ' — ' + panelName }) %>
+
+<style>
+.gc-layout { display: flex; height: calc(100vh - 70px); gap: 1.5rem; padding: 1.5rem; overflow: hidden; background: transparent; }
+.gc-main { flex: 1; display: flex; flex-direction: column; background: var(--bg-card); border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); border: 1px solid var(--border-md); overflow: hidden; position: relative; backdrop-filter: blur(20px); }
+.gc-main::before { content: ''; position: absolute; top:0; left:0; width:100%; height:4px; background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899); z-index: 10; box-shadow: 0 0 15px var(--accent);}
+
+.gc-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-md); display: flex; justify-content: space-between; align-items: center; background: linear-gradient(to right, rgba(139, 92, 246, 0.05), transparent); }
+.gc-title-group { display: flex; align-items: center; gap: 1rem; }
+.gc-title { font-size: 1.3rem; font-weight: 800; color: var(--text); }
+
+.gc-btn-voice { background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); transition: all 0.2s; }
+.gc-btn-voice:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4); }
+.gc-btn-voice.active { background: linear-gradient(135deg, #ef4444, #b91c1c); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); }
+
+/* Voice Room Overlay */
+.gc-voice-room { display: none; padding: 1.5rem; background: var(--bg-raised); border-bottom: 1px solid var(--border-md); flex-direction: column; gap: 1rem; }
+.gc-voice-room.active { display: flex; animation: slideDown 0.3s ease; }
+@keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+.gc-voice-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem; }
+.gc-voice-peer { background: var(--bg-card); border: 2px solid var(--border); border-radius: 16px; padding: 1.5rem; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; position: relative; transition: all 0.2s; }
+.gc-voice-peer.speaking { border-color: #10b981; box-shadow: 0 0 15px rgba(16, 185, 129, 0.3); }
+.gc-voice-avatar { width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #ec4899); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; color: white; }
+.gc-voice-name { font-weight: 600; font-size: 0.9rem; }
+.gc-voice-controls { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+.gc-v-btn { background: var(--bg-body); border: 1px solid var(--border-md); color: var(--text); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; }
+.gc-v-btn:hover { background: var(--bg-hover); color: var(--accent); border-color: var(--accent); }
+.gc-v-btn.muted { background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: #ef4444; }
+
+/* Screenshare container */
+.gc-screenshare { width: 100%; max-height: 400px; background: #000; border-radius: 12px; overflow: hidden; display: none; }
+.gc-screenshare.active { display: block; }
+.gc-screenshare video { width: 100%; height: 100%; object-fit: contain; }
+
+/* Chat Area */
+.gc-messages { flex: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem; }
+.gc-msg { display: flex; gap: 1rem; animation: fadeIn 0.3s; }
+.gc-avatar { width: 40px; height: 40px; border-radius: 12px; background: var(--border-md); display: flex; align-items: center; justify-content: center; font-weight: bold; }
+.gc-bubble { flex: 1; max-width: 80%; }
+.gc-meta { display: flex; gap: 0.5rem; margin-bottom: 0.4rem; font-size: 0.85rem; }
+.gc-name { font-weight: 700; color: var(--text); }
+.gc-time { color: var(--text-3); }
+.gc-text { background: var(--bg-raised); padding: 1rem; border-radius: 4px 16px 16px 16px; font-size: 0.95rem; border: 1px solid var(--border-md); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+
+.gc-input-bar { display: flex; gap: 0.75rem; padding: 1.25rem; background: var(--bg-card); border-top: 1px solid var(--border); }
+.gc-input { flex: 1; background: var(--bg-body); border: 1px solid var(--border-md); border-radius: 20px; padding: 0.8rem 1.25rem; color: var(--text); font-family: inherit; resize: none; overflow-y: hidden; }
+.gc-input:focus { outline: none; border-color: var(--accent); }
+
+/* Sidebar */
+.gc-side { width: 280px; background: var(--bg-card); border-radius: 20px; border: 1px solid var(--border-md); display: flex; flex-direction: column; overflow: hidden; }
+.gc-side-header { padding: 1.25rem; border-bottom: 1px solid var(--border-md); font-weight: 800; display: flex; justify-content: space-between; }
+.gc-members { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.gc-member { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; border-radius: 12px; background: rgba(0,0,0,0.2); transition: all 0.2s; }
+.gc-member:hover { background: var(--bg-raised); transform: translateX(4px); }
+
+.gc-add-btn { width: 100%; padding: 0.75rem; border: 1px dashed var(--border-md); border-radius: 12px; background: transparent; color: var(--text-2); font-weight: 600; cursor: pointer; transition: all 0.2s; margin-top: auto; }
+.gc-add-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(139, 92, 246, 0.05); }
+</style>
+
+<div class="layout">
+  <%- include('partials/sidebar', { page: 'social' }) %>
+
+  <div class="main">
+    <div class="gc-layout">
+      <!-- Chat & Voice Main -->
+      <div class="gc-main">
+        <div class="gc-header">
+          <div class="gc-title-group">
+            <span class="badge badge-purple" style="font-size: 0.7rem; margin-right: 0.5rem;">GROUP</span>
+            <div class="gc-title"><%= group.name %></div>
+          </div>
+          <button class="gc-btn-voice" id="btnVoice" onclick="toggleVoice()">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+            <span id="voiceBtnText">Join Voice</span>
+          </button>
+        </div>
+
+        <!-- Voice / Video Room Area -->
+        <div class="gc-voice-room" id="voiceRoom">
+          <div class="gc-voice-controls" style="justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <div style="font-weight: 700; color: #10b981; display: flex; align-items: center; gap: 0.5rem;">
+              <div class="pulse-dot" style="background: #10b981;"></div> Voice Connected
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="gc-v-btn" id="btnMute" onclick="toggleMute()" title="Mute Microphone">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+              </button>
+              <button class="gc-v-btn" id="btnScreen" onclick="toggleScreenShare()" title="Share Screen">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+              </button>
+            </div>
+          </div>
+          
+          <div class="gc-screenshare" id="screenShareContainer">
+            <video id="screenShareVideo" autoplay playsinline></video>
+          </div>
+
+          <div class="gc-voice-grid" id="voiceGrid">
+            <!-- Self -->
+            <div class="gc-voice-peer" id="peer-self">
+              <div class="gc-voice-avatar" style="<%= user.avatarUrl ? 'background: url('+user.avatarUrl+') center/cover; color: transparent;' : '' %>"><%= user.avatarUrl ? '' : user.username.charAt(0).toUpperCase() %></div>
+              <div class="gc-voice-name"><%= user.username %> (You)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Messages -->
+        <div class="gc-messages" id="msgContainer">
+          <% messages.forEach(m => { %>
+            <div class="gc-msg">
+              <div class="gc-avatar" style="<%= m.avatar_url ? 'background: url('+m.avatar_url+') center/cover; color: transparent;' : '' %>"><%= m.avatar_url ? '' : m.username.charAt(0).toUpperCase() %></div>
+              <div class="gc-bubble">
+                <div class="gc-meta">
+                  <span class="gc-name"><%= m.username %></span>
+                  <span class="gc-time"><%= new Date(m.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) %></span>
+                </div>
+                <div class="gc-text"><%= m.content %></div>
+              </div>
+            </div>
+          <% }) %>
+          <div id="chatBottom"></div>
+        </div>
+
+        <div class="gc-input-bar">
+          <textarea id="msgInput" class="gc-input" placeholder="Message <%= group.name %>..." rows="1" onkeydown="onKey(event)"></textarea>
+          <button class="gc-btn-voice" style="background: var(--accent);" onclick="sendMsg()">Send</button>
+        </div>
+      </div>
+
+      <!-- Members Sidebar -->
+      <div class="gc-side">
+        <div class="gc-side-header">
+          Members <span class="badge" style="background: var(--bg-raised);"><%= members.length %></span>
+        </div>
+        <div class="gc-members">
+          <% members.forEach(m => { %>
+            <div class="gc-member">
+              <div class="gc-avatar" style="width: 32px; height: 32px; font-size: 0.8rem; <%= m.avatar_url ? 'background: url('+m.avatar_url+') center/cover; color: transparent;' : '' %>"><%= m.avatar_url ? '' : m.username.charAt(0).toUpperCase() %></div>
+              <span style="font-weight: 600; font-size: 0.9rem;"><%= m.username %></span>
+            </div>
+          <% }) %>
+        </div>
+        <div style="padding: 1rem; border-top: 1px solid var(--border-md);">
+          <button class="gc-add-btn" onclick="addFriendToGroup()">+ Add Friend</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const GROUP_ID = <%= group.id %>;
+const MY_ID = <%= user.id %>;
+const MY_NAME = "<%= user.username %>";
+
+/* ── Chat Logic ── */
+const msgContainer = document.getElementById('msgContainer');
+const msgInput = document.getElementById('msgInput');
+const socket = io({ transports: ['websocket','polling'] });
+
+socket.on('group_message', msg => {
+  if (msg.group_id !== GROUP_ID) return;
+  const time = new Date(msg.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  const div = document.createElement('div');
+  div.className = 'gc-msg';
+  div.innerHTML = `
+    <div class="gc-avatar" style="${msg.avatar_url ? 'background: url('+msg.avatar_url+') center/cover; color: transparent;' : ''}">${msg.avatar_url ? '' : msg.username.charAt(0).toUpperCase()}</div>
+    <div class="gc-bubble">
+      <div class="gc-meta">
+        <span class="gc-name">${msg.username}</span>
+        <span class="gc-time">${time}</span>
+      </div>
+      <div class="gc-text">${msg.content}</div>
+    </div>`;
+  msgContainer.insertBefore(div, document.getElementById('chatBottom'));
+  msgContainer.scrollTop = msgContainer.scrollHeight;
+});
+
+async function sendMsg() {
+  const text = msgInput.value.trim();
+  if(!text) return;
+  msgInput.disabled = true;
+  await fetch('/api/groups/' + GROUP_ID + '/message', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: text })
+  });
+  msgInput.value = '';
+  msgInput.disabled = false;
+  msgInput.focus();
+}
+
+function onKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+}
+msgContainer.scrollTop = msgContainer.scrollHeight;
+
+async function addFriendToGroup() {
+  const username = prompt("Enter friend's username to add:");
+  if(!username) return;
+  const res = await fetch('/api/groups/' + GROUP_ID + '/add', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username })
+  });
+  const data = await res.json();
+  alert(data.message);
+  if(data.success) location.reload();
+}
+
+/* ── WebRTC Voice & Screen Sharing Logic ── */
+let inVoice = false;
+let localStream = null;
+let screenStream = null;
+let peerConnections = {}; // userId -> RTCPeerConnection
+let isMuted = false;
+
+const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+async function toggleVoice() {
+  if (inVoice) {
+    // Leave Voice
+    socket.emit('leave-voice', GROUP_ID);
+    if(localStream) localStream.getTracks().forEach(t => t.stop());
+    if(screenStream) screenStream.getTracks().forEach(t => t.stop());
+    Object.values(peerConnections).forEach(pc => pc.close());
+    peerConnections = {};
+    
+    document.getElementById('voiceRoom').classList.remove('active');
+    const btn = document.getElementById('btnVoice');
+    btn.classList.remove('active');
+    document.getElementById('voiceBtnText').textContent = 'Join Voice';
+    
+    // Clear peer UIs
+    document.querySelectorAll('.gc-voice-peer:not(#peer-self)').forEach(el => el.remove());
+    document.getElementById('screenShareContainer').style.display = 'none';
+    
+    inVoice = false;
+  } else {
+    // Join Voice
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    } catch(e) {
+      alert("Microphone access denied or not available.");
+      return;
+    }
+    
+    socket.emit('join-voice', GROUP_ID);
+    
+    document.getElementById('voiceRoom').classList.add('active');
+    const btn = document.getElementById('btnVoice');
+    btn.classList.add('active');
+    document.getElementById('voiceBtnText').textContent = 'Leave Voice';
+    document.getElementById('peer-self').classList.add('speaking');
+    
+    inVoice = true;
+  }
+}
+
+function toggleMute() {
+  if(!localStream) return;
+  isMuted = !isMuted;
+  localStream.getAudioTracks()[0].enabled = !isMuted;
+  const btn = document.getElementById('btnMute');
+  if(isMuted) {
+    btn.classList.add('muted');
+    document.getElementById('peer-self').classList.remove('speaking');
+  } else {
+    btn.classList.remove('muted');
+    document.getElementById('peer-self').classList.add('speaking');
+  }
+}
+
+async function toggleScreenShare() {
+  if(!inVoice) return;
+  if (screenStream) {
+    // Stop sharing
+    screenStream.getTracks().forEach(t => t.stop());
+    screenStream = null;
+    document.getElementById('screenShareContainer').style.display = 'none';
+    
+    // Replace track back to local audio (or just remove the video track from peers)
+    // For simplicity in this demo, screen sharing is broadcasted via the same peer connection
+    // Let's renegotiate
+  } else {
+    try {
+      screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      const videoEl = document.getElementById('screenShareVideo');
+      videoEl.srcObject = screenStream;
+      document.getElementById('screenShareContainer').style.display = 'block';
+      
+      // Add track to all peers
+      const screenTrack = screenStream.getVideoTracks()[0];
+      screenTrack.onended = () => toggleScreenShare(); // Handle native stop button
+      
+      Object.values(peerConnections).forEach(pc => {
+        pc.addTrack(screenTrack, screenStream);
+      });
+      // Need renegotiation logic if we were building a full SFU, but P2P works for small groups
+    } catch(e) {
+      console.error(e);
+    }
+  }
+}
+
+/* Signaling Event Handlers */
+socket.on('user-joined-voice', async (data) => {
+  if(!inVoice) return;
+  const pc = createPeerConnection(data.userId, data.username, data.avatarUrl);
+  
+  if(localStream) {
+    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+  }
+  if(screenStream) {
+    screenStream.getTracks().forEach(t => pc.addTrack(t, screenStream));
+  }
+  
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  
+  socket.emit('webrtc-offer', { groupId: GROUP_ID, offer, target: data.userId });
+});
+
+socket.on('user-left-voice', (data) => {
+  if(peerConnections[data.userId]) {
+    peerConnections[data.userId].close();
+    delete peerConnections[data.userId];
+  }
+  const el = document.getElementById('peer-' + data.userId);
+  if(el) el.remove();
+});
+
+socket.on('webrtc-offer', async (data) => {
+  if(!inVoice) return;
+  const pc = createPeerConnection(data.userId, data.username, data.avatarUrl);
+  await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+  
+  if(localStream) {
+    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+  }
+  
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  
+  socket.emit('webrtc-answer', { groupId: GROUP_ID, answer, target: data.userId });
+});
+
+socket.on('webrtc-answer', async (data) => {
+  if(peerConnections[data.userId]) {
+    await peerConnections[data.userId].setRemoteDescription(new RTCSessionDescription(data.answer));
+  }
+});
+
+socket.on('webrtc-ice-candidate', async (data) => {
+  if(peerConnections[data.userId]) {
+    await peerConnections[data.userId].addIceCandidate(new RTCIceCandidate(data.candidate));
+  }
+});
+
+function createPeerConnection(id, name, avatarUrl) {
+  const pc = new RTCPeerConnection(config);
+  peerConnections[id] = pc;
+  
+  pc.onicecandidate = e => {
+    if(e.candidate) {
+      socket.emit('webrtc-ice-candidate', { groupId: GROUP_ID, candidate: e.candidate, target: id });
+    }
+  };
+  
+  pc.ontrack = e => {
+    // Add audio element
+    if(e.track.kind === 'audio') {
+      let audio = document.getElementById('audio-' + id);
+      if(!audio) {
+        audio = document.createElement('audio');
+        audio.id = 'audio-' + id;
+        audio.autoplay = true;
+        document.body.appendChild(audio);
+      }
+      audio.srcObject = e.streams[0];
+      
+      // UI Update
+      let peerUI = document.getElementById('peer-' + id);
+      if(!peerUI) {
+        peerUI = document.createElement('div');
+        peerUI.className = 'gc-voice-peer speaking';
+        peerUI.id = 'peer-' + id;
+        peerUI.innerHTML = `
+          <div class="gc-voice-avatar" style="${avatarUrl ? 'background: url('+avatarUrl+') center/cover; color: transparent;' : ''}">${avatarUrl ? '' : name.charAt(0).toUpperCase()}</div>
+          <div class="gc-voice-name">${name}</div>
+        `;
+        document.getElementById('voiceGrid').appendChild(peerUI);
+      }
+    } else if (e.track.kind === 'video') {
+      // Show remote screen share
+      const videoEl = document.getElementById('screenShareVideo');
+      videoEl.srcObject = e.streams[0];
+      document.getElementById('screenShareContainer').style.display = 'block';
+    }
+  };
+  
+  return pc;
+}
+</script>
+</body>
+</html>

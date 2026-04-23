@@ -292,12 +292,13 @@ body {
             </div>
           <% } else { %>
             <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: auto;">
-              <button class="btn-buy <%= idx === 0 ? 'btn-buy-primary' : 'btn-buy-secondary' %>" disabled style="opacity: 0.5; cursor: not-allowed;">
-                Payments Unavailable
-              </button>
               <% if (p.roblox_gamepass_id) { %>
               <button class="btn-buy" style="background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(0, 162, 255, 0.4);" onclick="claimGamepass(<%= p.id %>, '<%= p.name %>', this)">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Robux_2019_Logo_gold.svg/1024px-Robux_2019_Logo_gold.svg.png" style="width: 18px; height: 18px;" alt="Robux"> Verify Gamepass
+              </button>
+              <% } else { %>
+              <button class="btn-buy <%= idx === 0 ? 'btn-buy-primary' : 'btn-buy-secondary' %>" disabled style="opacity: 0.5; cursor: not-allowed;">
+                Payments Unavailable
               </button>
               <% } %>
             </div>

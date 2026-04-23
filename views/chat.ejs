@@ -89,7 +89,12 @@
           <% messages.forEach(function(msg, index) { %>
           <div class="cp-msg" data-id="<%= msg.id %>" style="animation-delay: <%= Math.min(index * 0.05, 0.5) %>s;">
             <div class="cp-av-wrap">
-              <div class="cp-avatar <%= msg.role === 'admin' ? 'cp-avatar-admin' : msg.role === 'mod' ? 'cp-avatar-mod' : '' %>" style="<%= msg.avatar_url ? 'background: url(' + msg.avatar_url + ') center/cover; color:transparent;' : '' %>">
+              <div class="cp-avatar <%= msg.role === 'admin' ? 'cp-avatar-admin' : msg.role === 'mod' ? 'cp-avatar-mod' : '' %>" style="<%= msg.avatar_url ? 'background: url(' + msg.avatar_url + ') center/cover; color:transparent;' : '' %>" onload="if(JSON.parse(localStorage.getItem('chatPrefs')||'{}').gifAvatars===false) this.style.animation='none'">
+                <script>
+                  if(JSON.parse(localStorage.getItem('chatPrefs')||'{}').gifAvatars === false) {
+                    document.write('<style>.cp-avatar{animation:none!important;}</style>');
+                  }
+                </script>
                 <%= msg.avatar_url ? '' : msg.username.charAt(0).toUpperCase() %>
               </div>
               <div class="status-dot status-<%= msg.online_status || 'online' %>"></div>
@@ -181,6 +186,39 @@
 const MY_ROLE = '<%= user ? user.role : "" %>';
 let pendingFile = null;
 
+/* ── Load user preferences from localStorage ── */
+const _prefs = JSON.parse(localStorage.getItem('chatPrefs') || '{}');
+const PREF_SOUND      = _prefs.sound      !== false;
+const PREF_COMPACT    = _prefs.compact    === true;
+const PREF_TIMESTAMPS  = _prefs.timestamps !== false;
+const PREF_GIF         = _prefs.gifAvatars !== false;
+const PREF_ONLINE_ONLY = _prefs.onlineOnly === true;
+
+if (PREF_COMPACT) {
+  document.head.insertAdjacentHTML('beforeend', '<style>.cp-msg{gap:0.5rem!important;margin-bottom:0!important;} .cp-bubble{margin-bottom:0;} .cp-text{padding:0.4rem 0.75rem!important;border-radius:6px!important;}</style>');
+}
+if (!PREF_TIMESTAMPS) {
+  document.head.insertAdjacentHTML('beforeend', '<style>.cp-time{display:none!important;}</style>');
+}
+
+/* Notification chime (tiny base64 beep) */
+let _chime = null;
+function playChime() {
+  if (!PREF_SOUND) return;
+  try {
+    if (!_chime) {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = 880; osc.type = 'sine';
+      gain.gain.setValueAtTime(0.18, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.35);
+    }
+  } catch {}
+}
+
 const msgContainer = document.getElementById('chatMessages');
 const msgInput     = document.getElementById('msgInput');
 const sendBtn      = document.getElementById('sendBtn');
@@ -195,6 +233,8 @@ socket.on('online_count', n => {
 
 socket.on('online_list', list => {
   const el = document.getElementById('onlineUsersList');
+  if (PREF_ONLINE_ONLY) list = list.filter(u => u.onlineStatus && u.onlineStatus !== 'offline');
+
   if (!list.length) {
     el.innerHTML = '<div class="dimmed t-xs" style="padding:0.5rem 0;">No one else here</div>';
     return;
@@ -217,6 +257,7 @@ socket.on('chat_message', msg => {
   if (empty) empty.remove();
   appendMsg(msg);
   scrollBottom();
+  playChime();
 });
 
 socket.on('chat_delete', id => {
@@ -242,7 +283,7 @@ function buildMsg(msg) {
   div.className = 'cp-msg'; div.dataset.id = msg.id;
   div.innerHTML = `
     <div class="cp-av-wrap">
-      <div class="cp-avatar ${isAdmin ? 'cp-avatar-admin' : isMod ? 'cp-avatar-mod' : ''}" style="${msg.avatar_url ? 'background:url('+msg.avatar_url+') center/cover;color:transparent;' : ''}">
+      <div class="cp-avatar ${isAdmin ? 'cp-avatar-admin' : isMod ? 'cp-avatar-mod' : ''}" style="${msg.avatar_url ? `background:url(${msg.avatar_url}) center/cover;color:transparent;` : ''} ${!PREF_GIF ? 'animation:none;' : ''}">
         ${msg.avatar_url ? '' : escH(msg.username.charAt(0).toUpperCase())}
       </div>
       <div style="width:10px;height:10px;border-radius:50%;background:${sc};border:2px solid var(--bg-card);position:absolute;bottom:-1px;right:-1px;"></div>

@@ -2217,13 +2217,13 @@ app.post('/api/payment/claim-gamepass', auth, async (req, res) => {
   const planId = Number(req.body.plan_id);
   if (!planId) return res.json({ success: false, message: 'Plan required.' });
 
-  const plan = await db.oneOrNone('SELECT * FROM payment_plans WHERE id=$1 AND is_active=true', [planId]);
+  const plan = await db.one('SELECT * FROM payment_plans WHERE id=$1 AND is_active=true', [planId]);
   if (!plan || !plan.roblox_gamepass_id) {
     return res.json({ success: false, message: 'This plan does not support gamepass claiming.' });
   }
 
   // Find their live session
-  const session = await db.oneOrNone('SELECT roblox_user_id FROM live_sessions WHERE user_id=$1', [req.session.user.id]);
+  const session = await db.one('SELECT roblox_user_id FROM live_sessions WHERE user_id=$1', [req.session.user.id]);
   if (!session) {
     return res.json({ success: false, message: 'You must be actively running the AuroraHub Free script in a game to verify ownership.' });
   }
@@ -2231,7 +2231,7 @@ app.post('/api/payment/claim-gamepass', auth, async (req, res) => {
   const robloxUserId = session.roblox_user_id;
 
   // Check if they already claimed this plan using this gamepass
-  const claim = await db.oneOrNone('SELECT id FROM gamepass_claims WHERE user_id=$1 AND gamepass_id=$2', [req.session.user.id, plan.roblox_gamepass_id]);
+  const claim = await db.one('SELECT id FROM gamepass_claims WHERE user_id=$1 AND gamepass_id=$2', [req.session.user.id, plan.roblox_gamepass_id]);
   if (claim) {
     return res.json({ success: false, message: 'You have already claimed this plan using your gamepass.' });
   }
@@ -2243,7 +2243,7 @@ app.post('/api/payment/claim-gamepass', auth, async (req, res) => {
 
     if (robloxData === true || robloxData === "true") {
       // Create user's key in luarmor
-      const proj = await db.oneOrNone('SELECT * FROM projects WHERE id=$1', [plan.project_id]);
+      const proj = await db.one('SELECT * FROM projects WHERE id=$1', [plan.project_id]);
       if (!proj) return res.json({ success: false, message: 'Project not found for this plan.' });
       
       const { json } = await luarmorReq('POST', proj.luarmor_project_id, proj.luarmor_api_key,
@@ -2324,7 +2324,7 @@ app.delete('/api/admin/tutorials/:id', apiAuth, adminApiOnly, async (req, res) =
     if (!id) return res.json({ success: false, message: 'Invalid ID.' });
 
     // Grab the row first so we know what file to delete
-    const row = await db.oneOrNone('SELECT video_url FROM tutorials WHERE id=$1', [id]);
+    const row = await db.one('SELECT video_url FROM tutorials WHERE id=$1', [id]);
 
     // Always delete the DB record (even if file is gone)
     await db.query('DELETE FROM tutorials WHERE id=$1', [id]);

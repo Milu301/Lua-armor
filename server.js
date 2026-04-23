@@ -2319,14 +2319,21 @@ app.patch('/api/admin/tutorials/:id', apiAuth, adminApiOnly, async (req, res) =>
 });
 
 app.delete('/api/admin/tutorials/:id', apiAuth, adminApiOnly, async (req, res) => {
-  const id = Number(req.params.id);
-  const row = await db.oneOrNone('SELECT video_url FROM tutorials WHERE id=$1', [id]);
-  if (row?.video_url) {
-    const filePath = path.join(__dirname, 'public', row.video_url);
-    require('fs').unlink(filePath, () => {});
+  try {
+    const id = Number(req.params.id);
+    const row = await db.oneOrNone('SELECT video_url FROM tutorials WHERE id=$1', [id]);
+    if (row?.video_url) {
+      const filePath = path.join(__dirname, 'public', row.video_url);
+      if (require('fs').existsSync(filePath)) {
+        require('fs').unlinkSync(filePath);
+      }
+    }
+    await db.query('DELETE FROM tutorials WHERE id=$1', [id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error deleting tutorial:', err);
+    res.json({ success: false, message: 'Server error while deleting tutorial' });
   }
-  await db.query('DELETE FROM tutorials WHERE id=$1', [id]);
-  res.json({ success: true });
 });
 
 /* ── ADMIN: Promo Codes CRUD ────────────────────────── */

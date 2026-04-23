@@ -77,27 +77,16 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:1.2rem
 }
 </style>
 
-<div class="ambient"></div>
+<div class="layout">
+  <%- include('partials/sidebar', { page: 'leaderboard' }) %>
 
-<nav>
-  <div class="nav-logo">
-    <% if (typeof panelLogo !== 'undefined' && panelLogo) { %>
-      <img src="<%= panelLogo %>" alt="logo">
-    <% } %>
-    <span><%= typeof panelName !== 'undefined' ? panelName : 'AuroraHub' %></span>
-  </div>
-  <div class="nav-links">
-    <a href="/home">Home</a>
-    <a href="/tutorials">Tutorials</a>
-    <a href="/leaderboard" class="active">Leaderboard</a>
-    <a href="/plans">Plans</a>
-    <% if (typeof user !== 'undefined' && user) { %>
-      <a href="/dashboard" class="btn-login">Dashboard</a>
-    <% } else { %>
-      <a href="/login" class="btn-login">Login</a>
-    <% } %>
-  </div>
-</nav>
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="pulse-dot"></div>
+        <div class="topbar-title">Leaderboard</div>
+      </div>
+    </div>
 
 <div class="page">
   <div class="page-header">
@@ -211,3 +200,7 @@ loadLeaderboard();
 // Auto-refresh every 30 seconds
 setInterval(loadLeaderboard, 30000);
 </script>
+  </div> <!-- /.main -->
+</div> <!-- /.layout -->
+</body>
+</html>

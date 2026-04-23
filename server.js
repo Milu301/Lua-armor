@@ -686,8 +686,8 @@ app.get('/tutorials', async (req, res) => {
   res.render('tutorials', { tutorials, disableAds: true });
 });
 
-/* ── GET /leaderboard — Public farming leaderboard ─── */
-app.get('/leaderboard', async (req, res) => {
+/* ── GET /leaderboard — Authenticated farming leaderboard ─── */
+app.get('/leaderboard', auth, async (req, res) => {
   res.render('leaderboard', { disableAds: true });
 });
 

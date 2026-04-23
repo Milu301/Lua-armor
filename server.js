@@ -310,6 +310,25 @@ async function initDB() {
       created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    /* ── Farm stats leaderboard (Gold + Bloodfruit totals per user) ── */
+    CREATE TABLE IF NOT EXISTS farm_stats (
+      user_id      INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      gold_total   BIGINT NOT NULL DEFAULT 0,
+      blood_total  BIGINT NOT NULL DEFAULT 0,
+      sessions     INT NOT NULL DEFAULT 0,
+      updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (user_id)
+    );
+
+    /* ── Profile extras ── */
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS banner_url TEXT NOT NULL DEFAULT '';
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS bio VARCHAR(160) NOT NULL DEFAULT '';
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_color VARCHAR(20) NOT NULL DEFAULT '#8b5cf6';
+
+    /* ── Track previous inventory snapshot to compute farm diffs ── */
+    ALTER TABLE live_sessions ADD COLUMN IF NOT EXISTS prev_gold BIGINT NOT NULL DEFAULT 0;
+    ALTER TABLE live_sessions ADD COLUMN IF NOT EXISTS prev_blood BIGINT NOT NULL DEFAULT 0;
+
     /* ── Migrations: rename columns if upgrading from old COP schema ── */
     DO $$ BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='payment_plans' AND column_name='price_cop') THEN
@@ -665,6 +684,137 @@ app.get('/home', async (req, res) => {
 app.get('/tutorials', async (req, res) => {
   const tutorials = await db.all('SELECT * FROM tutorials WHERE is_active=true ORDER BY sort_order ASC, created_at DESC');
   res.render('tutorials', { tutorials, disableAds: true });
+});
+
+/* ── GET /leaderboard — Public farming leaderboard ─── */
+app.get('/leaderboard', async (req, res) => {
+  res.render('leaderboard', { disableAds: true });
+});
+
+/* ── GET /api/leaderboard — JSON leaderboard data ─── */
+app.get('/api/leaderboard', async (req, res) => {
+  try {
+    const gold = await db.all(`
+      SELECT u.username, u.avatar_url, u.profile_color, u.role,
+             f.gold_total, f.blood_total, f.sessions, f.updated_at
+      FROM farm_stats f
+      JOIN users u ON u.id = f.user_id
+      WHERE u.is_active = true
+      ORDER BY f.gold_total DESC
+      LIMIT 100
+    `);
+    const blood = await db.all(`
+      SELECT u.username, u.avatar_url, u.profile_color, u.role,
+             f.gold_total, f.blood_total, f.sessions, f.updated_at
+      FROM farm_stats f
+      JOIN users u ON u.id = f.user_id
+      WHERE u.is_active = true
+      ORDER BY f.blood_total DESC
+      LIMIT 100
+    `);
+    res.json({ success: true, gold, blood });
+  } catch (err) {
+    res.json({ success: false, message: err.message });
+  }
+});
+
+/* ── GET /profile/:username — Public user profile ─── */
+app.get('/profile/:username', async (req, res) => {
+  try {
+    const username = req.params.username.toLowerCase();
+    const profileUser = await db.one(
+      `SELECT id, username, avatar_url, banner_url, bio, profile_color, role, created_at
+       FROM users WHERE LOWER(username)=$1 AND is_active=true`, [username]
+    );
+    if (!profileUser) return res.status(404).render('404');
+
+    const viewerUserId = req.session.user?.id || null;
+
+    // Friend count
+    const friendCount = await db.one(
+      `SELECT COUNT(*) as count FROM friends
+       WHERE (user1_id=$1 OR user2_id=$1) AND status='accepted'`, [profileUser.id]
+    );
+
+    // Mutual friends (only if viewer is logged in)
+    let mutualFriends = [];
+    if (viewerUserId && viewerUserId !== profileUser.id) {
+      mutualFriends = await db.all(`
+        SELECT u.username, u.avatar_url FROM users u
+        WHERE u.id IN (
+          SELECT CASE WHEN f.user1_id=$1 THEN f.user2_id ELSE f.user1_id END
+          FROM friends f WHERE (f.user1_id=$1 OR f.user2_id=$1) AND f.status='accepted'
+        ) AND u.id IN (
+          SELECT CASE WHEN f.user1_id=$2 THEN f.user2_id ELSE f.user1_id END
+          FROM friends f WHERE (f.user1_id=$2 OR f.user2_id=$2) AND f.status='accepted'
+        )
+      `, [profileUser.id, viewerUserId]);
+    }
+
+    // Farm stats
+    const farmStats = await db.one(
+      'SELECT gold_total, blood_total, sessions FROM farm_stats WHERE user_id=$1',
+      [profileUser.id]
+    );
+
+    // Friendship status between viewer and profile user
+    let friendStatus = null;
+    if (viewerUserId && viewerUserId !== profileUser.id) {
+      const fRow = await db.one(
+        `SELECT status, user1_id FROM friends
+         WHERE (user1_id=$1 AND user2_id=$2) OR (user1_id=$2 AND user2_id=$1)`,
+        [viewerUserId, profileUser.id]
+      );
+      friendStatus = fRow ? { status: fRow.status, sentByMe: fRow.user1_id === viewerUserId } : null;
+    }
+
+    res.render('profile', {
+      profileUser,
+      friendCount: Number(friendCount?.count || 0),
+      mutualFriends,
+      farmStats: farmStats || { gold_total: 0, blood_total: 0, sessions: 0 },
+      friendStatus,
+      isSelf: viewerUserId === profileUser.id,
+      disableAds: true
+    });
+  } catch (err) {
+    console.error('Profile error:', err);
+    res.status(404).render('404');
+  }
+});
+
+/* ── POST /api/profile/friend — Send/accept/remove friend request ─── */
+app.post('/api/profile/friend', apiAuth, async (req, res) => {
+  try {
+    const { target_username, action } = req.body;
+    const me = req.session.user.id;
+    const target = await db.one('SELECT id FROM users WHERE LOWER(username)=$1 AND is_active=true', [target_username?.toLowerCase()]);
+    if (!target) return res.json({ success: false, message: 'User not found.' });
+    if (target.id === me) return res.json({ success: false, message: 'Cannot friend yourself.' });
+
+    if (action === 'add') {
+      await db.query(
+        `INSERT INTO friends (user1_id, user2_id, status) VALUES ($1,$2,'pending')
+         ON CONFLICT DO NOTHING`, [me, target.id]
+      );
+      return res.json({ success: true, status: 'pending' });
+    } else if (action === 'accept') {
+      await db.query(
+        `UPDATE friends SET status='accepted' WHERE user1_id=$1 AND user2_id=$2`,
+        [target.id, me]
+      );
+      return res.json({ success: true, status: 'accepted' });
+    } else if (action === 'remove') {
+      await db.query(
+        `DELETE FROM friends WHERE (user1_id=$1 AND user2_id=$2) OR (user1_id=$2 AND user2_id=$1)`,
+        [me, target.id]
+      );
+      return res.json({ success: true, status: null });
+    }
+    res.json({ success: false, message: 'Invalid action.' });
+  } catch (err) {
+    res.json({ success: false, message: err.message });
+  }
 });
 
 /* ─── Discord OAuth Routes ─── */
@@ -1509,18 +1659,22 @@ app.get('/settings', auth, async (req, res) => {
 
 app.post('/api/settings', auth, async (req, res) => {
   const userId = req.session.user.id;
-  const avatarUrl = (req.body.avatar_url || '').trim().slice(0, 500);
-  const language = (req.body.language || 'en').trim().slice(0, 16);
-  const discordId = (req.body.discord_id || '').trim().slice(0, 32);
+  const avatarUrl    = (req.body.avatar_url    || '').trim().slice(0, 500);
+  const bannerUrl    = (req.body.banner_url    || '').trim().slice(0, 500);
+  const bio          = (req.body.bio           || '').trim().slice(0, 160);
+  const profileColor = (req.body.profile_color || '#8b5cf6').trim().slice(0, 20);
+  const language     = (req.body.language      || 'en').trim().slice(0, 16);
+  const discordId    = (req.body.discord_id    || '').trim().slice(0, 32);
   const onlineStatus = (req.body.online_status || 'online').trim().slice(0, 16);
 
   await db.query(
-    'UPDATE users SET avatar_url=$1, language=$2, discord_id=$3, online_status=$4 WHERE id=$5',
-    [avatarUrl, language, discordId, onlineStatus, userId]
+    `UPDATE users SET avatar_url=$1, language=$2, discord_id=$3, online_status=$4,
+     banner_url=$5, bio=$6, profile_color=$7 WHERE id=$8`,
+    [avatarUrl, language, discordId, onlineStatus, bannerUrl, bio, profileColor, userId]
   );
-  req.session.user.discordId = discordId; // update session
-  req.session.user.avatarUrl = avatarUrl;
-  req.session.user.language  = language;
+  req.session.user.discordId    = discordId;
+  req.session.user.avatarUrl    = avatarUrl;
+  req.session.user.language     = language;
   req.session.user.onlineStatus = onlineStatus;
   res.json({ success: true, message: 'Settings saved' });
 });
@@ -2012,20 +2166,42 @@ app.get('/api/heartbeat', heartbeatLimiter, async (req, res) => {
   }
 
   const existing = await db.one(
-    'SELECT kick_requested FROM live_sessions WHERE roblox_user_id=$1',
+    'SELECT kick_requested, prev_gold, prev_blood FROM live_sessions WHERE roblox_user_id=$1',
     [robloxId]
   );
   const shouldKick = !!(existing && existing.kick_requested);
 
+  // Compute farm diffs for Gold and Bloodfruit
+  const curGold  = Number(inventory['Gold']  || inventory['gold']  || 0);
+  const curBlood = Number(inventory['Bloodfruit'] || inventory['bloodfruit'] || 0);
+  const prevGold  = existing ? Number(existing.prev_gold  || 0) : 0;
+  const prevBlood = existing ? Number(existing.prev_blood || 0) : 0;
+  const diffGold  = Math.max(0, curGold  - prevGold);
+  const diffBlood = Math.max(0, curBlood - prevBlood);
+
+  // Accumulate into farm_stats if user is linked and farmed something
+  if (userId && (diffGold > 0 || diffBlood > 0)) {
+    await db.query(`
+      INSERT INTO farm_stats (user_id, gold_total, blood_total, sessions, updated_at)
+      VALUES ($1, $2, $3, 1, NOW())
+      ON CONFLICT (user_id) DO UPDATE SET
+        gold_total  = farm_stats.gold_total  + $2,
+        blood_total = farm_stats.blood_total + $3,
+        sessions    = farm_stats.sessions    + 1,
+        updated_at  = NOW()
+    `, [userId, diffGold, diffBlood]);
+  }
+
   await db.query(`
-    INSERT INTO live_sessions (roblox_user_id, roblox_username, user_id, place_id, place_name, job_id, inventory, kick_requested, last_seen)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,false,NOW())
+    INSERT INTO live_sessions (roblox_user_id, roblox_username, user_id, place_id, place_name, job_id, inventory, kick_requested, last_seen, prev_gold, prev_blood)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,false,NOW(),$8,$9)
     ON CONFLICT (roblox_user_id) DO UPDATE SET
       roblox_username=$2,
       user_id=COALESCE($3, live_sessions.user_id),
       place_id=$4, place_name=$5, job_id=$6,
-      inventory=$7, kick_requested=false, last_seen=NOW()
-  `, [robloxId, rn, userId, pi, pn, ji, JSON.stringify(inventory)]);
+      inventory=$7, kick_requested=false, last_seen=NOW(),
+      prev_gold=$8, prev_blood=$9
+  `, [robloxId, rn, userId, pi, pn, ji, JSON.stringify(inventory), curGold, curBlood]);
 
   res.json({ ok: true, kick: shouldKick });
 });

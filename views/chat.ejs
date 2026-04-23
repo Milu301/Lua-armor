@@ -48,6 +48,9 @@
 .cp-img-preview img { height: 60px; border-radius: 8px; border: 2px solid var(--accent); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
 .cp-img-clear { background: var(--red-dim); color: var(--red); border: none; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.8rem; transition: transform 0.2s; }
 .cp-img-clear:hover { transform: scale(1.1); background: var(--red); color: white; }
+.cp-translate-btn { background: none; border: none; cursor: pointer; font-size: .8rem; margin-top:.3rem; padding:2px 6px; border-radius:6px; color:var(--text-3); transition:all .2s; display:inline-block; }
+.cp-translate-btn:hover { background:rgba(139,92,246,.15); color:var(--primary-light); }
+.cp-translated-label { font-size:.7rem; color:var(--text-3); margin-top:.2rem; font-style:italic; }
 </style>
 
 <div class="layout">
@@ -114,7 +117,9 @@
                 <% } %>
               </div>
               <% if (msg.content) { %>
-              <div class="cp-text"><%= msg.content %></div>
+              <div class="cp-text" id="msg-text-<%= msg.id %>"><%= msg.content %></div>
+              <button class="cp-translate-btn" onclick="translateMsg(<%= msg.id %>, '<%= msg.content.replace(/'/g, &quot;\\&quot;').replace(/
+/g,'\\n') %>', this)" title="Translate">🌐</button>
               <% } %>
               <% if (msg.image_url) { %>
               <div style="margin-top: 0.5rem;">
@@ -294,7 +299,10 @@ function buildMsg(msg) {
         <span class="cp-time">${time}</span>
         ${delBtn}
       </div>
-      ${msg.content  ? `<div class="cp-text">${escH(msg.content)}</div>` : ''}
+      ${msg.content ? `
+        <div class="cp-text" id="msg-text-${msg.id}">${escH(msg.content)}</div>
+        <button class="cp-translate-btn" onclick="translateMsg(${msg.id}, ${JSON.stringify(msg.content)}, this)" title="Translate">🌐</button>
+      ` : ''}
       ${msg.image_url ? `<div style="margin-top:0.4rem;"><img src="${msg.image_url}" class="cp-img" onclick="openLb('${msg.image_url}')" loading="eager" decoding="async" onerror="this.style.opacity='0.3';this.title='Image not found'"/></div>` : ''}
     </div>`;
   return div;
@@ -376,6 +384,46 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLb(); }
 /* ── Utils ── */
 function escH(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── Translate ── */
+async function translateMsg(id, text, btn) {
+  const textEl = document.getElementById('msg-text-' + id);
+  if (!textEl) return;
+  // Toggle back if already translated
+  if (btn.dataset.original) {
+    textEl.textContent = btn.dataset.original;
+    btn.textContent = '🌐';
+    btn.title = 'Translate';
+    delete btn.dataset.original;
+    const lbl = btn.nextElementSibling;
+    if (lbl && lbl.classList.contains('cp-translated-label')) lbl.remove();
+    return;
+  }
+  btn.textContent = '⏳';
+  btn.disabled = true;
+  try {
+    const userLang = '<%= typeof user !== "undefined" && user && user.language ? user.language : "en" %>';
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=autodetect|${userLang}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const translated = data?.responseData?.translatedText;
+    if (translated && translated !== text) {
+      btn.dataset.original = textEl.textContent;
+      textEl.textContent = translated;
+      btn.textContent = '↩️';
+      btn.title = 'Show original';
+      const lbl = document.createElement('div');
+      lbl.className = 'cp-translated-label';
+      lbl.textContent = '🌐 Translated — click ↩️ to see original';
+      btn.insertAdjacentElement('afterend', lbl);
+    } else {
+      btn.textContent = '✓';
+    }
+  } catch {
+    btn.textContent = '❌';
+  }
+  btn.disabled = false;
 }
 
 scrollBottom();

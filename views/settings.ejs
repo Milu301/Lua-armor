@@ -79,6 +79,35 @@
             </div>
           </div>
 
+          <!-- Banner URL -->
+          <div class="st-row">
+            <label class="st-label">🖼️ Banner URL (Profile cover image)</label>
+            <div style="display:flex;flex-direction:column;gap:.6rem;">
+              <div id="bannerPreviewBox" style="width:100%;height:90px;border-radius:12px;overflow:hidden;border:1px solid var(--border-md);background:var(--bg-raised);background-size:cover;background-position:center;transition:.3s;"
+                <% if (dbUser && dbUser.banner_url) { %>style="background-image:url('<%= dbUser.banner_url %>')"<% } %>></div>
+              <input type="text" class="st-input" id="set-banner" placeholder="https://example.com/banner.png"
+                value="<%= dbUser ? dbUser.banner_url || '' : '' %>" oninput="previewBanner(this.value)">
+              <div class="st-hint">Wide image (e.g. your Discord banner). Recommended: 1200×400px.</div>
+            </div>
+          </div>
+
+          <!-- Bio -->
+          <div class="st-row">
+            <label class="st-label">📝 Bio <span style="color:var(--text-3);font-weight:400;font-size:.75rem;" id="bio-count">(<%= dbUser && dbUser.bio ? dbUser.bio.length : 0 %>/160)</span></label>
+            <textarea class="st-input" id="set-bio" rows="3" maxlength="160" placeholder="Tell the community about yourself…" oninput="document.getElementById('bio-count').textContent='('+this.value.length+'/160)'" style="resize:vertical;min-height:72px;"><%= dbUser ? dbUser.bio || '' : '' %></textarea>
+          </div>
+
+          <!-- Profile Color -->
+          <div class="st-row">
+            <label class="st-label">🎨 Profile Accent Color</label>
+            <div style="display:flex;align-items:center;gap:.8rem;">
+              <input type="color" id="set-profile-color" value="<%= dbUser && dbUser.profile_color ? dbUser.profile_color : '#8b5cf6' %>" style="width:44px;height:44px;border-radius:10px;border:1px solid var(--border-md);background:none;cursor:pointer;padding:2px;">
+              <input type="text" class="st-input" id="set-profile-color-text" value="<%= dbUser && dbUser.profile_color ? dbUser.profile_color : '#8b5cf6' %>" placeholder="#8b5cf6" style="max-width:160px;" oninput="syncColorPicker(this.value)">
+              <div id="color-swatch" style="width:44px;height:44px;border-radius:10px;background:<%= dbUser && dbUser.profile_color ? dbUser.profile_color : '#8b5cf6' %>;flex-shrink:0;"></div>
+            </div>
+            <div class="st-hint">Used on your public profile: avatar border, stats color, banners.</div>
+          </div>
+
           <!-- Discord ID -->
           <div class="st-row">
             <label class="st-label">
@@ -297,8 +326,32 @@ function previewStatus(val) {
 function onLangChange(lang) { window.currentLanguage = lang; window.applyTranslations(lang); }
 
 /* ── Save profile to server ── */
+function previewBanner(url) {
+  const box = document.getElementById('bannerPreviewBox');
+  if (url && url.startsWith('http')) {
+    box.style.backgroundImage = `url('${url}')`;
+    box.style.backgroundSize = 'cover';
+  } else {
+    box.style.backgroundImage = 'none';
+  }
+}
+
+function syncColorPicker(val) {
+  const picker = document.getElementById('set-profile-color');
+  const swatch = document.getElementById('color-swatch');
+  if (/^#[0-9a-fA-F]{6}$/.test(val)) { picker.value = val; swatch.style.background = val; }
+}
+
+document.getElementById('set-profile-color')?.addEventListener('input', function() {
+  document.getElementById('set-profile-color-text').value = this.value;
+  document.getElementById('color-swatch').style.background = this.value;
+});
+
 async function saveSettings(btn) {
   const avatarUrl    = document.getElementById('set-avatar').value.trim();
+  const bannerUrl    = document.getElementById('set-banner').value.trim();
+  const bio          = document.getElementById('set-bio').value.trim();
+  const profileColor = document.getElementById('set-profile-color').value.trim();
   const discordId    = document.getElementById('set-discord').value.trim();
   const language     = document.getElementById('set-language').value;
   const onlineStatus = document.getElementById('set-status').value;
@@ -309,7 +362,7 @@ async function saveSettings(btn) {
   btn.innerHTML = '<div class="spinner" style="width:13px;height:13px;border-width:2px;"></div> Saving…';
   try {
     const res  = await fetch('/api/settings', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ avatar_url: avatarUrl, discord_id: discordId, language, online_status: onlineStatus }) });
+      body: JSON.stringify({ avatar_url: avatarUrl, banner_url: bannerUrl, bio, profile_color: profileColor, discord_id: discordId, language, online_status: onlineStatus }) });
     const data = await res.json();
     if (data.success) { toast('Saved! ✓', 'ok'); setTimeout(() => location.reload(), 800); }
     else { toast(data.message || 'Error', 'err'); btn.disabled=false; btn.innerHTML=orig; }

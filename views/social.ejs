@@ -310,18 +310,20 @@
               const sc = f.online_status === 'idle' ? '#f59e0b' : f.online_status === 'dnd' ? '#ef4444' : f.online_status === 'offline' ? '#6b7280' : '#22c55e';
             %>
             <div class="sh-friend-card">
-              <div class="sh-fav-wrap">
-                <div class="sh-fav" style="<%= f.avatar_url ? 'background:url('+f.avatar_url+') center/cover;color:transparent;' : '' %>">
-                  <%= f.avatar_url ? '' : f.username.charAt(0).toUpperCase() %>
+              <a href="/profile/<%= encodeURIComponent(f.username) %>" style="display:contents;">
+                <div class="sh-fav-wrap">
+                  <div class="sh-fav" style="<%= f.avatar_url ? 'background:url('+f.avatar_url+') center/cover;color:transparent;' : '' %>">
+                    <%= f.avatar_url ? '' : f.username.charAt(0).toUpperCase() %>
+                  </div>
+                  <div class="sh-fav-dot" style="background:<%= sc %>;box-shadow:0 0 5px <%= sc %>99;"></div>
                 </div>
-                <div class="sh-fav-dot" style="background:<%= sc %>;box-shadow:0 0 5px <%= sc %>99;"></div>
-              </div>
-              <div class="sh-finfo">
-                <div class="sh-fname"><%= f.username %></div>
-                <div class="sh-fstatus <%= isPending ? 'pending' : '' %>">
-                  <%= isPending ? '⏳ Pending Request' : isAccepted ? '✓ Friends' : '' %>
+                <div class="sh-finfo">
+                  <div class="sh-fname"><%= f.username %></div>
+                  <div class="sh-fstatus <%= isPending ? 'pending' : '' %>">
+                    <%= isPending ? '⏳ Pending Request' : isAccepted ? '✓ Friends' : '' %>
+                  </div>
                 </div>
-              </div>
+              </a>
               <% if (canAccept) { %>
                 <button class="sh-accept-btn" onclick="acceptFriend(<%= f.user_id %>)">Accept</button>
               <% } %>

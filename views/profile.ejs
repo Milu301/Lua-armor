@@ -1,0 +1,218 @@
+<%- include('partials/head', { title: profileUser.username + "'s Profile — " + (typeof panelName !== 'undefined' ? panelName : 'AuroraHub') }) %>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&display=swap');
+:root {
+  --bg:#07070f;--surface:#12121a;--border:rgba(255,255,255,.1);
+  --primary:<%- profileUser.profile_color || '#8b5cf6' %>;
+  --primary-light:<%- profileUser.profile_color || '#a78bfa' %>;
+  --gold:#f59e0b;--blood:#ef4444;--text:#f8fafc;--text-dim:#94a3b8;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* Nav */
+nav{display:flex;align-items:center;justify-content:space-between;padding:1rem 2rem;border-bottom:1px solid var(--border);background:rgba(7,7,15,.85);backdrop-filter:blur(20px);position:sticky;top:0;z-index:100;}
+.nav-logo{display:flex;align-items:center;gap:.6rem;font-weight:800;font-size:1.05rem;}
+.nav-logo img{width:30px;height:30px;border-radius:7px;}
+.nav-links a{color:var(--text-dim);text-decoration:none;font-size:.88rem;font-weight:600;margin-left:1.5rem;transition:color .2s;}
+.nav-links a:hover{color:#fff;}
+.btn-dash{background:linear-gradient(135deg,var(--primary),#6366f1);color:#fff;padding:.45rem 1.1rem;border-radius:9px;font-weight:700;font-size:.82rem;text-decoration:none;transition:opacity .2s;}
+.btn-dash:hover{opacity:.85;}
+
+/* Banner */
+.profile-banner{height:220px;width:100%;background:linear-gradient(135deg,var(--primary)33,#0d0d1a 70%);background-size:cover;background-position:center;position:relative;overflow:hidden;}
+.profile-banner::after{content:'';position:absolute;bottom:0;left:0;right:0;height:80px;background:linear-gradient(to top,var(--bg),transparent);}
+
+/* Profile card */
+.profile-outer{max-width:900px;margin:0 auto;padding:0 1.5rem 4rem;}
+.profile-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;overflow:hidden;margin-top:-3rem;position:relative;z-index:2;}
+.profile-top{display:flex;align-items:flex-end;gap:1.5rem;padding:0 1.5rem 1.5rem;position:relative;}
+.profile-avatar{width:90px;height:90px;border-radius:18px;border:3px solid var(--primary);overflow:hidden;flex-shrink:0;margin-top:-45px;background:var(--surface);}
+.profile-avatar img{width:100%;height:100%;object-fit:cover;}
+.profile-avatar-ini{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:2.5rem;font-weight:800;background:var(--primary)22;color:var(--primary);}
+.profile-names{flex:1;padding-top:1rem;}
+.profile-username{font-size:1.5rem;font-weight:800;}
+.profile-role{display:inline-flex;align-items:center;gap:.35rem;font-size:.75rem;font-weight:700;padding:2px 10px;border-radius:20px;margin-top:.3rem;}
+.role-admin{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3);}
+.role-mod{background:rgba(14,165,233,.15);color:#38bdf8;border:1px solid rgba(14,165,233,.3);}
+.role-user{background:rgba(139,92,246,.15);color:var(--primary-light);border:1px solid var(--primary)44;}
+.profile-actions{display:flex;gap:.6rem;align-items:center;padding-top:.5rem;}
+.btn-friend{padding:.5rem 1.2rem;border-radius:10px;font-weight:700;font-size:.85rem;border:none;cursor:pointer;transition:all .2s;}
+.btn-friend.add{background:linear-gradient(135deg,var(--primary),#6366f1);color:#fff;}
+.btn-friend.add:hover{opacity:.85;transform:translateY(-1px);}
+.btn-friend.pending{background:rgba(255,255,255,.06);color:var(--text-dim);border:1px solid var(--border);cursor:default;}
+.btn-friend.accepted{background:rgba(16,185,129,.12);color:#34d399;border:1px solid rgba(16,185,129,.3);}
+.btn-friend.remove{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.25);}
+.btn-friend.remove:hover{background:rgba(239,68,68,.2);}
+.btn-edit{padding:.5rem 1.2rem;border-radius:10px;font-weight:700;font-size:.85rem;background:rgba(255,255,255,.06);color:#fff;border:1px solid var(--border);text-decoration:none;transition:all .2s;}
+.btn-edit:hover{background:rgba(255,255,255,.1);}
+
+/* Bio */
+.profile-bio{padding:0 1.5rem 1.5rem;color:var(--text-dim);font-size:.9rem;line-height:1.6;border-bottom:1px solid var(--border);}
+
+/* Stats row */
+.stats-row{display:flex;gap:.5rem;padding:1rem 1.5rem;flex-wrap:wrap;}
+.stat-chip{flex:1;min-width:110px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:14px;padding:.9rem 1rem;text-align:center;}
+.stat-chip-val{font-size:1.3rem;font-weight:800;}
+.stat-chip-lbl{font-size:.72rem;color:var(--text-dim);margin-top:2px;text-transform:uppercase;letter-spacing:.5px;}
+.gold-chip .stat-chip-val{color:var(--gold);}
+.blood-chip .stat-chip-val{color:var(--blood);}
+
+/* Section */
+.section{padding:1.25rem 1.5rem;border-top:1px solid var(--border);}
+.section-title{font-size:.8rem;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.8px;margin-bottom:1rem;}
+.friends-grid{display:flex;flex-wrap:wrap;gap:.6rem;}
+.friend-chip{display:flex;align-items:center;gap:.5rem;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:.45rem .75rem;text-decoration:none;color:inherit;transition:all .2s;}
+.friend-chip:hover{background:rgba(255,255,255,.08);border-color:var(--primary)66;}
+.friend-av{width:26px;height:26px;border-radius:7px;overflow:hidden;flex-shrink:0;}
+.friend-av img{width:100%;height:100%;object-fit:cover;}
+.friend-av-ini{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;background:var(--primary)22;color:var(--primary);}
+.friend-name{font-size:.82rem;font-weight:600;}
+.mutual-badge{font-size:.68rem;background:rgba(139,92,246,.15);color:var(--primary-light);border:1px solid var(--primary)44;padding:1px 6px;border-radius:6px;font-weight:700;margin-left:.3rem;}
+
+/* Joined */
+.joined-tag{font-size:.8rem;color:var(--text-dim);display:flex;align-items:center;gap:.35rem;}
+
+@media(max-width:600px){
+  .stats-row{gap:.4rem;}
+  .profile-top{flex-direction:column;align-items:flex-start;}
+  .profile-actions{flex-wrap:wrap;}
+}
+</style>
+
+<% const hasAvatar = profileUser.avatar_url && profileUser.avatar_url.length > 5; %>
+<% const hasBanner = profileUser.banner_url && profileUser.banner_url.length > 5; %>
+
+<nav>
+  <div class="nav-logo">
+    <% if (typeof panelLogo !== 'undefined' && panelLogo) { %><img src="<%= panelLogo %>" alt="logo"><% } %>
+    <span><%= typeof panelName !== 'undefined' ? panelName : 'AuroraHub' %></span>
+  </div>
+  <div class="nav-links">
+    <a href="/home">Home</a>
+    <a href="/leaderboard">Leaderboard</a>
+    <% if (typeof user !== 'undefined' && user) { %>
+      <a href="/dashboard" class="btn-dash">Dashboard</a>
+    <% } else { %>
+      <a href="/login" class="btn-dash">Login</a>
+    <% } %>
+  </div>
+</nav>
+
+<div class="profile-banner" <% if (hasBanner) { %>style="background-image:url('<%= profileUser.banner_url %>');"<% } %>></div>
+
+<div class="profile-outer">
+  <div class="profile-card">
+    <div class="profile-top">
+      <div class="profile-avatar">
+        <% if (hasAvatar) { %>
+          <img src="<%= profileUser.avatar_url %>" onerror="this.parentElement.innerHTML='<div class=profile-avatar-ini><%= profileUser.username.charAt(0).toUpperCase() %></div>'">
+        <% } else { %>
+          <div class="profile-avatar-ini"><%= profileUser.username.charAt(0).toUpperCase() %></div>
+        <% } %>
+      </div>
+      <div class="profile-names">
+        <div class="profile-username"><%= profileUser.username %></div>
+        <div>
+          <% if (profileUser.role === 'admin') { %>
+            <span class="profile-role role-admin">👑 Admin</span>
+          <% } else if (profileUser.role === 'mod') { %>
+            <span class="profile-role role-mod">🛡 Moderator</span>
+          <% } else { %>
+            <span class="profile-role role-user">⚡ Member</span>
+          <% } %>
+        </div>
+        <div class="joined-tag" style="margin-top:.5rem;">
+          <i class="ph-fill ph-calendar-blank"></i>
+          Joined <%= new Date(profileUser.created_at).toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'}) %>
+        </div>
+      </div>
+      <div class="profile-actions">
+        <% if (isSelf) { %>
+          <a href="/settings" class="btn-edit">✏️ Edit Profile</a>
+        <% } else if (typeof user !== 'undefined' && user) { %>
+          <% if (!friendStatus) { %>
+            <button class="btn-friend add" id="friend-btn" onclick="sendFriendReq()">➕ Add Friend</button>
+          <% } else if (friendStatus.status === 'pending' && friendStatus.sentByMe) { %>
+            <button class="btn-friend pending" id="friend-btn">⏳ Request Sent</button>
+            <button class="btn-friend remove" onclick="removeFriend()">Cancel</button>
+          <% } else if (friendStatus.status === 'pending' && !friendStatus.sentByMe) { %>
+            <button class="btn-friend add" id="friend-btn" onclick="acceptFriend()">✅ Accept Request</button>
+            <button class="btn-friend remove" onclick="removeFriend()">Decline</button>
+          <% } else if (friendStatus.status === 'accepted') { %>
+            <button class="btn-friend accepted" id="friend-btn">✅ Friends</button>
+            <button class="btn-friend remove" onclick="removeFriend()">Remove</button>
+          <% } %>
+        <% } else { %>
+          <a href="/login" class="btn-edit">Login to Add Friend</a>
+        <% } %>
+      </div>
+    </div>
+
+    <% if (profileUser.bio) { %>
+      <div class="profile-bio"><%= profileUser.bio %></div>
+    <% } %>
+
+    <!-- Farm Stats -->
+    <div class="stats-row">
+      <div class="stat-chip gold-chip">
+        <div class="stat-chip-val" id="s-gold"><%= Number(farmStats.gold_total || 0).toLocaleString() %></div>
+        <div class="stat-chip-lbl">🪙 Gold Farmed</div>
+      </div>
+      <div class="stat-chip blood-chip">
+        <div class="stat-chip-val" id="s-blood"><%= Number(farmStats.blood_total || 0).toLocaleString() %></div>
+        <div class="stat-chip-lbl">🩸 Bloodfruit</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-chip-val"><%= friendCount %></div>
+        <div class="stat-chip-lbl">👥 Friends</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-chip-val"><%= farmStats.sessions || 0 %></div>
+        <div class="stat-chip-lbl">🎮 Sessions</div>
+      </div>
+    </div>
+
+    <!-- Mutual Friends -->
+    <% if (mutualFriends && mutualFriends.length > 0) { %>
+    <div class="section">
+      <div class="section-title">Mutual Friends (<%= mutualFriends.length %>)</div>
+      <div class="friends-grid">
+        <% mutualFriends.forEach(f => { %>
+          <a href="/profile/<%= encodeURIComponent(f.username) %>" class="friend-chip">
+            <div class="friend-av">
+              <% if (f.avatar_url) { %>
+                <img src="<%= f.avatar_url %>">
+              <% } else { %>
+                <div class="friend-av-ini"><%= f.username.charAt(0).toUpperCase() %></div>
+              <% } %>
+            </div>
+            <span class="friend-name"><%= f.username %></span>
+            <span class="mutual-badge">Mutual</span>
+          </a>
+        <% }) %>
+      </div>
+    </div>
+    <% } %>
+  </div>
+</div>
+
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<script>
+const TARGET = '<%= profileUser.username %>';
+
+async function friendAction(action) {
+  const res = await fetch('/api/profile/friend', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ target_username: TARGET, action })
+  });
+  const data = await res.json();
+  if (data.success) location.reload();
+  else alert(data.message);
+}
+function sendFriendReq() { friendAction('add'); }
+function acceptFriend() { friendAction('accept'); }
+function removeFriend() { if(confirm('Remove friend?')) friendAction('remove'); }
+</script>

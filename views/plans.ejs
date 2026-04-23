@@ -268,39 +268,17 @@ body {
             <li><i class="ph-fill ph-check-circle" style="color: #10b981;"></i> Priority support</li>
           </ul>
           
-          <% if (typeof boldEnabled !== 'undefined' && boldEnabled && user) { %>
+          <% if (user) { %>
             <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: auto;">
               <button class="btn-buy <%= idx === 0 ? 'btn-buy-primary' : 'btn-buy-secondary' %>" onclick="startCheckout(<%= p.id %>, '<%= p.name %>', this)">
                 <i class="ph-bold ph-credit-card"></i> Pay Securely with Bold
               </button>
-              <% if (p.roblox_gamepass_id) { %>
-              <button class="btn-buy" style="background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(0, 162, 255, 0.4);" onclick="claimGamepass(<%= p.id %>, '<%= p.name %>', this)">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Robux_2019_Logo_gold.svg/1024px-Robux_2019_Logo_gold.svg.png" style="width: 18px; height: 18px;" alt="Robux"> Verify Gamepass
-              </button>
-              <% } %>
             </div>
-          <% } else if (!user) { %>
+          <% } else { %>
             <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: auto;">
               <a href="/login" class="btn-buy <%= idx === 0 ? 'btn-buy-primary' : 'btn-buy-secondary' %>">
                 <i class="ph-bold ph-sign-in"></i> Login to Purchase
               </a>
-              <% if (p.roblox_gamepass_id) { %>
-              <a href="/login" class="btn-buy" style="background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(0, 162, 255, 0.4);">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Robux_2019_Logo_gold.svg/1024px-Robux_2019_Logo_gold.svg.png" style="width: 18px; height: 18px;" alt="Robux"> Login to verify Gamepass
-              </a>
-              <% } %>
-            </div>
-          <% } else { %>
-            <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: auto;">
-              <% if (p.roblox_gamepass_id) { %>
-              <button class="btn-buy" style="background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(0, 162, 255, 0.4);" onclick="claimGamepass(<%= p.id %>, '<%= p.name %>', this)">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Robux_2019_Logo_gold.svg/1024px-Robux_2019_Logo_gold.svg.png" style="width: 18px; height: 18px;" alt="Robux"> Verify Gamepass
-              </button>
-              <% } else { %>
-              <button class="btn-buy <%= idx === 0 ? 'btn-buy-primary' : 'btn-buy-secondary' %>" disabled style="opacity: 0.5; cursor: not-allowed;">
-                Payments Unavailable
-              </button>
-              <% } %>
             </div>
           <% } %>
         </div>
@@ -346,7 +324,7 @@ body {
 
   </div>
 
-  <% if (typeof boldEnabled !== 'undefined' && boldEnabled && user) { %>
+  <% if (user) { %>
     <div style="margin: 3rem auto 2.5rem; max-width: 400px; text-align: center; animation: slideUp 0.8s ease 0.2s backwards;">
       <div style="background: var(--surface); padding: 1.5rem; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
         <label style="display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 700; margin-bottom: 0.8rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 0.5rem;"><i class="ph-fill ph-tag" style="color: var(--primary-light);"></i> Have a Promo Code?</label>

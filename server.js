@@ -2321,14 +2321,27 @@ app.patch('/api/admin/tutorials/:id', apiAuth, adminApiOnly, async (req, res) =>
 app.delete('/api/admin/tutorials/:id', apiAuth, adminApiOnly, async (req, res) => {
   try {
     const id = Number(req.params.id);
+    if (!id) return res.json({ success: false, message: 'Invalid ID.' });
+
+    // Grab the row first so we know what file to delete
     const row = await db.oneOrNone('SELECT video_url FROM tutorials WHERE id=$1', [id]);
+
+    // Always delete the DB record (even if file is gone)
+    await db.query('DELETE FROM tutorials WHERE id=$1', [id]);
+
+    // Try to delete the physical file — if it's gone (ephemeral storage) just skip
     if (row?.video_url) {
       const filePath = path.join(__dirname, 'public', row.video_url);
-      if (require('fs').existsSync(filePath)) {
-        require('fs').unlinkSync(filePath);
+      try {
+        if (require('fs').existsSync(filePath)) {
+          require('fs').unlinkSync(filePath);
+        }
+      } catch (fileErr) {
+        // File already gone — that's fine, DB record is already deleted
+        console.warn('Video file already missing:', filePath);
       }
     }
-    await db.query('DELETE FROM tutorials WHERE id=$1', [id]);
+
     res.json({ success: true });
   } catch (err) {
     console.error('Error deleting tutorial:', err);

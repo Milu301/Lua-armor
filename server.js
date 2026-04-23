@@ -299,6 +299,17 @@ async function initDB() {
 
     ALTER TABLE payment_plans ADD COLUMN IF NOT EXISTS roblox_gamepass_id VARCHAR(64) DEFAULT '';
 
+    CREATE TABLE IF NOT EXISTS tutorials (
+      id          SERIAL PRIMARY KEY,
+      title       VARCHAR(255) NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      video_url   TEXT NOT NULL,
+      thumbnail_url TEXT NOT NULL DEFAULT '',
+      sort_order  INT NOT NULL DEFAULT 0,
+      is_active   BOOL NOT NULL DEFAULT true,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
     /* ── Migrations: rename columns if upgrading from old COP schema ── */
     DO $$ BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='payment_plans' AND column_name='price_cop') THEN
@@ -447,6 +458,25 @@ const chatUpload = multer({
   limits:  { fileSize: 4 * 1024 * 1024 }, // 4 MB
   fileFilter: (_req, file, cb) => {
     const allowed = ['image/jpeg','image/png','image/gif','image/webp'];
+    cb(null, allowed.includes(file.mimetype));
+  },
+});
+
+/* ── Video upload (tutorials) ── */
+const VIDEOS_DIR = path.join(__dirname, 'public', 'uploads', 'videos');
+if (!require('fs').existsSync(VIDEOS_DIR)) require('fs').mkdirSync(VIDEOS_DIR, { recursive: true });
+const videoStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, VIDEOS_DIR),
+  filename:    (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase().replace(/[^.a-z0-9]/g, '');
+    cb(null, `${Date.now()}-${crypto.randomBytes(8).toString('hex')}${ext}`);
+  },
+});
+const videoUpload = multer({
+  storage: videoStorage,
+  limits:  { fileSize: 500 * 1024 * 1024 }, // 500 MB max
+  fileFilter: (_req, file, cb) => {
+    const allowed = ['video/mp4','video/webm','video/ogg','video/quicktime','video/x-matroska','video/avi','video/x-ms-wmv'];
     cb(null, allowed.includes(file.mimetype));
   },
 });
@@ -629,6 +659,12 @@ app.get('/home', async (req, res) => {
     project = await db.one('SELECT id, name, icon, daily_reset_limit FROM projects WHERE id=$1', [req.session.user.projectId]);
   }
   res.render('home', { project, disableAds: true });
+});
+
+/* ── GET /tutorials — Public tutorials page ─────── */
+app.get('/tutorials', async (req, res) => {
+  const tutorials = await db.all('SELECT * FROM tutorials WHERE is_active=true ORDER BY sort_order ASC, created_at DESC');
+  res.render('tutorials', { tutorials, disableAds: true });
 });
 
 /* ─── Discord OAuth Routes ─── */
@@ -2238,6 +2274,59 @@ app.post('/api/payment/claim-gamepass', auth, async (req, res) => {
     console.error('Roblox Gamepass Verification Error:', err);
     return res.json({ success: false, message: 'Failed to verify gamepass ownership. Please try again later.' });
   }
+});
+
+/* ── ADMIN: Tutorials CRUD ──────────────────────────── */
+app.get('/api/admin/tutorials', apiAuth, adminApiOnly, async (req, res) => {
+  const rows = await db.all('SELECT * FROM tutorials ORDER BY sort_order ASC, created_at DESC');
+  res.json({ success: true, tutorials: rows });
+});
+
+app.post('/api/admin/tutorials', apiAuth, adminApiOnly, videoUpload.single('video'), async (req, res) => {
+  try {
+    if (!req.file) return res.json({ success: false, message: 'No video file uploaded.' });
+    const { title, description, sort_order } = req.body;
+    if (!title) return res.json({ success: false, message: 'Title required.' });
+    const videoUrl = `/uploads/videos/${req.file.filename}`;
+    const row = await db.one(
+      `INSERT INTO tutorials (title, description, video_url, sort_order)
+       VALUES ($1,$2,$3,$4) RETURNING id`,
+      [title.trim(), description?.trim() || '', videoUrl, Number(sort_order) || 0]
+    );
+    res.json({ success: true, id: row.id });
+  } catch (err) {
+    console.error('Tutorial upload error:', err);
+    res.json({ success: false, message: err.message });
+  }
+});
+
+app.patch('/api/admin/tutorials/:id', apiAuth, adminApiOnly, async (req, res) => {
+  const id = Number(req.params.id);
+  const { title, description, sort_order, is_active } = req.body;
+  const fields = []; const vals = []; let i = 1;
+  if (title !== undefined) { fields.push(`title=$${i++}`); vals.push(title.trim()); }
+  if (description !== undefined) { fields.push(`description=$${i++}`); vals.push(description.trim()); }
+  if (sort_order !== undefined) { fields.push(`sort_order=$${i++}`); vals.push(Number(sort_order)); }
+  if (is_active !== undefined) { fields.push(`is_active=$${i++}`); vals.push(is_active === true || is_active === 'true'); }
+  // If no fields provided, toggle is_active
+  if (!fields.length) {
+    await db.query('UPDATE tutorials SET is_active = NOT is_active WHERE id=$1', [id]);
+    return res.json({ success: true });
+  }
+  vals.push(id);
+  await db.query(`UPDATE tutorials SET ${fields.join(',')} WHERE id=$${i}`, vals);
+  res.json({ success: true });
+});
+
+app.delete('/api/admin/tutorials/:id', apiAuth, adminApiOnly, async (req, res) => {
+  const id = Number(req.params.id);
+  const row = await db.oneOrNone('SELECT video_url FROM tutorials WHERE id=$1', [id]);
+  if (row?.video_url) {
+    const filePath = path.join(__dirname, 'public', row.video_url);
+    require('fs').unlink(filePath, () => {});
+  }
+  await db.query('DELETE FROM tutorials WHERE id=$1', [id]);
+  res.json({ success: true });
 });
 
 /* ── ADMIN: Promo Codes CRUD ────────────────────────── */

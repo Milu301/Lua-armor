@@ -91,6 +91,10 @@
         <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
         Promo Codes
       </button>
+      <button class="tab-btn" onclick="switchTab('tutorials',this);loadTutorialsTab();">
+        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Tutorials
+      </button>
     </div>
 
     <!-- ═══════ TAB: OVERVIEW ═══════ -->
@@ -585,6 +589,36 @@
       </div>
     </div>
 
+    <!-- ═══════ TAB: TUTORIALS ═══════ -->
+    <div class="tab-panel" id="tab-tutorials">
+      <div class="content" style="max-width:1200px;">
+        <div class="card" style="margin-bottom:1.25rem;">
+          <div class="card-head">
+            <div class="card-icon" style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);color:#818cf8;">🎬</div>
+            <div>
+              <div class="card-title">Tutorials</div>
+              <div class="card-desc">Upload video tutorials visible to all users on the public page.</div>
+            </div>
+            <button class="btn btn-primary btn-sm" style="margin-left:auto;background:#6366f1;" onclick="openTutorialModal()">
+              <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              Upload Video
+            </button>
+          </div>
+          <!-- Upload progress -->
+          <div id="tut-upload-progress" style="display:none;padding:0 1.5rem 1rem;">
+            <div style="background:rgba(0,0,0,0.3);border-radius:8px;overflow:hidden;height:6px;">
+              <div id="tut-progress-bar" style="height:100%;background:linear-gradient(90deg,#6366f1,#8b5cf6);width:0%;transition:width 0.3s;"></div>
+            </div>
+            <div id="tut-progress-label" style="font-size:0.75rem;color:var(--text-3);margin-top:0.4rem;">Uploading…</div>
+          </div>
+          <!-- Tutorials Grid -->
+          <div id="tut-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.25rem;padding:1.5rem;">
+            <div style="grid-column:1/-1;text-align:center;color:var(--text-3);padding:2rem;">Loading…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /main -->
 </div><!-- /layout -->
 
@@ -757,6 +791,38 @@
         Save Plan
       </button>
       <button class="btn btn-ghost" onclick="closeModal('plan-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TUTORIAL UPLOAD MODAL ═══ -->
+<div class="modal-overlay" id="tutorial-modal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('tutorial-modal')">×</button>
+    <h2>Upload Tutorial Video</h2>
+    <div id="tut-modal-result"></div>
+
+    <div class="form-row"><label class="label">Title *</label><input type="text" class="input" id="tut-title" placeholder="How to use the Auto Farm..." maxlength="200"/></div>
+    <div class="form-row"><label class="label">Description</label><textarea class="input" id="tut-desc" rows="2" placeholder="A short description of the tutorial..." maxlength="500"></textarea></div>
+    <div class="field-grid">
+      <div class="form-row"><label class="label">Sort Order</label><input type="number" class="input" id="tut-sort" placeholder="0" value="0" min="0"/></div>
+    </div>
+    <div class="form-row">
+      <label class="label">Video File *</label>
+      <div id="tut-dropzone" style="border:2px dashed rgba(99,102,241,0.4);border-radius:12px;padding:2rem;text-align:center;cursor:pointer;transition:border-color 0.2s;background:rgba(99,102,241,0.04);" onclick="document.getElementById('tut-file').click()">
+        <svg width="32" height="32" fill="none" stroke="rgba(99,102,241,0.8)" viewBox="0 0 24 24" style="margin:0 auto 0.5rem;display:block;"><path stroke-linecap="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+        <div id="tut-dropzone-label" style="color:rgba(129,140,248,0.9);font-weight:600;font-size:0.9rem;">Click or drag video here</div>
+        <div style="font-size:0.75rem;color:var(--text-3);margin-top:0.3rem;">MP4, WebM, MOV, MKV, AVI — up to 500 MB</div>
+      </div>
+      <input type="file" id="tut-file" accept="video/*" style="display:none;" onchange="onTutFileSelect(this)">
+    </div>
+
+    <div style="display:flex;gap:0.5rem;margin-top:1rem;">
+      <button class="btn btn-primary" style="background:#6366f1;" id="tut-submit-btn" onclick="submitTutorial()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+        Upload
+      </button>
+      <button class="btn btn-ghost" onclick="closeModal('tutorial-modal')">Cancel</button>
     </div>
   </div>
 </div>
@@ -1435,6 +1501,147 @@ refreshAdminLive(); // populate on load
     requestAnimationFrame(loop);
   })();
 })();
+
+/* ── TUTORIALS ── */
+function openTutorialModal() {
+  document.getElementById('tut-title').value = '';
+  document.getElementById('tut-desc').value = '';
+  document.getElementById('tut-sort').value = '0';
+  document.getElementById('tut-file').value = '';
+  document.getElementById('tut-dropzone-label').textContent = 'Click or drag video here';
+  document.getElementById('tut-modal-result').innerHTML = '';
+  openModal('tutorial-modal');
+}
+
+function onTutFileSelect(input) {
+  const file = input.files[0];
+  if (file) {
+    const mb = (file.size / 1024 / 1024).toFixed(1);
+    document.getElementById('tut-dropzone-label').textContent = `✅ ${file.name} (${mb} MB)`;
+    document.getElementById('tut-dropzone').style.borderColor = 'rgba(99,102,241,0.8)';
+  }
+}
+
+async function submitTutorial() {
+  const title = document.getElementById('tut-title').value.trim();
+  const desc  = document.getElementById('tut-desc').value.trim();
+  const sort  = document.getElementById('tut-sort').value;
+  const file  = document.getElementById('tut-file').files[0];
+  const result = document.getElementById('tut-modal-result');
+
+  if (!title) return toast('Title is required.', 'warn');
+  if (!file)  return toast('Please select a video file.', 'warn');
+
+  const btn = document.getElementById('tut-submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Uploading…';
+
+  const progressWrap = document.getElementById('tut-upload-progress');
+  const progressBar  = document.getElementById('tut-progress-bar');
+  const progressLabel= document.getElementById('tut-progress-label');
+
+  const formData = new FormData();
+  formData.append('title', title);
+  formData.append('description', desc);
+  formData.append('sort_order', sort);
+  formData.append('video', file);
+
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', '/api/admin/tutorials');
+
+  xhr.upload.onprogress = (e) => {
+    if (e.lengthComputable) {
+      const pct = Math.round((e.loaded / e.total) * 100);
+      progressBar.style.width = pct + '%';
+      progressLabel.textContent = `Uploading… ${pct}%`;
+      progressWrap.style.display = 'block';
+    }
+  };
+
+  xhr.onload = () => {
+    progressWrap.style.display = 'none';
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg> Upload';
+    try {
+      const data = JSON.parse(xhr.responseText);
+      if (data.success) {
+        toast('Tutorial uploaded!', 'ok');
+        closeModal('tutorial-modal');
+        loadTutorialsTab();
+      } else {
+        result.innerHTML = `<div class="alert alert-danger" style="margin-bottom:1rem;font-size:0.8rem;">${data.message}</div>`;
+      }
+    } catch (e) {
+      result.innerHTML = `<div class="alert alert-danger" style="margin-bottom:1rem;font-size:0.8rem;">Unexpected error.</div>`;
+    }
+  };
+
+  xhr.onerror = () => {
+    progressWrap.style.display = 'none';
+    btn.disabled = false;
+    btn.innerHTML = '… Upload';
+    result.innerHTML = `<div class="alert alert-danger" style="margin-bottom:1rem;font-size:0.8rem;">Network error. Try again.</div>`;
+  };
+
+  xhr.send(formData);
+}
+
+async function loadTutorialsTab() {
+  const grid = document.getElementById('tut-grid');
+  grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text-3);padding:2rem;">Loading…</div>';
+  try {
+    const res  = await fetch('/api/admin/tutorials');
+    const data = await res.json();
+    if (!data.success) {
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#f87171;padding:2rem;">${data.message || 'Error'}</div>`;
+      return;
+    }
+    if (!data.tutorials.length) {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text-3);padding:3rem;"><div style="font-size:2.5rem;margin-bottom:0.5rem;">🎬</div>No tutorials yet. Upload your first video!</div>';
+      return;
+    }
+    grid.innerHTML = data.tutorials.map(t => `
+      <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;">
+        <div style="position:relative;aspect-ratio:16/9;background:#000;">
+          <video src="${t.video_url}" style="width:100%;height:100%;object-fit:cover;" preload="metadata" muted></video>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.4);">
+            <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.9);display:flex;align-items:center;justify-content:center;">
+              <svg width="18" height="18" fill="#6366f1" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+          </div>
+          <div style="position:absolute;top:8px;right:8px;">
+            <span style="background:${t.is_active ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'};border:1px solid ${t.is_active ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)'};color:${t.is_active ? '#4ade80' : '#f87171'};font-size:0.65rem;padding:2px 8px;border-radius:20px;font-weight:700;">${t.is_active ? 'LIVE' : 'HIDDEN'}</span>
+          </div>
+        </div>
+        <div style="padding:1rem;">
+          <div style="font-weight:700;font-size:0.95rem;margin-bottom:0.3rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.title}</div>
+          ${t.description ? `<div style="font-size:0.78rem;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:0.8rem;">${t.description}</div>` : '<div style="margin-bottom:0.8rem;"></div>'}
+          <div style="display:flex;gap:0.4rem;">
+            <button class="btn btn-sm" style="flex:1;padding:4px;font-size:0.7rem;background:${t.is_active ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)'};border:1px solid ${t.is_active ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)'};color:${t.is_active ? '#f87171' : '#4ade80'};" onclick="toggleTutorial(${t.id})">${t.is_active ? '🙈 Hide' : '👁 Show'}</button>
+            <button class="btn btn-sm" style="flex:1;padding:4px;font-size:0.7rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;" onclick="deleteTutorial(${t.id}, '${t.title.replace(/'/g,"\\\\'")}')">🗑 Delete</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#f87171;padding:2rem;">Network error.</div>';
+  }
+}
+
+async function toggleTutorial(id) {
+  const res  = await fetch(`/api/admin/tutorials/${id}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({}) });
+  const data = await res.json();
+  // get current state from DOM and flip it
+  if (data.success || true) { loadTutorialsTab(); toast('Updated', 'ok'); }
+}
+
+async function deleteTutorial(id, titleStr) {
+  if (!confirm(`Delete tutorial "${titleStr}"? The video file will also be deleted.`)) return;
+  const res  = await fetch(`/api/admin/tutorials/${id}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (data.success) { toast('Tutorial deleted', 'ok'); loadTutorialsTab(); }
+  else toast(data.message, 'err');
+}
 
 /* ── PROMO CODES ── */
 async function loadPromosTab() {

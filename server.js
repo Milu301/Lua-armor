@@ -760,12 +760,29 @@ app.get('/profile/:username', async (req, res) => {
     // Friendship status between viewer and profile user
     let friendStatus = null;
     if (viewerUserId && viewerUserId !== profileUser.id) {
+      const u1 = Math.min(viewerUserId, profileUser.id);
+      const u2 = Math.max(viewerUserId, profileUser.id);
       const fRow = await db.one(
-        `SELECT status, user1_id FROM friends
-         WHERE (user1_id=$1 AND user2_id=$2) OR (user1_id=$2 AND user2_id=$1)`,
-        [viewerUserId, profileUser.id]
+        `SELECT status, user1_id, user2_id FROM friends
+         WHERE user1_id=$1 AND user2_id=$2`,
+        [u1, u2]
       );
-      friendStatus = fRow ? { status: fRow.status, sentByMe: fRow.user1_id === viewerUserId } : null;
+      if (fRow) {
+        let status = fRow.status;
+        let sentByMe = false;
+        if (status === 'accepted') {
+          // already friends
+        } else if (status.startsWith('pending_')) {
+          // pending_<senderId> format (social hub)
+          const senderId = Number(status.split('_')[1]);
+          sentByMe = senderId === viewerUserId;
+          status = 'pending';
+        } else if (status === 'pending') {
+          // legacy format — user1_id was the sender
+          sentByMe = fRow.user1_id === viewerUserId;
+        }
+        friendStatus = { status, sentByMe };
+      }
     }
 
     res.render('profile', {
@@ -792,22 +809,28 @@ app.post('/api/profile/friend', apiAuth, async (req, res) => {
     if (!target) return res.json({ success: false, message: 'User not found.' });
     if (target.id === me) return res.json({ success: false, message: 'Cannot friend yourself.' });
 
+    const u1 = Math.min(me, target.id);
+    const u2 = Math.max(me, target.id);
+
     if (action === 'add') {
       await db.query(
-        `INSERT INTO friends (user1_id, user2_id, status) VALUES ($1,$2,'pending')
-         ON CONFLICT DO NOTHING`, [me, target.id]
+        `INSERT INTO friends (user1_id, user2_id, status) VALUES ($1,$2,$3)
+         ON CONFLICT DO NOTHING`, [u1, u2, 'pending_' + me]
       );
       return res.json({ success: true, status: 'pending' });
     } else if (action === 'accept') {
+      // Accept: update any pending row where the OTHER person sent the request
       await db.query(
-        `UPDATE friends SET status='accepted' WHERE user1_id=$1 AND user2_id=$2`,
-        [target.id, me]
+        `UPDATE friends SET status='accepted'
+         WHERE user1_id=$1 AND user2_id=$2
+         AND (status=$3 OR (status='pending' AND user1_id=$4))`,
+        [u1, u2, 'pending_' + target.id, target.id]
       );
       return res.json({ success: true, status: 'accepted' });
     } else if (action === 'remove') {
       await db.query(
-        `DELETE FROM friends WHERE (user1_id=$1 AND user2_id=$2) OR (user1_id=$2 AND user2_id=$1)`,
-        [me, target.id]
+        `DELETE FROM friends WHERE user1_id=$1 AND user2_id=$2`,
+        [u1, u2]
       );
       return res.json({ success: true, status: null });
     }
@@ -1097,7 +1120,7 @@ app.get('/social', auth, async (req, res) => {
   const { id } = req.session.user;
   // Get friends
   const friendsRaw = await db.all(`
-    SELECT f.status, u.id as user_id, u.username, u.role, u.avatar_url, u.online_status
+    SELECT f.status, f.user1_id, u.id as user_id, u.username, u.role, u.avatar_url, u.online_status
     FROM friends f
     JOIN users u ON (f.user1_id = u.id OR f.user2_id = u.id)
     WHERE (f.user1_id = $1 OR f.user2_id = $1) AND u.id != $1
@@ -1194,8 +1217,11 @@ app.post('/api/friends/accept', apiAuth, async (req, res) => {
   const u1 = Math.min(userId, friendId);
   const u2 = Math.max(userId, friendId);
 
-  await db.query('UPDATE friends SET status=$1 WHERE user1_id=$2 AND user2_id=$3 AND status LIKE $4', 
-    ['accepted', u1, u2, 'pending_%']);
+  await db.query(`
+    UPDATE friends SET status=$1
+    WHERE user1_id=$2 AND user2_id=$3
+    AND (status=$4 OR (status='pending' AND user1_id=$5))
+  `, ['accepted', u1, u2, 'pending_' + friendId, friendId]);
   
   res.json({ success: true, message: 'Friend accepted!' });
 });

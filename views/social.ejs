@@ -306,7 +306,13 @@
             <%
               const isPending = f.status && f.status.startsWith('pending');
               const isAccepted = f.status === 'accepted';
-              const canAccept = isPending && f.status !== ('pending_' + user.id);
+              let sentByMe = false;
+              if (f.status.startsWith('pending_')) {
+                sentByMe = f.status === ('pending_' + user.id);
+              } else if (f.status === 'pending') {
+                sentByMe = (f.user1_id === user.id);
+              }
+              const canAccept = isPending && !sentByMe;
               const sc = f.online_status === 'idle' ? '#f59e0b' : f.online_status === 'dnd' ? '#ef4444' : f.online_status === 'offline' ? '#6b7280' : '#22c55e';
             %>
             <div class="sh-friend-card">
@@ -320,7 +326,7 @@
                 <div class="sh-finfo">
                   <div class="sh-fname"><%= f.username %></div>
                   <div class="sh-fstatus <%= isPending ? 'pending' : '' %>">
-                    <%= isPending ? '⏳ Pending Request' : isAccepted ? '✓ Friends' : '' %>
+                    <%= isPending ? (sentByMe ? '⏳ Request Sent' : '⏳ Pending Request') : isAccepted ? '✓ Friends' : '' %>
                   </div>
                 </div>
               </a>

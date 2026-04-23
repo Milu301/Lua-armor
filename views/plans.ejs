@@ -269,17 +269,38 @@ body {
           </ul>
           
           <% if (typeof boldEnabled !== 'undefined' && boldEnabled && user) { %>
-            <button class="btn-buy <%= idx === 0 ? 'btn-buy-primary' : 'btn-buy-secondary' %>" onclick="startCheckout(<%= p.id %>, '<%= p.name %>', this)">
-              <i class="ph-bold ph-credit-card"></i> Pay Securely with Bold
-            </button>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: auto;">
+              <button class="btn-buy <%= idx === 0 ? 'btn-buy-primary' : 'btn-buy-secondary' %>" onclick="startCheckout(<%= p.id %>, '<%= p.name %>', this)">
+                <i class="ph-bold ph-credit-card"></i> Pay Securely with Bold
+              </button>
+              <% if (p.roblox_gamepass_id) { %>
+              <button class="btn-buy" style="background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(0, 162, 255, 0.4);" onclick="claimGamepass(<%= p.id %>, '<%= p.name %>', this)">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Robux_2019_Logo_gold.svg/1024px-Robux_2019_Logo_gold.svg.png" style="width: 18px; height: 18px;" alt="Robux"> Verify Gamepass
+              </button>
+              <% } %>
+            </div>
           <% } else if (!user) { %>
-            <a href="/login" class="btn-buy <%= idx === 0 ? 'btn-buy-primary' : 'btn-buy-secondary' %>">
-              <i class="ph-bold ph-sign-in"></i> Login to Purchase
-            </a>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: auto;">
+              <a href="/login" class="btn-buy <%= idx === 0 ? 'btn-buy-primary' : 'btn-buy-secondary' %>">
+                <i class="ph-bold ph-sign-in"></i> Login to Purchase
+              </a>
+              <% if (p.roblox_gamepass_id) { %>
+              <a href="/login" class="btn-buy" style="background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(0, 162, 255, 0.4);">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Robux_2019_Logo_gold.svg/1024px-Robux_2019_Logo_gold.svg.png" style="width: 18px; height: 18px;" alt="Robux"> Login to verify Gamepass
+              </a>
+              <% } %>
+            </div>
           <% } else { %>
-            <button class="btn-buy <%= idx === 0 ? 'btn-buy-primary' : 'btn-buy-secondary' %>" disabled style="opacity: 0.5; cursor: not-allowed;">
-              Payments Unavailable
-            </button>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: auto;">
+              <button class="btn-buy <%= idx === 0 ? 'btn-buy-primary' : 'btn-buy-secondary' %>" disabled style="opacity: 0.5; cursor: not-allowed;">
+                Payments Unavailable
+              </button>
+              <% if (p.roblox_gamepass_id) { %>
+              <button class="btn-buy" style="background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(0, 162, 255, 0.4);" onclick="claimGamepass(<%= p.id %>, '<%= p.name %>', this)">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Robux_2019_Logo_gold.svg/1024px-Robux_2019_Logo_gold.svg.png" style="width: 18px; height: 18px;" alt="Robux"> Verify Gamepass
+              </button>
+              <% } %>
+            </div>
           <% } %>
         </div>
       <% }) %>
@@ -322,7 +343,23 @@ body {
       </div>
     <% } %>
 
+    <% } %>
+
   </div>
+
+  <% if (typeof boldEnabled !== 'undefined' && boldEnabled && user) { %>
+    <div style="margin: 3rem auto 2.5rem; max-width: 400px; text-align: center; animation: slideUp 0.8s ease 0.2s backwards;">
+      <div style="background: var(--surface); padding: 1.5rem; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+        <label style="display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 700; margin-bottom: 0.8rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 0.5rem;"><i class="ph-fill ph-tag" style="color: var(--primary-light);"></i> Have a Promo Code?</label>
+        <div style="display: flex; gap: 0.5rem;">
+          <input type="text" id="promo-code-input" placeholder="ENTER CODE..." style="flex: 1; padding: 0.8rem 1rem; border-radius: 12px; border: 1px solid var(--border); background: rgba(0,0,0,0.4); color: #fff; font-size: 1rem; text-transform: uppercase; text-align: center; font-weight: 600; letter-spacing: 1px;">
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-dim); margin-top: 0.8rem;">Discount will be calculated and securely applied before payment.</div>
+      </div>
+    </div>
+  <% } else { %>
+    <div style="height: 3rem;"></div>
+  <% } %>
 
     <div style="display:flex;align-items:center;justify-content:center;gap:1.5rem;flex-wrap:wrap;margin-bottom:2rem;">
       <div style="display:flex;align-items:center;gap:0.4rem;font-size:0.8rem;color:var(--text-dim);">
@@ -358,11 +395,14 @@ async function startCheckout(planId, planName, btn) {
   btn.disabled = true;
   btn.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Preparing...';
 
+  const promoInput = document.getElementById('promo-code-input');
+  const promoCode = promoInput ? promoInput.value.trim() : '';
+
   try {
     const res  = await fetch('/api/payment/create-order', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan_id: planId })
+      body: JSON.stringify({ plan_id: planId, promo_code: promoCode })
     });
     const data = await res.json();
 
@@ -390,6 +430,34 @@ async function startCheckout(planId, planName, btn) {
 
   } catch (err) {
     alert('Network error. Please try again.');
+    btn.disabled = false;
+    btn.innerHTML = orig;
+  }
+}
+
+async function claimGamepass(planId, planName, btn) {
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Verifying...';
+
+  try {
+    const res = await fetch('/api/payment/claim-gamepass', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan_id: planId })
+    });
+    const data = await res.json();
+    
+    if (data.success) {
+      alert('Gamepass verified successfully! Your new plan and key have been added to your dashboard.');
+      window.location.href = '/dashboard';
+    } else {
+      alert(data.message || 'Verification failed.');
+      btn.disabled = false;
+      btn.innerHTML = orig;
+    }
+  } catch (err) {
+    alert('Network error during verification. Please try again.');
     btn.disabled = false;
     btn.innerHTML = orig;
   }

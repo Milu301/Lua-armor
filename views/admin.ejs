@@ -87,6 +87,10 @@
         Payments
         <span class="sb-badge" style="background:rgba(139,92,246,0.12);border-color:rgba(139,92,246,0.25);color:#a78bfa;">BOLD</span>
       </button>
+      <button class="tab-btn" onclick="switchTab('promos',this);loadPromosTab();">
+        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+        Promo Codes
+      </button>
     </div>
 
     <!-- ═══════ TAB: OVERVIEW ═══════ -->
@@ -547,6 +551,40 @@
       </div>
     </div>
 
+    <!-- ═══════ TAB: PROMO CODES ═══════ -->
+    <div class="tab-panel" id="tab-promos">
+      <div class="content" style="max-width:1100px;">
+        <div class="card" style="margin-bottom:1.25rem;">
+          <div class="card-head">
+            <div class="card-icon" style="background:rgba(236,72,153,0.1);border:1px solid rgba(236,72,153,0.22);color:#ec4899;">🏷️</div>
+            <div>
+              <div class="card-title">Promo Codes</div>
+              <div class="card-desc">Create discount codes for your users.</div>
+            </div>
+            <button class="btn btn-primary btn-sm" style="margin-left:auto; background: #ec4899;" onclick="openPromoModal()">
+              <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              New Code
+            </button>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table" id="promos-table">
+              <thead><tr>
+                <th>Code</th>
+                <th>Discount</th>
+                <th>Uses</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr></thead>
+              <tbody id="promos-tbody">
+                <tr><td colspan="6" style="text-align:center;color:var(--text-3);padding:2rem;">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /main -->
 </div><!-- /layout -->
 
@@ -701,6 +739,11 @@
       </select>
       <div class="input-hint">When a payment is approved, a key is auto-created in this Luarmor project for the buyer.</div>
     </div>
+    <div class="form-row">
+      <label class="label">Roblox Gamepass ID</label>
+      <input type="text" class="input" id="plm-gamepass" placeholder="12345678" />
+      <div class="input-hint">Users can buy this gamepass in Roblox to unlock this plan automatically.</div>
+    </div>
     <div class="form-row"><label class="label">Description</label><textarea class="input" id="plm-desc" rows="2" placeholder="What does this plan include?" maxlength="300"></textarea></div>
     <div class="field-grid">
       <div class="form-row"><label class="label">Accent Color</label><input type="color" class="input" id="plm-color" value="#8b5cf6" style="height:40px;padding:4px;" oninput="updatePlanGradient()"/></div>
@@ -714,6 +757,29 @@
         Save Plan
       </button>
       <button class="btn btn-ghost" onclick="closeModal('plan-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PROMO CODE MODAL ═══ -->
+<div class="modal-overlay" id="promo-modal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('promo-modal')">×</button>
+    <h2>New Promo Code</h2>
+    <div id="promo-result"></div>
+
+    <div class="form-row"><label class="label">Code (e.g. SUMMER50) *</label><input type="text" class="input" id="promo-code" placeholder="WINTER20" maxlength="32" style="text-transform:uppercase;"/></div>
+    <div class="field-grid">
+      <div class="form-row"><label class="label">Discount % *</label><input type="number" class="input" id="promo-percent" placeholder="20" min="1" max="100"/></div>
+      <div class="form-row"><label class="label">Max Uses (0 = unlimited)</label><input type="number" class="input" id="promo-max" placeholder="100" value="0" min="0"/></div>
+    </div>
+
+    <div style="display:flex;gap:0.5rem;margin-top:1rem;">
+      <button class="btn btn-primary" style="background:#ec4899;" onclick="savePromo()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        Create Code
+      </button>
+      <button class="btn btn-ghost" onclick="closeModal('promo-modal')">Cancel</button>
     </div>
   </div>
 </div>
@@ -1118,6 +1184,7 @@ function openPlanModal(planId) {
       document.getElementById('plm-price').value   = p.price_usd;
       document.getElementById('plm-days').value    = p.duration_days;
       document.getElementById('plm-project').value = p.project_id || '';
+      document.getElementById('plm-gamepass').value = p.roblox_gamepass_id || '';
       document.getElementById('plm-desc').value    = p.description;
       document.getElementById('plm-color').value   = p.color || '#8b5cf6';
       document.getElementById('plm-sort').value    = p.sort_order;
@@ -1138,6 +1205,7 @@ async function savePlan() {
     price_usd:    document.getElementById('plm-price').value,
     duration_days:document.getElementById('plm-days').value,
     project_id:   document.getElementById('plm-project').value || null,
+    roblox_gamepass_id: document.getElementById('plm-gamepass').value.trim() || null,
     description:  document.getElementById('plm-desc').value.trim(),
     icon:         document.getElementById('plm-icon').value.trim() || '⚡',
     color:        document.getElementById('plm-color').value,
@@ -1367,6 +1435,103 @@ refreshAdminLive(); // populate on load
     requestAnimationFrame(loop);
   })();
 })();
+
+/* ── PROMO CODES ── */
+async function loadPromosTab() {
+  const tbody = document.getElementById('promos-tbody');
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-3);padding:2rem;">Loading…</td></tr>';
+  try {
+    const res = await fetch('/api/admin/promo-codes');
+    const data = await res.json();
+    if (!data.success) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#f87171;padding:2rem;">${data.message || 'Error'}</td></tr>`;
+      return;
+    }
+    if (!data.codes.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-3);padding:2rem;">No promo codes found.</td></tr>';
+      return;
+    }
+    let html = '';
+    data.codes.forEach(c => {
+      const usesStr = c.max_uses > 0 ? `${c.current_uses} / ${c.max_uses}` : `${c.current_uses} / ∞`;
+      const dateStr = new Date(c.created_at).toLocaleDateString();
+      const statusBadge = c.is_active 
+        ? '<span class="badge badge-green" style="font-size:0.65rem;">Active</span>' 
+        : '<span class="badge badge-red" style="font-size:0.65rem;">Disabled</span>';
+      
+      html += `<tr>
+        <td style="font-weight:700;font-family:'JetBrains Mono',monospace;">${c.code}</td>
+        <td style="color:var(--green);font-weight:600;">${c.discount_percent}%</td>
+        <td>${usesStr}</td>
+        <td><span id="promo-status-${c.id}">${statusBadge}</span></td>
+        <td style="color:var(--text-3);font-size:0.8rem;">${dateStr}</td>
+        <td>
+          <div style="display:flex;gap:0.3rem;">
+            <button class="btn btn-sm" style="padding:3px 7px;font-size:0.7rem;background:${c.is_active ? 'var(--red-dim)' : 'var(--green-dim)'};border:1px solid ${c.is_active ? 'var(--red-border)' : 'var(--green-border)'};color:${c.is_active ? '#f87171' : '#4ade80'};" onclick="togglePromo(${c.id}, this)" title="${c.is_active ? 'Disable' : 'Enable'}">${c.is_active ? '🚫' : '✅'}</button>
+            <button class="btn btn-sm" style="padding:3px 7px;font-size:0.7rem;background:var(--red-dim);border:1px solid var(--red-border);color:#f87171;" onclick="deletePromo(${c.id}, '${c.code}')" title="Delete">🗑️</button>
+          </div>
+        </td>
+      </tr>`;
+    });
+    tbody.innerHTML = html;
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#f87171;padding:2rem;">Network Error.</td></tr>';
+  }
+}
+
+function openPromoModal() {
+  document.getElementById('promo-code').value = '';
+  document.getElementById('promo-percent').value = '';
+  document.getElementById('promo-max').value = '0';
+  document.getElementById('promo-result').innerHTML = '';
+  openModal('promo-modal');
+}
+
+async function savePromo() {
+  const code = document.getElementById('promo-code').value.trim().toUpperCase();
+  const percent = document.getElementById('promo-percent').value;
+  const max = document.getElementById('promo-max').value;
+  
+  if (!code || !percent) return toast('Fill out code and percent.', 'err');
+  
+  const res = await fetch('/api/admin/promo-codes', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ code, discount_percent: percent, max_uses: max })
+  });
+  const data = await res.json();
+  if (data.success) {
+    toast('Promo code created!', 'ok');
+    closeModal('promo-modal');
+    loadPromosTab();
+  } else {
+    document.getElementById('promo-result').innerHTML = `<div class="alert alert-danger" style="margin-bottom:1rem;font-size:0.8rem;">${data.message}</div>`;
+  }
+}
+
+async function togglePromo(id, btn) {
+  btn.disabled = true;
+  const res = await fetch(`/api/admin/promo-codes/${id}/toggle`, { method: 'PATCH' });
+  const data = await res.json();
+  if (data.success) {
+    toast('Code toggled', 'ok');
+    loadPromosTab();
+  } else {
+    toast(data.message, 'err');
+    btn.disabled = false;
+  }
+}
+
+async function deletePromo(id, codeStr) {
+  if (!confirm(`Delete promo code ${codeStr}?`)) return;
+  const res = await fetch(`/api/admin/promo-codes/${id}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (data.success) {
+    toast('Code deleted', 'ok');
+    loadPromosTab();
+  } else {
+    toast(data.message, 'err');
+  }
+}
 
 /* ── Chat Moderation (admin) ── */
 const adminSocket = io({ transports: ['websocket','polling'] });

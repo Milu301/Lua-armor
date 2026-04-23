@@ -42,6 +42,11 @@ const BOLD_SECRET_KEY   = process.env.BOLD_SECRET_KEY   || '';
    Bold charges the COP equivalent — users always see and pay in USD. */
 const USD_TO_COP_RATE   = Number(process.env.USD_TO_COP_RATE) || 4100;
 
+/* ─── Discord OAuth Config ─── */
+const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || '';
+const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || '';
+const DISCORD_REDIRECT_URI = process.env.DISCORD_REDIRECT_URI || '';
+
 if (!DATABASE_URL) { console.error('DATABASE_URL required'); process.exit(1); }
 
 /* ─── Ensure upload directories exist ─── */
@@ -271,6 +276,28 @@ async function initDB() {
       image_url TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS promo_codes (
+      id SERIAL PRIMARY KEY,
+      code VARCHAR(32) NOT NULL UNIQUE,
+      discount_percent INT NOT NULL DEFAULT 0,
+      max_uses INT NOT NULL DEFAULT 0,
+      current_uses INT NOT NULL DEFAULT 0,
+      is_active BOOL NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS gamepass_claims (
+      id SERIAL PRIMARY KEY,
+      user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      roblox_user_id VARCHAR(32) NOT NULL,
+      gamepass_id VARCHAR(64) NOT NULL,
+      plan_id INT NOT NULL REFERENCES payment_plans(id) ON DELETE CASCADE,
+      claimed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (user_id, gamepass_id)
+    );
+
+    ALTER TABLE payment_plans ADD COLUMN IF NOT EXISTS roblox_gamepass_id VARCHAR(64) DEFAULT '';
 
     /* ── Migrations: rename columns if upgrading from old COP schema ── */
     DO $$ BEGIN
@@ -602,6 +629,94 @@ app.get('/home', async (req, res) => {
     project = await db.one('SELECT id, name, icon, daily_reset_limit FROM projects WHERE id=$1', [req.session.user.projectId]);
   }
   res.render('home', { project, disableAds: true });
+});
+
+/* ─── Discord OAuth Routes ─── */
+app.get('/auth/discord', (req, res) => {
+  if (!DISCORD_CLIENT_ID || !DISCORD_REDIRECT_URI) {
+    return res.status(500).send('Discord OAuth is not configured. Please set DISCORD_CLIENT_ID and DISCORD_REDIRECT_URI in .env.');
+  }
+  const url = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(DISCORD_REDIRECT_URI)}&response_type=code&scope=identify`;
+  res.redirect(url);
+});
+
+app.get('/auth/discord/callback', async (req, res) => {
+  const code = req.query.code;
+  if (!code) return res.redirect('/login?error=Discord+login+failed');
+
+  try {
+    const tokenParams = new URLSearchParams({
+      client_id: DISCORD_CLIENT_ID,
+      client_secret: DISCORD_CLIENT_SECRET,
+      grant_type: 'authorization_code',
+      code: code,
+      redirect_uri: DISCORD_REDIRECT_URI
+    });
+
+    const tokenRes = await fetch('https://discord.com/api/oauth2/token', {
+      method: 'POST',
+      body: tokenParams,
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    });
+    
+    if (!tokenRes.ok) {
+      console.error('Discord token error:', await tokenRes.text());
+      return res.redirect('/login?error=Discord+OAuth+error');
+    }
+
+    const tokenData = await tokenRes.json();
+    
+    const userRes = await fetch('https://discord.com/api/users/@me', {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` }
+    });
+    const discordUser = await userRes.json();
+
+    const discordId = discordUser.id;
+    const avatarHash = discordUser.avatar;
+    const avatarUrl = avatarHash 
+      ? `https://cdn.discordapp.com/avatars/${discordId}/${avatarHash}.${avatarHash.startsWith('a_') ? 'gif' : 'png'}`
+      : `https://cdn.discordapp.com/embed/avatars/${parseInt(discordUser.discriminator || '0') % 5}.png`;
+
+    if (req.session.user) {
+      // User is already logged in, they are linking their account
+      await db.query('UPDATE users SET discord_id=$1, avatar_url=$2 WHERE id=$3', [discordId, avatarUrl, req.session.user.id]);
+      req.session.user.discordId = discordId;
+      req.session.user.avatarUrl = avatarUrl;
+      return res.redirect('/settings?success=Discord+connected+successfully');
+    } else {
+      // User is trying to log in with Discord
+      const user = await db.one('SELECT * FROM users WHERE discord_id=$1 AND is_active=true', [discordId]);
+      if (!user) {
+        return res.redirect('/login?error=No+account+linked+to+this+Discord.+Please+login+with+username/password+and+link+it+in+settings.');
+      }
+
+      // Log them in
+      const proj = user.project_id ? await db.one('SELECT * FROM projects WHERE id=$1', [user.project_id]) : null;
+      let scriptToken = user.script_token;
+      if (!scriptToken) {
+        scriptToken = crypto.randomBytes(16).toString('hex');
+        await db.query('UPDATE users SET script_token=$1 WHERE id=$2', [scriptToken, user.id]);
+      }
+
+      // Update avatar to keep it synced
+      await db.query('UPDATE users SET avatar_url=$1, last_login=NOW() WHERE id=$2', [avatarUrl, user.id]);
+
+      req.session.user = {
+        id: user.id, username: user.username, role: user.role,
+        luarmorKey: user.luarmor_key, projectId: user.project_id,
+        project: proj, discordId: user.discord_id,
+        note: user.note || '', scriptToken,
+        avatarUrl: avatarUrl,
+        onlineStatus: user.online_status || 'online',
+        language: user.language || 'en'
+      };
+      
+      return res.redirect('/dashboard');
+    }
+  } catch (err) {
+    console.error('Discord auth exception:', err);
+    return res.redirect('/login?error=Internal+Discord+Error');
+  }
 });
 
 app.get('/login', (req, res) => {
@@ -1924,6 +2039,8 @@ app.get('/plans', async (req, res) => {
 /* ── POST /api/payment/create-order — create Bold order ─── */
 app.post('/api/payment/create-order', auth, async (req, res) => {
   const planId = Number(req.body.plan_id);
+  const promoCodeInput = (req.body.promo_code || '').trim().toUpperCase();
+
   if (!planId) return res.json({ success: false, message: 'Plan required.' });
 
   const plan = await db.one('SELECT * FROM payment_plans WHERE id=$1 AND is_active=true', [planId]);
@@ -1931,9 +2048,22 @@ app.post('/api/payment/create-order', auth, async (req, res) => {
 
   if (!BOLD_IDENTITY_KEY) return res.json({ success: false, message: 'Payments not configured yet.' });
 
+  let amountUsd = Number(plan.price_usd);
+  
+  if (promoCodeInput) {
+    const codeData = await db.one('SELECT * FROM promo_codes WHERE code=$1 AND is_active=true', [promoCodeInput]);
+    if (!codeData) return res.json({ success: false, message: 'Invalid promo code.' });
+    if (codeData.max_uses > 0 && codeData.current_uses >= codeData.max_uses) {
+      return res.json({ success: false, message: 'Promo code reached its maximum uses.' });
+    }
+    const discount = (amountUsd * codeData.discount_percent) / 100;
+    amountUsd = Math.max(0, amountUsd - discount);
+    await db.query('UPDATE promo_codes SET current_uses = current_uses + 1 WHERE id=$1', [codeData.id]);
+  }
+
   const userId     = req.session.user.id;
   const orderRef   = `AH-${userId}-${planId}-${Date.now()}`;
-  const amountUsd  = Number(plan.price_usd);
+  
   /* Bold requires COP — convert internally, user never sees COP */
   const amountCop  = usdToCop(amountUsd);
   const integrity  = boldIntegrity(orderRef, amountCop);
@@ -2046,6 +2176,109 @@ app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), asyn
 
 
 
+/* ── POST /api/payment/claim-gamepass — Verify Gamepass ─── */
+app.post('/api/payment/claim-gamepass', auth, async (req, res) => {
+  const planId = Number(req.body.plan_id);
+  if (!planId) return res.json({ success: false, message: 'Plan required.' });
+
+  const plan = await db.oneOrNone('SELECT * FROM payment_plans WHERE id=$1 AND is_active=true', [planId]);
+  if (!plan || !plan.roblox_gamepass_id) {
+    return res.json({ success: false, message: 'This plan does not support gamepass claiming.' });
+  }
+
+  // Find their live session
+  const session = await db.oneOrNone('SELECT roblox_user_id FROM live_sessions WHERE user_id=$1', [req.session.user.id]);
+  if (!session) {
+    return res.json({ success: false, message: 'You must be actively running the AuroraHub Free script in a game to verify ownership.' });
+  }
+
+  const robloxUserId = session.roblox_user_id;
+
+  // Check if they already claimed this plan using this gamepass
+  const claim = await db.oneOrNone('SELECT id FROM gamepass_claims WHERE user_id=$1 AND gamepass_id=$2', [req.session.user.id, plan.roblox_gamepass_id]);
+  if (claim) {
+    return res.json({ success: false, message: 'You have already claimed this plan using your gamepass.' });
+  }
+
+  // Check Roblox API for gamepass ownership
+  try {
+    const robloxRes = await fetch(`https://inventory.roblox.com/v1/users/${robloxUserId}/items/GamePass/${plan.roblox_gamepass_id}/is-owned`);
+    const robloxData = await robloxRes.json();
+
+    if (robloxData === true || robloxData === "true") {
+      // Create user's key in luarmor
+      const proj = await db.oneOrNone('SELECT * FROM projects WHERE id=$1', [plan.project_id]);
+      if (!proj) return res.json({ success: false, message: 'Project not found for this plan.' });
+      
+      const { json } = await luarmorReq('POST', proj.luarmor_project_id, proj.luarmor_api_key,
+        '/users', {
+          note: `AuroraHub Gamepass Claim ${plan.roblox_gamepass_id}`,
+          auth_expire: Math.floor(Date.now() / 1000) + (plan.duration_days * 86400)
+        }
+      );
+      
+      if (json?.user_key) {
+        await db.query(
+          `INSERT INTO user_keys (user_id, luarmor_key, project_id, label)
+           VALUES ($1,$2,$3,$4) ON CONFLICT (luarmor_key) DO NOTHING`,
+          [req.session.user.id, json.user_key, plan.project_id, `${plan.name} — Gamepass`]
+        );
+      } else {
+        return res.json({ success: false, message: 'Failed to generate key from Luarmor.' });
+      }
+
+      // Record claim
+      await db.query('INSERT INTO gamepass_claims (user_id, gamepass_id) VALUES ($1, $2)', [req.session.user.id, plan.roblox_gamepass_id]);
+
+      return res.json({ success: true, message: 'Gamepass verified! Key generated and added to your keys.' });
+    } else {
+      return res.json({ success: false, message: 'You do not own this gamepass.' });
+    }
+  } catch (err) {
+    console.error('Roblox Gamepass Verification Error:', err);
+    return res.json({ success: false, message: 'Failed to verify gamepass ownership. Please try again later.' });
+  }
+});
+
+/* ── ADMIN: Promo Codes CRUD ────────────────────────── */
+app.get('/api/admin/promo-codes', apiAuth, adminApiOnly, async (req, res) => {
+  const codes = await db.all('SELECT * FROM promo_codes ORDER BY created_at DESC');
+  res.json({ success: true, codes });
+});
+
+app.post('/api/admin/promo-codes', apiAuth, adminApiOnly, async (req, res) => {
+  const code = (req.body.code || '').trim().toUpperCase();
+  const discount = Number(req.body.discount_percent);
+  const maxUses = Number(req.body.max_uses) || 0;
+  
+  if (!code || isNaN(discount) || discount < 1 || discount > 100) {
+    return res.json({ success: false, message: 'Invalid code or discount percent (1-100).' });
+  }
+
+  try {
+    const promo = await db.one(
+      'INSERT INTO promo_codes (code, discount_percent, max_uses) VALUES ($1, $2, $3) RETURNING id',
+      [code, discount, maxUses]
+    );
+    res.json({ success: true, id: promo.id });
+  } catch (err) {
+    res.json({ success: false, message: 'Code already exists or error occurred.' });
+  }
+});
+
+app.patch('/api/admin/promo-codes/:id/toggle', apiAuth, adminApiOnly, async (req, res) => {
+  const id = Number(req.params.id);
+  const code = await db.one('SELECT is_active FROM promo_codes WHERE id=$1', [id]);
+  if (!code) return res.json({ success: false, message: 'Not found.' });
+  await db.query('UPDATE promo_codes SET is_active=$1 WHERE id=$2', [!code.is_active, id]);
+  res.json({ success: true, is_active: !code.is_active });
+});
+
+app.delete('/api/admin/promo-codes/:id', apiAuth, adminApiOnly, async (req, res) => {
+  await db.query('DELETE FROM promo_codes WHERE id=$1', [req.params.id]);
+  res.json({ success: true });
+});
+
 /* ── ADMIN: Payment Plans CRUD ────────────────────────── */
 app.get('/api/admin/payment-plans', apiAuth, adminApiOnly, async (req, res) => {
   const plans = await db.all('SELECT pp.*, p.name AS project_name FROM payment_plans pp LEFT JOIN projects p ON p.id=pp.project_id ORDER BY pp.sort_order');
@@ -2053,12 +2286,12 @@ app.get('/api/admin/payment-plans', apiAuth, adminApiOnly, async (req, res) => {
 });
 
 app.post('/api/admin/payment-plans', apiAuth, adminApiOnly, async (req, res) => {
-  const { name, description, price_usd, project_id, duration_days, icon, color, gradient, sort_order } = req.body;
+  const { name, description, price_usd, project_id, roblox_gamepass_id, duration_days, icon, color, gradient, sort_order } = req.body;
   if (!name || !price_usd) return res.json({ success: false, message: 'Name and price required.' });
   const plan = await db.one(
-    `INSERT INTO payment_plans (name, description, price_usd, project_id, duration_days, icon, color, gradient, sort_order)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
-    [name, description||'', Number(price_usd), project_id||null, Number(duration_days)||30,
+    `INSERT INTO payment_plans (name, description, price_usd, project_id, roblox_gamepass_id, duration_days, icon, color, gradient, sort_order)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+    [name, description||'', Number(price_usd), project_id||null, roblox_gamepass_id||null, Number(duration_days)||30,
      icon||'⚡', color||'#8b5cf6', gradient||'linear-gradient(135deg,#8b5cf6,#6366f1)', Number(sort_order)||0]
   );
   res.json({ success: true, id: plan.id });
@@ -2066,7 +2299,7 @@ app.post('/api/admin/payment-plans', apiAuth, adminApiOnly, async (req, res) => 
 
 app.patch('/api/admin/payment-plans/:id', apiAuth, adminApiOnly, async (req, res) => {
   const id = Number(req.params.id);
-  const allowed = ['name','description','price_usd','project_id','duration_days','icon','color','gradient','sort_order','is_active'];
+  const allowed = ['name','description','price_usd','project_id','roblox_gamepass_id','duration_days','icon','color','gradient','sort_order','is_active'];
   const fields = []; const vals = []; let i = 1;
   for (const key of allowed) {
     if (req.body[key] === undefined) continue;

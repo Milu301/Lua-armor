@@ -21,7 +21,22 @@
 
 
 
-      <div class="alert" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.18);color:#fbbf24;margin-bottom:1.5rem;gap:0.625rem;">
+      <div class="stat-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:1.5rem; animation: slideUp 0.6s ease;">
+        <div class="stat" style="border-top:2px solid var(--accent); background: var(--bg-raised); transition: transform 0.3s; box-shadow: 0 4px 20px rgba(0,0,0,0.2);" onmouseover="this.style.transform='translateY(-5px)';" onmouseout="this.style.transform='translateY(0)';">
+          <div class="stat-label">Total Users</div>
+          <div class="stat-val c-purple" style="text-shadow: 0 0 10px rgba(139,92,246,0.3);"><%= users.length %></div>
+        </div>
+        <div class="stat" style="border-top:2px solid var(--green); background: var(--bg-raised); transition: transform 0.3s; box-shadow: 0 4px 20px rgba(0,0,0,0.2);" onmouseover="this.style.transform='translateY(-5px)';" onmouseout="this.style.transform='translateY(0)';">
+          <div class="stat-label">Active Users</div>
+          <div class="stat-val c-green" style="text-shadow: 0 0 10px rgba(34,197,94,0.3);"><%= users.filter(u=>u.is_active).length %></div>
+        </div>
+        <div class="stat" style="border-top:2px solid var(--red); background: var(--bg-raised); transition: transform 0.3s; box-shadow: 0 4px 20px rgba(0,0,0,0.2);" onmouseover="this.style.transform='translateY(-5px)';" onmouseout="this.style.transform='translateY(0)';">
+          <div class="stat-label">Blacklisted</div>
+          <div class="stat-val" style="color:var(--red); text-shadow: 0 0 10px rgba(239,68,68,0.3);"><%= users.filter(u=>!u.is_active).length %></div>
+        </div>
+      </div>
+
+      <div class="alert" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.18);color:#fbbf24;margin-bottom:1.5rem;gap:0.625rem;animation: slideUp 0.8s ease;">
         <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink:0"><path stroke-linecap="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
         <span>Mod actions are logged. Use responsibly — blacklisting prevents login immediately.</span>
       </div>
@@ -81,7 +96,11 @@
                 </td>
                 <td class="t-sm dimmed"><%= u.total_resets %></td>
                 <td>
-                  <div style="display:flex;gap:0.4rem;justify-content:flex-end;flex-wrap:wrap;">
+                    <div style="display:flex;gap:0.4rem;justify-content:flex-end;flex-wrap:wrap;">
+                      <button class="btn btn-sm btn-secondary" onclick="openModUserModal(<%= u.id %>)" title="View Details">
+                        <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                        View
+                      </button>
                     <% if (u.role !== 'admin') { %>
                     <button class="btn btn-sm btn-ghost" onclick="resetHwid(<%= u.id %>, '<%= u.username %>', this)" title="Reset HWID">
                       <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
@@ -99,7 +118,7 @@
                     </button>
                     <% } %>
                     <% } else { %>
-                    <span class="t-xs dimmed">Protected</span>
+                    <span class="t-xs dimmed" style="margin-left:0.5rem;align-self:center;">Protected</span>
                     <% } %>
                   </div>
                 </td>
@@ -113,7 +132,102 @@
   </div>
 </div>
 
+  <div class="modal-overlay" id="mod-user-modal">
+    <div class="modal-box" style="padding:0; overflow:hidden;">
+      <div style="padding:1.5rem 1.75rem 0; border-bottom:1px solid var(--border-md);">
+        <button class="modal-close" onclick="closeModal('mod-user-modal')" style="margin-top:2px;">×</button>
+        <h2>User Details — <span id="mum-name" style="color:var(--accent);"></span></h2>
+      </div>
+
+      <div style="padding:1.5rem 1.75rem; max-height: 60vh; overflow-y: auto;">
+        <div id="mum-result"></div>
+
+        <div class="field-grid">
+          <div class="form-row">
+            <label class="label">Project</label>
+            <div class="input" style="background:var(--bg-raised);" id="mum-project">—</div>
+          </div>
+          <div class="form-row">
+            <label class="label">Discord ID</label>
+            <div class="input mono" style="background:var(--bg-raised);" id="mum-discord">—</div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label class="label">Total Resets</label>
+          <div class="input" style="background:var(--bg-raised);" id="mum-resets">0</div>
+        </div>
+
+        <div class="form-row">
+          <label class="label">Admin / Mod Note</label>
+          <input type="text" class="input" id="mum-note" placeholder="Custom note" maxlength="100"/>
+        </div>
+      </div>
+
+      <div style="padding:1.25rem 1.75rem; border-top:1px solid var(--border-md); background:var(--bg-card); display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+        <input type="hidden" id="mum-id" />
+        <button class="btn btn-primary" onclick="saveModNote()">Save Note</button>
+        <button class="btn btn-ghost" onclick="closeModal('mod-user-modal')">Close</button>
+      </div>
+    </div>
+  </div>
+
 <script>
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+async function openModUserModal(id) {
+  document.getElementById('mum-id').value = id;
+  document.getElementById('mum-name').textContent = '...';
+  document.getElementById('mum-project').textContent = '...';
+  document.getElementById('mum-discord').textContent = '...';
+  document.getElementById('mum-resets').textContent = '...';
+  document.getElementById('mum-note').value = '';
+  document.getElementById('mum-result').innerHTML = '<div class="alert alert-info" style="margin-bottom:.5rem;font-size:.75rem;">Loading…</div>';
+  
+  openModal('mod-user-modal');
+
+  try {
+    const res = await fetch('/api/mod/user/' + id);
+    const d = await res.json();
+    if (!d.success) {
+      document.getElementById('mum-result').innerHTML = '<div class="alert alert-danger" style="font-size:.75rem;">Failed to load.</div>';
+      return;
+    }
+    const u = d.user;
+    document.getElementById('mum-name').textContent = u.username;
+    document.getElementById('mum-project').textContent = u.project_name || 'None';
+    document.getElementById('mum-discord').textContent = u.discord_id || '—';
+    document.getElementById('mum-resets').textContent = u.total_resets || 0;
+    document.getElementById('mum-note').value = u.note || '';
+    document.getElementById('mum-result').innerHTML = '';
+  } catch(e) {
+    document.getElementById('mum-result').innerHTML = '<div class="alert alert-danger" style="font-size:.75rem;">Network error.</div>';
+  }
+}
+
+async function saveModNote() {
+  const id = document.getElementById('mum-id').value;
+  const note = document.getElementById('mum-note').value.trim();
+  
+  try {
+    const res = await fetch('/api/mod/user/' + id + '/note', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ note })
+    });
+    const d = await res.json();
+    if (d.success) {
+      toast('Note saved!', 'success');
+      closeModal('mod-user-modal');
+    } else {
+      toast(d.message, 'error');
+    }
+  } catch(e) {
+    toast('Failed to save note.', 'error');
+  }
+}
+
 function filterUsers(q) {
   const val = q.toLowerCase();
   document.querySelectorAll('.mod-user-row').forEach(row => {
@@ -157,5 +271,15 @@ function toast(msg, type) {
   setTimeout(() => t.remove(), 3500);
 }
 </script>
+<style>
+  .modal-overlay { display:none; position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:1.5rem; }
+  .modal-overlay.open { display:flex; animation:fadeIn 0.2s ease; }
+  .modal-box { background:var(--bg-card); border:1px solid var(--border-acc); border-radius:var(--rl); width:100%; max-width:520px; box-shadow:var(--shadow-lg); animation:slideUp 0.2s ease; max-height:90vh; overflow-y:auto; }
+  .modal-box h2 { font-size:1rem; font-weight:700; margin-bottom:1.25rem; }
+  .modal-close { float:right; background:none; border:none; cursor:pointer; color:var(--text-3); font-size:1.4rem; line-height:1; padding:2px 6px; border-radius:6px; margin-top:-4px; transition:background 0.12s,color 0.12s; }
+  .modal-close:hover { background:var(--bg-raised); color:var(--text); }
+  .field-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; }
+  .form-row { margin-bottom:0.75rem; }
+</style>
 </body>
 </html>

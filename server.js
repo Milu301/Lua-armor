@@ -1519,7 +1519,7 @@ app.get('/api/admin/users', apiAuth, adminApiOnly, async (req, res) => {
 
 app.patch('/api/admin/user/:id', apiAuth, adminApiOnly, async (req, res) => {
   const id = Number(req.params.id);
-  const allowed = ['role','project_id','discord_id','note','is_active','username','is_verified_seller'];
+  const allowed = ['role','project_id','discord_id','note','is_active','username','is_verified_seller','luarmor_key'];
   const fields = []; const vals = []; let i = 1;
   for (const key of allowed) {
     if (req.body[key] === undefined) continue;
@@ -1538,6 +1538,22 @@ app.patch('/api/admin/user/:id', apiAuth, adminApiOnly, async (req, res) => {
     res.json({ success: true, message: 'User updated.' });
   } catch (e) {
     res.json({ success: false, message: e.detail || e.message });
+  }
+});
+
+app.get('/api/admin/user/:id/orders', apiAuth, adminApiOnly, async (req, res) => {
+  try {
+    const orders = await db.query(`
+      SELECT o.*, p.name as plan_name 
+      FROM payment_orders o
+      LEFT JOIN payment_plans p ON p.id = o.plan_id
+      WHERE o.user_id = $1
+      ORDER BY o.created_at DESC
+      LIMIT 10
+    `, [Number(req.params.id)]);
+    res.json({ success: true, orders });
+  } catch(e) {
+    res.json({ success: false, message: e.message });
   }
 });
 
@@ -1657,6 +1673,31 @@ app.post('/api/mod/user/:id/unblacklist', apiAuth, modOrAdminApi, async (req, re
   const id = Number(req.params.id);
   await db.query('UPDATE users SET is_active=true WHERE id=$1', [id]);
   res.json({ success: true, message: 'User reinstated.' });
+});
+
+app.get('/api/mod/user/:id', apiAuth, modOrAdminApi, async (req, res) => {
+  try {
+    const user = await db.oneOrNone(`
+      SELECT u.id, u.username, u.role, u.discord_id, u.note, u.total_resets, p.name as project_name
+      FROM users u
+      LEFT JOIN projects p ON p.id = u.project_id
+      WHERE u.id=$1
+    `, [Number(req.params.id)]);
+    if (!user) return res.json({ success: false, message: 'User not found.' });
+    res.json({ success: true, user });
+  } catch(e) {
+    res.json({ success: false, message: e.message });
+  }
+});
+
+app.patch('/api/mod/user/:id/note', apiAuth, modOrAdminApi, async (req, res) => {
+  try {
+    const note = String(req.body.note || '').slice(0, 100);
+    await db.query('UPDATE users SET note=$1 WHERE id=$2', [note, Number(req.params.id)]);
+    res.json({ success: true, message: 'Note updated.' });
+  } catch(e) {
+    res.json({ success: false, message: e.message });
+  }
 });
 
 /* ─────────────────────────────────────
@@ -2341,6 +2382,16 @@ app.get('/payment/cancel', auth, async (req, res) => {
   res.render('payment_result', { success: false, order: null, disableAds: true });
 });
 
+/* ── GET /api/payment/status/:ref — Poll payment status ── */
+app.get('/api/payment/status/:ref', auth, async (req, res) => {
+  try {
+    const order = await db.oneOrNone('SELECT status, activated_at FROM payment_orders WHERE order_ref=$1 AND user_id=$2', [req.params.ref, req.session.user.id]);
+    res.json({ success: true, status: order?.status || 'pending' });
+  } catch(e) {
+    res.json({ success: false, status: 'error' });
+  }
+});
+
 /* ── POST /api/payment/webhook — Bold notifies payment ─── */
 /* Bold sends this when a payment is approved/rejected       */
 app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
@@ -2385,16 +2436,38 @@ app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), asyn
               }
             );
             if (json?.user_key) {
-              /* Store in user_keys table (additional key for user) */
               const user = await db.one('SELECT * FROM users WHERE id=$1', [order.user_id]);
               if (user) {
-                await db.query(
-                  `INSERT INTO user_keys (user_id, luarmor_key, project_id, label)
-                   VALUES ($1,$2,$3,$4) ON CONFLICT (luarmor_key) DO NOTHING`,
-                  [order.user_id, json.user_key, plan.project_id, `${plan.name} — Order ${order_id}`]
-                );
+                // Check if user is free (project_id is free or null)
+                const currentProj = user.project_id ? await db.oneOrNone('SELECT is_free FROM projects WHERE id=$1', [user.project_id]) : null;
+                const isFreeUser = !currentProj || currentProj.is_free;
+
+                if (isFreeUser) {
+                  // Upgrade user's main key!
+                  await db.query(
+                    `UPDATE users SET luarmor_key=$1, project_id=$2 WHERE id=$3`,
+                    [json.user_key, plan.project_id, order.user_id]
+                  );
+                  console.log(`[Bold] ✅ UPGRADED FREE USER ${order.user_id} to PREMIUM: ${json.user_key}`);
+                } else {
+                  // Already premium, just add an additional key
+                  await db.query(
+                    `INSERT INTO user_keys (user_id, luarmor_key, project_id, label)
+                     VALUES ($1,$2,$3,$4) ON CONFLICT (luarmor_key) DO NOTHING`,
+                    [order.user_id, json.user_key, plan.project_id, `${plan.name} — Order ${order_id}`]
+                  );
+                  console.log(`[Bold] ✅ Additional key activated for user ${order.user_id}: ${json.user_key}`);
+                }
+
+                // Notify frontend via Socket.io
+                const onlineUser = onlineUsers.get(order.user_id);
+                if (onlineUser && onlineUser.socketId) {
+                  io.to(onlineUser.socketId).emit('payment_approved', {
+                    order_ref: order_id,
+                    plan_name: plan.name
+                  });
+                }
               }
-              console.log(`[Bold] ✅ Key activated for user ${order.user_id}: ${json.user_key}`);
             }
           }
         }

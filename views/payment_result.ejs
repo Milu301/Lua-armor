@@ -1,4 +1,6 @@
-<%- include('partials/head', { title: (success ? 'Payment Successful' : 'Payment Cancelled') + ' — ' + panelName }) %>
+<%- include('partials/head', { title: (success ? 'Payment Status' : 'Payment Cancelled') + ' — ' + panelName }) %>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
 <div class="auth-page">
   <div class="auth-bg">
@@ -19,32 +21,39 @@
       box-shadow: 0 24px 64px rgba(0,0,0,0.4);
       animation: slideUp 0.4s ease;
     ">
-      <% if (success) { %>
-        <!-- Success -->
-        <div style="
+      <% if (success && order) { %>
+        <!-- Payment Received but maybe pending -->
+        
+        <div id="status-icon" style="
           width: 72px; height: 72px; border-radius: 50%;
-          background: linear-gradient(135deg,#22c55e,#16a34a);
           display: flex; align-items: center; justify-content: center;
           margin: 0 auto 1.5rem;
-          box-shadow: 0 0 40px rgba(34,197,94,0.3);
-          animation: pulse 2s infinite;
+          <%= order.status === 'approved' ? 'background: linear-gradient(135deg,#22c55e,#16a34a); box-shadow: 0 0 40px rgba(34,197,94,0.3);' : 'background: linear-gradient(135deg,#f59e0b,#d97706); box-shadow: 0 0 40px rgba(245,158,11,0.3); animation: pulse 2s infinite;' %>
         ">
-          <svg width="32" height="32" fill="none" stroke="#fff" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
-          </svg>
+          <% if (order.status === 'approved') { %>
+            <svg width="32" height="32" fill="none" stroke="#fff" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+          <% } else { %>
+            <i class="ph-bold ph-spinner ph-spin" style="font-size: 2rem; color: #fff;"></i>
+          <% } %>
         </div>
 
-        <h1 style="font-size:1.6rem;font-weight:900;color:var(--text);margin-bottom:0.5rem;">Payment Received!</h1>
-        <p style="color:var(--text-3);font-size:0.9rem;line-height:1.6;margin-bottom:1.5rem;">
-          Your payment is being processed. Your Luarmor key will be automatically delivered to your account once the payment is confirmed by Bold (usually within seconds).
+        <h1 id="status-title" style="font-size:1.6rem;font-weight:900;color:var(--text);margin-bottom:0.5rem;">
+          <%= order.status === 'approved' ? 'Payment Approved!' : 'Confirming Payment...' %>
+        </h1>
+        
+        <p id="status-desc" style="color:var(--text-3);font-size:0.9rem;line-height:1.6;margin-bottom:1.5rem;">
+          <% if (order.status === 'approved') { %>
+            Your Luarmor key has been activated! Redirecting you to the dashboard...
+          <% } else { %>
+            Waiting for confirmation from Bold. This usually takes just a few seconds. Do not close this page.
+          <% } %>
         </p>
 
-        <% if (order) { %>
         <div style="background:var(--bg-raised);border-radius:12px;padding:1rem;margin-bottom:1.5rem;text-align:left;">
           <div style="font-size:0.72rem;font-weight:700;color:var(--text-3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:0.5rem;">Order Details</div>
           <div style="display:flex;justify-content:space-between;font-size:0.82rem;margin-bottom:0.25rem;">
             <span style="color:var(--text-3);">Reference</span>
-            <span style="color:var(--text);font-family:monospace;font-size:0.75rem;"><%= order.order_ref %></span>
+            <span style="color:var(--text);font-family:monospace;font-size:0.75rem;" id="order-ref"><%= order.order_ref %></span>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:0.82rem;margin-bottom:0.25rem;">
             <span style="color:var(--text-3);">Amount</span>
@@ -52,28 +61,103 @@
           </div>
           <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
             <span style="color:var(--text-3);">Status</span>
-            <% if (order.status === 'approved') { %>
-            <span style="color:#22c55e;font-weight:600;">✓ Approved</span>
-            <% } else { %>
-            <span style="color:#f59e0b;font-weight:600;">⏳ Processing…</span>
-            <% } %>
+            <span id="order-status-badge" style="<%= order.status === 'approved' ? 'color:#22c55e;' : 'color:#f59e0b;' %>font-weight:600;">
+              <%= order.status === 'approved' ? '✓ Approved' : '⏳ Processing…' %>
+            </span>
           </div>
         </div>
-        <% } %>
 
         <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;">
-          <a href="/dashboard" class="btn btn-primary" style="text-decoration:none;">
-            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke-width="2"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke-width="2"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke-width="2"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke-width="2"/></svg>
-            Go to Dashboard
+          <a href="/dashboard" id="btn-dashboard" class="btn btn-primary" style="text-decoration:none; <%= order.status === 'approved' ? '' : 'display:none;' %>">
+            <i class="ph-bold ph-squares-four"></i> Go to Dashboard
           </a>
           <a href="/plans" class="btn btn-ghost" style="text-decoration:none;">Buy Another</a>
         </div>
 
+        <script>
+          const initialStatus = '<%= order.status %>';
+          const orderRef = '<%= order.order_ref %>';
+          let pollingInterval = null;
+
+          function setApproved() {
+            document.getElementById('status-icon').innerHTML = '<svg width="32" height="32" fill="none" stroke="#fff" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>';
+            document.getElementById('status-icon').style.background = 'linear-gradient(135deg,#22c55e,#16a34a)';
+            document.getElementById('status-icon').style.boxShadow = '0 0 40px rgba(34,197,94,0.3)';
+            document.getElementById('status-icon').style.animation = 'none';
+
+            document.getElementById('status-title').innerText = 'Payment Approved!';
+            document.getElementById('status-desc').innerText = 'Your Luarmor key has been activated! Redirecting you to the dashboard...';
+            
+            const badge = document.getElementById('order-status-badge');
+            badge.innerText = '✓ Approved';
+            badge.style.color = '#22c55e';
+
+            document.getElementById('btn-dashboard').style.display = 'inline-flex';
+
+            confetti({
+              particleCount: 150,
+              spread: 80,
+              origin: { y: 0.6 },
+              colors: ['#8b5cf6', '#10b981', '#3b82f6']
+            });
+
+            setTimeout(() => {
+              window.location.href = '/dashboard';
+            }, 3000);
+          }
+
+          async function checkStatus() {
+            try {
+              const res = await fetch(`/api/payment/status/${orderRef}`);
+              const data = await res.json();
+              if (data.success && data.status === 'approved') {
+                clearInterval(pollingInterval);
+                setApproved();
+              } else if (data.success && data.status === 'failed') {
+                clearInterval(pollingInterval);
+                window.location.href = '/payment/cancel';
+              }
+            } catch(e) {}
+          }
+
+          if (initialStatus === 'pending') {
+            pollingInterval = setInterval(checkStatus, 3000);
+          } else if (initialStatus === 'approved') {
+            confetti({
+              particleCount: 150,
+              spread: 80,
+              origin: { y: 0.6 },
+              colors: ['#8b5cf6', '#10b981', '#3b82f6']
+            });
+            setTimeout(() => {
+              window.location.href = '/dashboard';
+            }, 3000);
+          }
+
+          // Socket.io for immediate updates
+          if (typeof io !== 'undefined') {
+            const socket = io();
+            socket.on('payment_approved', (data) => {
+              if (data.order_ref === orderRef) {
+                if(pollingInterval) clearInterval(pollingInterval);
+                setApproved();
+              }
+            });
+          }
+        </script>
+
+      <% } else if (success) { %>
+        <!-- Success but no order found -->
+        <h1 style="font-size:1.6rem;font-weight:900;color:var(--text);margin-bottom:0.5rem;">Payment Received</h1>
+        <p style="color:var(--text-3);font-size:0.9rem;line-height:1.6;margin-bottom:1.5rem;">
+          Your payment is being processed. You can check your dashboard in a few minutes.
+        </p>
+        <a href="/dashboard" class="btn btn-primary" style="text-decoration:none;">Go to Dashboard</a>
       <% } else { %>
         <!-- Cancelled -->
         <div style="
           width: 72px; height: 72px; border-radius: 50%;
-          background: linear-gradient(135deg,#6b7280,#4b5563);
+          background: linear-gradient(135deg,#ef4444,#dc2626);
           display: flex; align-items: center; justify-content: center;
           margin: 0 auto 1.5rem;
         ">
@@ -84,7 +168,7 @@
 
         <h1 style="font-size:1.6rem;font-weight:900;color:var(--text);margin-bottom:0.5rem;">Payment Cancelled</h1>
         <p style="color:var(--text-3);font-size:0.9rem;line-height:1.6;margin-bottom:1.5rem;">
-          You cancelled the payment. No charges were made. You can try again whenever you're ready.
+          You cancelled the payment or it failed. No charges were made. You can try again whenever you're ready.
         </p>
 
         <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;">

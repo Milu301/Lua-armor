@@ -247,8 +247,12 @@ body {
     <% if (plans && plans.length > 0) { %>
       <% plans.forEach((p, idx) => { %>
         <!-- Dynamic Plans from DB -->
-        <div class="plan-card <%= idx === 0 ? 'featured' : '' %>">
-          <% if (idx === 0) { %><div class="plan-badge">RECOMMENDED</div><% } %>
+        <div class="plan-card <%= idx === 0 ? 'featured' : '' %>" <%= (user && user.projectId === p.project_id) ? 'style="border-color: rgba(16, 185, 129, 0.5);"' : '' %>>
+          <% if (user && user.projectId === p.project_id) { %>
+            <div class="plan-badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border-color: rgba(16, 185, 129, 0.4);">CURRENT PLAN</div>
+          <% } else if (idx === 0) { %>
+            <div class="plan-badge">RECOMMENDED</div>
+          <% } %>
           
           <div class="plan-icon" style="background: <%= p.gradient || 'rgba(139,92,246,0.15)' %>; color: <%= p.color || '#a78bfa' %>; border: 1px solid <%= p.color ? p.color+'40' : 'rgba(139,92,246,0.3)' %>;">
             <%- p.icon || '<i class="ph-fill ph-crown"></i>' %>
@@ -270,9 +274,15 @@ body {
           
           <% if (user) { %>
             <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: auto;">
-              <button class="btn-buy <%= idx === 0 ? 'btn-buy-primary' : 'btn-buy-secondary' %>" onclick="startCheckout(<%= p.id %>, '<%= p.name %>', this)">
-                <i class="ph-bold ph-credit-card"></i> Pay Securely with Bold
-              </button>
+              <% if (user.projectId === p.project_id) { %>
+                <button class="btn-buy btn-buy-secondary" style="border-color: rgba(16, 185, 129, 0.4); color: #34d399;" onclick="startCheckout(<%= p.id %>, '<%= p.name %>', this)">
+                  <i class="ph-bold ph-arrows-clockwise"></i> Renew / Extend
+                </button>
+              <% } else { %>
+                <button class="btn-buy <%= idx === 0 ? 'btn-buy-primary' : 'btn-buy-secondary' %>" onclick="startCheckout(<%= p.id %>, '<%= p.name %>', this)">
+                  <i class="ph-bold ph-credit-card"></i> Pay Securely with Bold
+                </button>
+              <% } %>
             </div>
           <% } else { %>
             <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: auto;">

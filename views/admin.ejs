@@ -660,90 +660,150 @@
 
 <!-- ═══ USER EDIT MODAL ═══ -->
 <div class="modal-overlay" id="user-modal">
-  <div class="modal-box">
-    <button class="modal-close" onclick="closeModal('user-modal')">×</button>
-    <h2>Edit User — <span id="um-name" style="color:var(--accent);"></span></h2>
-    <input type="hidden" id="um-id" />
-    <div id="um-result"></div>
-
-    <div class="form-row">
-      <label class="label">Full Luarmor Key</label>
-      <div class="chip w-full" id="um-key" style="word-break:break-all;user-select:all;cursor:text;justify-content:flex-start;font-size:0.72rem;padding:0.5rem 0.75rem;" onclick="copyText(document.getElementById('um-key').dataset.key)"></div>
-    </div>
-
-    <div class="field-grid">
-      <div class="form-row">
-        <label class="label">Username</label>
-        <input type="text" class="input" id="um-username" maxlength="32"/>
-      </div>
-      <div class="form-row">
-        <label class="label">Role</label>
-        <select class="input" id="um-role">
-          <option value="user">User</option>
-          <option value="mod">Mod</option>
-          <option value="admin">Admin</option>
-        </select>
+  <div class="modal-box" style="padding:0; overflow:hidden;">
+    <div style="padding:1.5rem 1.75rem 0; border-bottom:1px solid var(--border-md);">
+      <button class="modal-close" onclick="closeModal('user-modal')" style="margin-top:2px;">×</button>
+      <h2>Edit User — <span id="um-name" style="color:var(--accent);"></span></h2>
+      
+      <!-- Inner Tabs -->
+      <div style="display:flex; gap:1.5rem; margin-top:1rem;">
+        <button class="um-tab-btn active" onclick="switchUmTab('general')">General</button>
+        <button class="um-tab-btn" onclick="switchUmTab('premium')">Premium & Orders</button>
+        <button class="um-tab-btn" onclick="switchUmTab('security')">Security</button>
       </div>
     </div>
 
-    <div class="form-row">
-      <label class="label">Project</label>
-      <select class="input" id="um-project">
-        <option value="">None</option>
-        <% projects.forEach(p => { %>
-        <option value="<%= p.id %>"><%= p.icon %> <%= p.name %></option>
-        <% }) %>
-      </select>
-    </div>
+    <div style="padding:1.5rem 1.75rem; max-height: 60vh; overflow-y: auto;">
+      <input type="hidden" id="um-id" />
+      <div id="um-result"></div>
 
-    <div class="field-grid">
-      <div class="form-row">
-        <label class="label">Discord ID</label>
-        <input type="text" class="input mono" id="um-discord" placeholder="123456789012345678" maxlength="20"/>
+      <!-- Tab: General -->
+      <div class="um-tab-content active" id="um-tab-general">
+        <div class="field-grid">
+          <div class="form-row">
+            <label class="label">Username</label>
+            <input type="text" class="input" id="um-username" maxlength="32"/>
+          </div>
+          <div class="form-row">
+            <label class="label">Role</label>
+            <select class="input" id="um-role">
+              <option value="user">User</option>
+              <option value="mod">Mod</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label class="label">Project / Tier</label>
+          <select class="input" id="um-project">
+            <option value="">None</option>
+            <% projects.forEach(p => { %>
+            <option value="<%= p.id %>"><%= p.icon %> <%= p.name %></option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div class="field-grid">
+          <div class="form-row">
+            <label class="label">Discord ID</label>
+            <input type="text" class="input mono" id="um-discord" placeholder="123456789012345678" maxlength="20"/>
+          </div>
+          <div class="form-row">
+            <label class="label">Admin Note</label>
+            <input type="text" class="input" id="um-note" placeholder="Custom note" maxlength="100"/>
+          </div>
+        </div>
+
+        <div class="form-row" style="margin-top:1rem;">
+          <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.82rem;">
+            <input type="checkbox" id="um-active" style="accent-color:var(--accent);width:16px;height:16px;"/>
+            Account Active (uncheck to ban)
+          </label>
+        </div>
+        
+        <div class="form-row">
+          <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.82rem;">
+            <input type="checkbox" id="um-verified" style="accent-color:#3b82f6;width:16px;height:16px;"/>
+            Verified Seller
+          </label>
+        </div>
       </div>
-      <div class="form-row">
-        <label class="label">Note</label>
-        <input type="text" class="input" id="um-note" placeholder="Custom note" maxlength="100"/>
+
+      <!-- Tab: Premium -->
+      <div class="um-tab-content" id="um-tab-premium" style="display:none;">
+        <div class="form-row">
+          <label class="label" style="display:flex;justify-content:space-between;">
+            <span>Luarmor Key (Main)</span>
+            <span style="font-size:0.7rem;color:var(--text-3);font-weight:normal;">Edit carefully!</span>
+          </label>
+          <input type="text" class="input mono" id="um-key-input" style="font-size:0.72rem;padding:0.6rem;" placeholder="luarmor_xxxxxxxx"/>
+        </div>
+        
+        <div class="stat-grid" style="grid-template-columns:1fr 1fr; margin-bottom:1.5rem; gap:0.5rem;">
+          <div class="stat" style="border-top:2px solid var(--accent); padding:0.75rem;">
+            <div class="stat-label">Total Resets</div>
+            <div class="stat-val c-purple" id="um-total-resets" style="font-size:1.2rem;">0</div>
+          </div>
+          <div class="stat" style="border-top:2px solid var(--green); padding:0.75rem;">
+            <div class="stat-label">Joined</div>
+            <div class="stat-val c-green" id="um-joined-date" style="font-size:1rem; margin-top:5px;">—</div>
+          </div>
+        </div>
+
+        <div class="label" style="margin-bottom:0.5rem;">Recent Bold Orders</div>
+        <div id="um-orders-list" style="background:var(--bg-raised); border:1px solid var(--border-md); border-radius:8px; padding:0.5rem; max-height:160px; overflow-y:auto; font-size:0.75rem;">
+          <div style="text-align:center; padding:1rem; color:var(--text-3);">Loading orders...</div>
+        </div>
       </div>
-    </div>
 
-    <div class="form-row">
-      <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.82rem;">
-        <input type="checkbox" id="um-active" style="accent-color:var(--accent);width:16px;height:16px;"/>
-        Account Active (uncheck to ban)
-      </label>
-    </div>
-    
-    <div class="form-row">
-      <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.82rem;">
-        <input type="checkbox" id="um-verified" style="accent-color:#3b82f6;width:16px;height:16px;"/>
-        Verified Seller
-      </label>
-    </div>
+      <!-- Tab: Security -->
+      <div class="um-tab-content" id="um-tab-security" style="display:none;">
+        <div class="alert" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); color:#ef4444; margin-bottom:1.5rem; font-size:0.8rem; display:flex; gap:0.5rem; align-items:flex-start;">
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:2px;"><path stroke-linecap="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          <div>
+            <strong>Danger Zone.</strong> Be careful with these actions.
+          </div>
+        </div>
 
-    <!-- Change password -->
-    <details style="margin-top:0.5rem;">
-      <summary style="cursor:pointer;font-size:0.8rem;font-weight:600;color:var(--text-2);padding:0.5rem 0;">Change Password</summary>
-      <div style="margin-top:0.5rem;">
-        <div id="um-pw-result"></div>
-        <input type="password" class="input" id="um-new-pw" placeholder="New password (min 8 chars)" style="margin-bottom:0.5rem;"/>
-        <button class="btn btn-secondary btn-sm" onclick="changeUserPw()">Set Password</button>
+        <div style="background:var(--bg-raised); padding:1rem; border-radius:8px; border:1px solid var(--border-md); margin-bottom:1rem;">
+          <h4 style="font-size:0.85rem; font-weight:600; margin-bottom:0.5rem;">Reset HWID</h4>
+          <p style="font-size:0.75rem; color:var(--text-3); margin-bottom:0.75rem;">Force reset the user's hardware ID limit immediately.</p>
+          <button class="btn btn-secondary btn-sm" onclick="forceResetHwid()">
+            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Force Reset HWID
+          </button>
+        </div>
+
+        <div style="background:var(--bg-raised); padding:1rem; border-radius:8px; border:1px solid var(--border-md);">
+          <h4 style="font-size:0.85rem; font-weight:600; margin-bottom:0.5rem;">Change Password</h4>
+          <div id="um-pw-result"></div>
+          <div style="display:flex; gap:0.5rem;">
+            <input type="password" class="input" id="um-new-pw" placeholder="New password (min 8 chars)" style="flex:1;" />
+            <button class="btn btn-secondary btn-sm" onclick="changeUserPw()">Set</button>
+          </div>
+        </div>
       </div>
-    </details>
 
-    <div style="display:flex;gap:0.5rem;margin-top:1rem;flex-wrap:wrap;">
+    </div>
+
+    <!-- Modal Footer -->
+    <div style="padding:1.25rem 1.75rem; border-top:1px solid var(--border-md); background:var(--bg-card); display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
       <button class="btn btn-primary" onclick="saveUser()">
         <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
         Save Changes
-      </button>
-      <button class="btn btn-secondary" onclick="forceResetHwid()">
-        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-        Force Reset HWID
       </button>
       <button class="btn btn-ghost" onclick="closeModal('user-modal')">Cancel</button>
     </div>
   </div>
 </div>
+
+<style>
+.um-tab-btn { background:none; border:none; padding:0 0 0.5rem 0; font-size:0.82rem; font-weight:600; color:var(--text-3); cursor:pointer; border-bottom:2px solid transparent; transition:0.2s; font-family:inherit; }
+.um-tab-btn:hover { color:var(--text); }
+.um-tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
+.um-tab-content { animation: fadeIn 0.15s ease; }
+</style>
 
 <div class="toast-wrap" id="toasts"></div>
 
@@ -983,8 +1043,16 @@ function searchUsers() {
   });
 }
 
+function switchUmTab(tab) {
+  document.querySelectorAll('.um-tab-content').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.um-tab-btn').forEach(btn => btn.classList.remove('active'));
+  document.getElementById('um-tab-' + tab).style.display = 'block';
+  document.querySelector(`button[onclick="switchUmTab('${tab}')"]`).classList.add('active');
+}
+
 async function openUserModal(userId) {
   // Reset and open immediately
+  switchUmTab('general');
   document.getElementById('um-id').value           = userId;
   document.getElementById('um-name').textContent   = '…';
   document.getElementById('um-username').value     = '';
@@ -994,11 +1062,14 @@ async function openUserModal(userId) {
   document.getElementById('um-note').value         = '';
   document.getElementById('um-active').checked     = true;
   document.getElementById('um-verified').checked   = false;
+  document.getElementById('um-key-input').value    = '';
+  document.getElementById('um-total-resets').textContent = '0';
+  document.getElementById('um-joined-date').textContent  = '—';
   document.getElementById('um-result').innerHTML   = '<div class="alert alert-info" style="margin-bottom:.5rem;font-size:.75rem;">Loading…</div>';
   document.getElementById('um-pw-result').innerHTML = '';
   document.getElementById('um-new-pw').value       = '';
-  const keyEl = document.getElementById('um-key');
-  keyEl.textContent = '…'; keyEl.dataset.key = '';
+  document.getElementById('um-orders-list').innerHTML = '<div style="text-align:center; padding:1rem; color:var(--text-3);">Loading orders...</div>';
+  
   openModal('user-modal');
 
   try {
@@ -1015,9 +1086,35 @@ async function openUserModal(userId) {
     document.getElementById('um-note').value        = u.note || '';
     document.getElementById('um-active').checked    = !!u.is_active;
     document.getElementById('um-verified').checked  = !!u.is_verified_seller;
-    keyEl.textContent = u.luarmor_key || '—';
-    keyEl.dataset.key = u.luarmor_key || '';
+    document.getElementById('um-key-input').value   = u.luarmor_key || '';
+    document.getElementById('um-total-resets').textContent = u.total_resets || 0;
+    document.getElementById('um-joined-date').textContent  = new Date(u.created_at).toLocaleDateString('en');
     document.getElementById('um-result').innerHTML  = '';
+
+    // Fetch orders
+    fetch(`/api/admin/user/${userId}/orders`)
+      .then(res => res.json())
+      .then(od => {
+        const olist = document.getElementById('um-orders-list');
+        if (!od.success) { olist.innerHTML = `<div style="color:#ef4444;padding:0.5rem;">Failed to load orders.</div>`; return; }
+        if (!od.orders.length) { olist.innerHTML = `<div style="text-align:center; padding:1rem; color:var(--text-3);">No orders found.</div>`; return; }
+        
+        olist.innerHTML = od.orders.map(o => `
+          <div style="display:flex; justify-content:space-between; padding:0.5rem; border-bottom:1px solid rgba(255,255,255,0.05);">
+            <div>
+              <div style="font-weight:600;">${o.plan_name || 'Unknown Plan'}</div>
+              <div class="dimmed" style="font-size:0.65rem; margin-top:2px;">Ref: ${o.order_ref.slice(0,12)}…</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="${o.status==='approved' ? 'color:#22c55e;' : o.status==='failed' ? 'color:#ef4444;' : 'color:#f59e0b;'} font-weight:600;">
+                ${o.status.toUpperCase()}
+              </div>
+              <div class="dimmed" style="font-size:0.65rem; margin-top:2px;">$${Number(o.amount_usd).toFixed(2)}</div>
+            </div>
+          </div>
+        `).join('');
+      });
+
   } catch {
     document.getElementById('um-result').innerHTML = '<div class="alert alert-danger" style="font-size:.75rem;">Network error loading user.</div>';
   }
@@ -1045,6 +1142,7 @@ async function saveUser() {
     note:       document.getElementById('um-note').value.trim(),
     is_active:  document.getElementById('um-active').checked,
     is_verified_seller: document.getElementById('um-verified').checked,
+    luarmor_key: document.getElementById('um-key-input').value.trim() || null,
   };
   const r = await fetch(`/api/admin/user/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
   const d = await r.json();

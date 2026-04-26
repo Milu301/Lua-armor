@@ -405,6 +405,54 @@ const isFreeUser   = !!(proj && proj.is_free) || !!(user && user.luarmorKey && u
             </div>
           </div>
 
+          <!-- AncientTree Xpfarm -->
+          <div class="script-card" style="background:var(--bg-raised); border:1px solid var(--border-md); border-radius:16px; overflow:hidden; transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'; this.style.borderColor='var(--green)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'; this.style.borderColor='var(--border-md)';">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding: 1rem 1.25rem; background: linear-gradient(to right, rgba(34, 197, 94, 0.1), transparent); border-bottom: 1px solid var(--border);">
+              <div style="font-weight:700; font-size:0.95rem; display:flex; align-items:center; gap:0.6rem; color: var(--text);">
+                <div style="width:28px;height:28px;border-radius:8px;background:var(--bg-body);display:flex;align-items:center;justify-content:center;font-size:1.1rem;box-shadow:inset 0 2px 4px rgba(0,0,0,0.1);">🌳</div>
+                AncientTree Xpfarm
+              </div>
+              <button class="btn btn-sm" style="background: var(--bg-body); border: 1px solid var(--border-md); color: var(--text-2); display: flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.8rem; border-radius: 8px; font-weight: 600; transition: all 0.2s;" onclick="copyScriptEnhanced('script-ancienttree', this)" data-tip="Click to copy">
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                </svg>
+                <span class="copy-text">Copy</span>
+              </button>
+            </div>
+            <div class="script-code-wrap" style="background:#0d1117; padding:1.25rem; overflow-x:auto; position: relative;">
+              <div style="position: absolute; top: 0; left: 0; bottom: 0; width: 3px; background: var(--green);"></div>
+              <code id="script-ancienttree" style="font-family:'Fira Code', 'JetBrains Mono', monospace; font-size:0.8rem; line-height: 1.6; white-space:pre; display: block;">
+<span style="color:#ff7b72;">getgenv</span>().<span style="color:#79c0ff;">script_key</span> <span style="color:#ff7b72;">=</span> <span style="color:#a5d6ff;">"<%= user ? user.luarmorKey : 'Your-Key' %>"</span>;
+<span style="color:#d2a8ff;">loadstring</span>(<span style="color:#79c0ff;">game</span>:<span style="color:#d2a8ff;">HttpGet</span>(<span style="color:#a5d6ff;">"https://api.luarmor.net/files/v4/loaders/a596679fc29c6ec3d9624860cd88022d.lua"</span>))()
+              </code>
+            </div>
+          </div>
+
+          <!-- Premium Script -->
+          <div class="script-card" style="background:var(--bg-raised); border:1px solid var(--border-md); border-radius:16px; overflow:hidden; transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'; this.style.borderColor='var(--blue)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'; this.style.borderColor='var(--border-md)';">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding: 1rem 1.25rem; background: linear-gradient(to right, rgba(59, 130, 246, 0.1), transparent); border-bottom: 1px solid var(--border);">
+              <div style="font-weight:700; font-size:0.95rem; display:flex; align-items:center; gap:0.6rem; color: var(--text);">
+                <div style="width:28px;height:28px;border-radius:8px;background:var(--bg-body);display:flex;align-items:center;justify-content:center;font-size:1.1rem;box-shadow:inset 0 2px 4px rgba(0,0,0,0.1);">💎</div>
+                Premium Script
+              </div>
+              <button class="btn btn-sm" style="background: var(--bg-body); border: 1px solid var(--border-md); color: var(--text-2); display: flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.8rem; border-radius: 8px; font-weight: 600; transition: all 0.2s;" onclick="copyScriptEnhanced('script-premium', this)" data-tip="Click to copy">
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                </svg>
+                <span class="copy-text">Copy</span>
+              </button>
+            </div>
+            <div class="script-code-wrap" style="background:#0d1117; padding:1.25rem; overflow-x:auto; position: relative;">
+              <div style="position: absolute; top: 0; left: 0; bottom: 0; width: 3px; background: var(--blue);"></div>
+              <code id="script-premium" style="font-family:'Fira Code', 'JetBrains Mono', monospace; font-size:0.8rem; line-height: 1.6; white-space:pre; display: block;">
+<span style="color:#ff7b72;">getgenv</span>().<span style="color:#79c0ff;">script_key</span> <span style="color:#ff7b72;">=</span> <span style="color:#a5d6ff;">"<%= user ? user.luarmorKey : 'Your-Key' %>"</span>;
+<span style="color:#d2a8ff;">loadstring</span>(<span style="color:#79c0ff;">game</span>:<span style="color:#d2a8ff;">HttpGet</span>(<span style="color:#a5d6ff;">"https://api.luarmor.net/files/v4/loaders/2cf155c92c4f3c169ab27e6a66395a10.lua"</span>))()
+              </code>
+            </div>
+          </div>
+
         </div>
       </div>
 

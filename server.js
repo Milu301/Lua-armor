@@ -520,11 +520,11 @@ app.use(helmet({
       defaultSrc:    ["'self'"],
       styleSrc:      ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
       fontSrc:       ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "data:"],
-      scriptSrc:     ["'self'", "'unsafe-inline'", "https://publisher.linkvertise.com", "https://checkout.bold.co"],
-      scriptSrcAttr: ["'unsafe-inline'"],
-      imgSrc:        ["'self'", "data:", "blob:", "https://cdn.discordapp.com", "https://i.imgur.com", "https:", "http:"],
-      connectSrc:    ["'self'", "https://api.luarmor.net", "https://api.ipify.org", "https://linkvertise.com", "https://*.linkvertise.com", "https://checkout.bold.co", "ws:", "wss:"],
-      frameSrc:      ["'self'", "https://linkvertise.com", "https://*.linkvertise.com"],
+       scriptSrc:     ["'self'", "'unsafe-inline'", "https://checkout.bold.co"],
+       scriptSrcAttr: ["'unsafe-inline'"],
+       imgSrc:        ["'self'", "data:", "blob:", "https://cdn.discordapp.com", "https://i.imgur.com", "https:", "http:"],
+       connectSrc:    ["'self'", "https://api.luarmor.net", "https://api.ipify.org", "https://checkout.bold.co", "ws:", "wss:"],
+       frameSrc:      ["'self'"],
       formAction:    ["'self'", "https://checkout.bold.co"],
     },
   },
@@ -677,18 +677,18 @@ app.get('/home', async (req, res) => {
   if (req.session.user?.projectId) {
     project = await db.one('SELECT id, name, icon, daily_reset_limit FROM projects WHERE id=$1', [req.session.user.projectId]);
   }
-  res.render('home', { project, disableAds: true });
+  res.render('home', { project });
 });
 
 /* ── GET /tutorials — Public tutorials page ─────── */
 app.get('/tutorials', async (req, res) => {
   const tutorials = await db.all('SELECT * FROM tutorials WHERE is_active=true ORDER BY sort_order ASC, created_at DESC');
-  res.render('tutorials', { tutorials, disableAds: true });
+  res.render('tutorials', { tutorials });
 });
 
 /* ── GET /leaderboard — Authenticated farming leaderboard ─── */
 app.get('/leaderboard', auth, async (req, res) => {
-  res.render('leaderboard', { disableAds: true });
+  res.render('leaderboard');
 });
 
 /* ── GET /api/leaderboard — JSON leaderboard data ─── */
@@ -791,8 +791,7 @@ app.get('/profile/:username', async (req, res) => {
       mutualFriends,
       farmStats: farmStats || { gold_total: 0, fruit_total: 0, sessions: 0 },
       friendStatus,
-      isSelf: viewerUserId === profileUser.id,
-      disableAds: true
+      isSelf: viewerUserId === profileUser.id
     });
   } catch (err) {
     console.error('Profile error:', err);
@@ -930,7 +929,7 @@ app.get('/auth/discord/callback', async (req, res) => {
 
 app.get('/login', (req, res) => {
   if (req.session.user) return res.redirect('/dashboard');
-  res.render('login', { error: null, disableAds: true });
+  res.render('login', { error: null });
 });
 
 app.post('/login', loginLimiter, async (req, res) => {
@@ -938,13 +937,13 @@ app.post('/login', loginLimiter, async (req, res) => {
   const password = (req.body.password || '').trim();
 
   if (!username || !password)
-    return res.render('login', { error: 'Please fill in all fields.', disableAds: true });
+    return res.render('login', { error: 'Please fill in all fields.' });
 
   const user = await db.one('SELECT * FROM users WHERE username=$1 AND is_active=true', [username]);
-  if (!user) return res.render('login', { error: 'Invalid username or password.', disableAds: true });
+  if (!user) return res.render('login', { error: 'Invalid username or password.' });
 
   const ok = await bcrypt.compare(password, user.password_hash);
-  if (!ok) return res.render('login', { error: 'Invalid username or password.', disableAds: true });
+  if (!ok) return res.render('login', { error: 'Invalid username or password.' });
 
   const proj = user.project_id
     ? await db.one('SELECT * FROM projects WHERE id=$1', [user.project_id])
@@ -973,12 +972,12 @@ app.post('/login', loginLimiter, async (req, res) => {
 app.get('/register', async (req, res) => {
   if (req.session.user) return res.redirect('/dashboard');
   const projects = await db.all('SELECT id,name,slug,color,gradient,icon,description,daily_reset_limit FROM projects WHERE is_active=true AND is_free=false ORDER BY sort_order');
-  res.render('register', { error: null, projects, disableAds: true });
+  res.render('register', { error: null, projects });
 });
 
 app.post('/register', registerLimiter, async (req, res) => {
   const getProjects = () => db.all('SELECT id,name,slug,color,gradient,icon,description,daily_reset_limit FROM projects WHERE is_active=true AND is_free=false ORDER BY sort_order');
-  const fail = async (msg) => res.render('register', { error: msg, projects: await getProjects(), disableAds: true });
+  const fail = async (msg) => res.render('register', { error: msg, projects: await getProjects() });
 
   const username = (req.body.username || '').trim().toLowerCase();
   const password = (req.body.password || '').trim();
@@ -1099,7 +1098,7 @@ app.get('/dashboard', auth, async (req, res) => {
   res.render('dashboard', {
     dbUser, proj, luaUser,
     resetsToday, resetsLeft, dailyLimit, pct, pfClass, ringOffset,
-    announcements, history, liveSessions, userKeys, disableAds: true
+    announcements, history, liveSessions, userKeys
   });
 });
 
@@ -1138,8 +1137,7 @@ app.get('/social', auth, async (req, res) => {
   res.render('social', { 
     friends: friendsRaw, 
     groups: groupsRaw,
-    page: 'social',
-    disableAds: true 
+    page: 'social'
   });
 });
 
@@ -1185,7 +1183,7 @@ app.get('/groups/:id', auth, async (req, res) => {
     ORDER BY gm.is_admin DESC, u.username ASC
   `, [groupId]);
 
-  res.render('group_chat', { group, messages, members, page: 'social', disableAds: true, isGroupAdmin });
+  res.render('group_chat', { group, messages, members, page: 'social', isGroupAdmin });
 });
 
 /* ── Social API ──────────────────────────────────── */
@@ -1319,7 +1317,7 @@ app.get('/bugs', auth, async (req, res) => {
     'SELECT id, title, description, status, admin_note, created_at FROM bug_reports WHERE user_id=$1 ORDER BY created_at DESC LIMIT 30',
     [id]
   );
-  res.render('bugs', { reports, page: 'bugs', success: null, error: null, disableAds: true });
+  res.render('bugs', { reports, page: 'bugs', success: null, error: null });
 });
 
 app.post('/bugs', auth, async (req, res) => {
@@ -1331,10 +1329,10 @@ app.post('/bugs', auth, async (req, res) => {
     [id]
   );
   if (!title || !description) {
-    return res.render('bugs', { reports: await fetchReports(), page: 'bugs', success: null, error: 'Title and description are required.', disableAds: true });
+    return res.render('bugs', { reports: await fetchReports(), page: 'bugs', success: null, error: 'Title and description are required.' });
   }
   await db.query('INSERT INTO bug_reports (user_id, username, title, description) VALUES ($1,$2,$3,$4)', [id, username, title, description]);
-  res.render('bugs', { reports: await fetchReports(), page: 'bugs', success: 'Report submitted! Staff will review it shortly.', error: null, disableAds: true });
+  res.render('bugs', { reports: await fetchReports(), page: 'bugs', success: 'Report submitted! Staff will review it shortly.', error: null });
 });
 
 /* ── Mod Panel ───────────────────────────────────── */
@@ -1346,7 +1344,7 @@ app.get('/mod', auth, modOrAdmin, async (req, res) => {
     LEFT JOIN projects p ON p.id = u.project_id
     ORDER BY u.created_at DESC LIMIT 200
   `);
-  res.render('mod', { users, page: 'mod', disableAds: true });
+  res.render('mod', { users, page: 'mod' });
 });
 
 /* ── Mod API ─────────────────────────────────────── */
@@ -1410,8 +1408,7 @@ app.get('/admin', auth, adminOnly, async (req, res) => {
     stats: { totalUsers: totalUsers.c, activeToday: activeToday.c, totalResets: totalResets.c || 0, chatMessages: chatCount.c, openBugs: openBugs.c },
     settings: { ...dynSettings },
     chatMessages: chatMessages.reverse(),
-    bugReports,
-    disableAds: true
+    bugReports
   });
 });
 
@@ -1721,7 +1718,7 @@ app.patch('/api/admin/bug-reports/:id', apiAuth, adminApiOnly, async (req, res) 
 ───────────────────────────────────── */
 app.get('/settings', auth, async (req, res) => {
   const dbUser = await db.one('SELECT * FROM users WHERE id=$1', [req.session.user.id]);
-  res.render('settings', { user: req.session.user, dbUser, page: 'settings', disableAds: true });
+  res.render('settings', { user: req.session.user, dbUser, page: 'settings' });
 });
 
 app.post('/api/settings', auth, async (req, res) => {
@@ -2311,8 +2308,7 @@ app.get('/plans', async (req, res) => {
   res.render('plans', {
     plans,
     boldIdentityKey: BOLD_IDENTITY_KEY,
-    boldEnabled: !!BOLD_IDENTITY_KEY,
-    disableAds: true
+    boldEnabled: !!BOLD_IDENTITY_KEY
   });
 });
 
@@ -2372,14 +2368,13 @@ app.get('/payment/success', auth, async (req, res) => {
   const order = ref ? await db.one('SELECT * FROM payment_orders WHERE order_ref=$1', [ref]) : null;
   res.render('payment_result', {
     success: true,
-    order,
-    disableAds: true
+    order
   });
 });
 
 /* ── GET /payment/cancel — user cancelled Bold checkout ─── */
 app.get('/payment/cancel', auth, async (req, res) => {
-  res.render('payment_result', { success: false, order: null, disableAds: true });
+  res.render('payment_result', { success: false, order: null });
 });
 
 /* ── GET /api/payment/status/:ref — Poll payment status ── */

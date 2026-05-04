@@ -1116,6 +1116,7 @@ input.input:focus {
   background: rgba(239, 68, 68, 0.2);
   border-color: rgba(239, 68, 68, 0.4);
   transform: scale(1.05);
+}
 /* ─── DASHBOARD: WELCOME BANNER ─── */
 .welcome-banner {
   background: var(--bg-card); border-radius: var(--r-xl); padding: 2rem;

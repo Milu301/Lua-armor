@@ -278,13 +278,35 @@ body {
   .showcase { grid-template-columns: 1fr; gap: 3rem; }
 }
 @media (max-width: 768px) {
-  .nav { padding: 1rem 2rem; flex-direction: column; gap: 1rem; }
-  .nav-links { display: none; }
-  .hero h1 { font-size: 3.5rem; }
-  .section-head h2 { font-size: 2.5rem; }
+  .nav { padding: 1rem 1.5rem; }
+  .nav-links {
+    position: fixed; top: 0; right: -100%; width: 250px; height: 100vh;
+    background: rgba(7, 7, 15, 0.95); backdrop-filter: blur(24px);
+    flex-direction: column; padding: 5rem 2rem; gap: 2rem;
+    transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    border-left: 1px solid var(--border);
+    z-index: 99;
+  }
+  .nav-links.active { right: 0; }
+  .nav-actions { display: none; }
+  .nav-actions.active {
+    display: flex; flex-direction: column; position: fixed;
+    bottom: 2rem; right: -100%; width: 250px; padding: 0 2rem;
+    transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 100; gap: 1rem;
+  }
+  .nav-actions.active.show { right: 0; }
+  
+  .mobile-toggle { display: block; z-index: 101; background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; }
+  
+  .hero h1 { font-size: 3rem; }
+  .section-head h2 { font-size: 2.2rem; }
   .float-icon { display: none; }
-  .showcase-text h3 { font-size: 2.5rem; }
+  .showcase-text h3 { font-size: 2rem; }
+  .tier-card { padding: 2rem; }
 }
+.mobile-toggle { display: none; }
+
 </style>
 
 <!-- Phosphor Icons -->
@@ -299,13 +321,13 @@ body {
     <img src="<%= typeof panelLogo !== 'undefined' ? panelLogo : '/logo.png' %>" onerror="this.src='https://ui-avatars.com/api/?name=AH&background=7c3aed&color=fff'" alt="Logo">
     <span><%= typeof panelName !== 'undefined' ? panelName : 'Aurora Hub' %></span>
   </a>
-  <div class="nav-links">
-    <a href="#features">Features</a>
-    <a href="#premium">Pricing</a>
-    <a href="#games">Games</a>
+  <div class="nav-links" id="navLinks">
+    <a href="#features" onclick="toggleMobileMenu()">Features</a>
+    <a href="#premium" onclick="toggleMobileMenu()">Pricing</a>
+    <a href="#games" onclick="toggleMobileMenu()">Games</a>
     <a href="/tutorials">Tutorials</a>
   </div>
-  <div style="display: flex; gap: 1rem;">
+  <div class="nav-actions" id="navActions" style="display: flex; gap: 1rem;">
     <% if (user) { %>
       <a href="/dashboard" class="btn btn-glass"><i class="ph ph-squares-four"></i> Dashboard</a>
       <a href="/plans" class="btn btn-glow"><i class="ph-fill ph-crown"></i> Get Premium</a>
@@ -314,7 +336,32 @@ body {
       <a href="/register" class="btn btn-glow">Get Started</a>
     <% } %>
   </div>
+  <button class="mobile-toggle" id="mobileToggle" onclick="toggleMobileMenu()">
+    <i class="ph ph-list"></i>
+  </button>
 </nav>
+
+<script>
+  function toggleMobileMenu() {
+    const links = document.getElementById('navLinks');
+    const actions = document.getElementById('navActions');
+    const icon = document.querySelector('#mobileToggle i');
+    
+    links.classList.toggle('active');
+    
+    if (links.classList.contains('active')) {
+      actions.classList.add('active');
+      setTimeout(() => actions.classList.add('show'), 10);
+      icon.classList.remove('ph-list');
+      icon.classList.add('ph-x');
+    } else {
+      actions.classList.remove('show');
+      setTimeout(() => actions.classList.remove('active'), 400);
+      icon.classList.remove('ph-x');
+      icon.classList.add('ph-list');
+    }
+  }
+</script>
 
 <!-- Hero -->
 <section class="hero">

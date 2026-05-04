@@ -28,9 +28,11 @@ const io     = new Server(server, {
 const PORT          = process.env.PORT || 3000;
 const DATABASE_URL  = process.env.DATABASE_URL || '';
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
-const PANEL_NAME    = process.env.PANEL_NAME || 'LuarmorHub';
+const PANEL_NAME    = process.env.PANEL_NAME || 'AuroraSafe Hub';
 const DISCORD_URL   = process.env.DISCORD_URL || 'https://discord.gg/tHrR89y7kn';
 const PANEL_LOGO    = process.env.PANEL_LOGO || 'https://cdn.discordapp.com/icons/1398423987817807934/a_6f62815e5aee24b4964bd4113626e3fe.webp?size=64';
+const AURORASAFE_API_URL = process.env.AURORASAFE_API_URL || 'http://localhost:3001';
+const AURORASAFE_API_KEY = process.env.AURORASAFE_API_KEY || '';
 
 /* Dynamic settings (overrides env vars, editable from admin panel) */
 let dynSettings = { panel_name: PANEL_NAME, discord_url: DISCORD_URL, panel_logo: PANEL_LOGO };
@@ -88,8 +90,7 @@ async function initDB() {
       id SERIAL PRIMARY KEY,
       name VARCHAR(64) NOT NULL,
       slug VARCHAR(32) NOT NULL UNIQUE,
-      luarmor_project_id VARCHAR(128) NOT NULL,
-      luarmor_api_key TEXT NOT NULL,
+      script_id VARCHAR(128) NOT NULL,
       color VARCHAR(20) NOT NULL DEFAULT '#8b5cf6',
       gradient VARCHAR(80) NOT NULL DEFAULT 'linear-gradient(135deg,#8b5cf6,#6366f1)',
       icon VARCHAR(8) NOT NULL DEFAULT '⚡',
@@ -344,32 +345,30 @@ async function initDB() {
     END $$;
   `);
 
-  /* Seed projects from env vars PROJECT_N_* */
+  /* Seed projects from env vars SCRIPT_N_* */
   for (let i = 1; i <= 10; i++) {
-    const name  = process.env[`PROJECT_${i}_NAME`];
-    const pid   = process.env[`PROJECT_${i}_LUARMOR_ID`];
-    const pkey  = process.env[`PROJECT_${i}_LUARMOR_KEY`];
-    if (!name || !pid || !pkey) continue;
+    const name  = process.env[`SCRIPT_${i}_NAME`];
+    const sid   = process.env[`SCRIPT_${i}_ID`];
+    if (!name || !sid) continue;
 
     const slug    = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
-    const color   = process.env[`PROJECT_${i}_COLOR`]   || '#8b5cf6';
-    const grad    = process.env[`PROJECT_${i}_GRADIENT`] || `linear-gradient(135deg,${color},${color}cc)`;
-    const icon    = process.env[`PROJECT_${i}_ICON`]     || '⚡';
-    const limit   = Number(process.env[`PROJECT_${i}_LIMIT`] || 3);
-    const desc    = process.env[`PROJECT_${i}_DESC`]     || '';
+    const color   = process.env[`SCRIPT_${i}_COLOR`]   || '#8b5cf6';
+    const grad    = process.env[`SCRIPT_${i}_GRADIENT`] || `linear-gradient(135deg,${color},${color}cc)`;
+    const icon    = process.env[`SCRIPT_${i}_ICON`]     || '⚡';
+    const limit   = Number(process.env[`SCRIPT_${i}_LIMIT`] || 3);
+    const desc    = process.env[`SCRIPT_${i}_DESC`]     || '';
     const order   = i;
 
     await db.query(`
-      INSERT INTO projects (name, slug, luarmor_project_id, luarmor_api_key, color, gradient, icon, daily_reset_limit, description, sort_order)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      INSERT INTO projects (name, slug, script_id, color, gradient, icon, daily_reset_limit, description, sort_order)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
       ON CONFLICT (slug) DO UPDATE SET
-        luarmor_project_id=EXCLUDED.luarmor_project_id,
-        luarmor_api_key=EXCLUDED.luarmor_api_key,
+        script_id=EXCLUDED.script_id,
         color=EXCLUDED.color, gradient=EXCLUDED.gradient,
         icon=EXCLUDED.icon, daily_reset_limit=EXCLUDED.daily_reset_limit,
         description=EXCLUDED.description
-    `, [name, slug, pid, pkey, color, grad, icon, limit, desc, order]);
-    console.log(`  ✓ Project seeded: ${name}`);
+    `, [name, slug, sid, color, grad, icon, limit, desc, order]);
+    console.log(`  \u2713 Project seeded: ${name}`);
   }
 
   /* Seed admin from env — fully idempotent */
@@ -383,12 +382,9 @@ async function initDB() {
         'UPDATE users SET password_hash=$1, role=$2, is_active=true WHERE id=$3',
         [hash, 'admin', existing.id]
       );
-      console.log(`  ✓ Admin updated: ${adminUser}`);
+      console.log(`  \u2713 Admin updated: ${adminUser}`);
     } else {
-      let adminKey = process.env.ADMIN_LUARMOR_KEY || '';
-      if (!adminKey || adminKey === 'admin-key-placeholder') {
-        adminKey = `admin-${adminUser}-${Date.now()}`;
-      }
+      let adminKey = `admin-${adminUser}-${Date.now()}`;
       const keyTaken = await db.one('SELECT id FROM users WHERE luarmor_key=$1', [adminKey]);
       if (keyTaken) adminKey = `admin-${adminUser}-${Date.now()}`;
       await db.query(
@@ -396,20 +392,20 @@ async function initDB() {
          VALUES ($1,$2,$3,'admin',true)`,
         [adminUser, hash, adminKey]
       );
-      console.log(`  ✓ Admin created: ${adminUser}`);
+      console.log(`  \u2713 Admin created: ${adminUser}`);
     }
   }
 
   console.log('✅ Database ready');
 }
 
-/* ─── Luarmor API ─── */
-async function luarmorReq(method, projectId, apiKey, urlPath, body) {
-  const url = `https://api.luarmor.net/v3/projects/${encodeURIComponent(projectId)}${urlPath}`;
+/* ─── AuroraSafe API ─── */
+async function safeReq(method, urlPath, body) {
+  const url = `${AURORASAFE_API_URL}${urlPath}`;
   try {
     const opts = {
       method,
-      headers: { Authorization: apiKey, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${AURORASAFE_API_KEY}`, 'Content-Type': 'application/json' },
       timeout: 8000,
     };
     if (body) opts.body = JSON.stringify(body);
@@ -421,25 +417,23 @@ async function luarmorReq(method, projectId, apiKey, urlPath, body) {
   }
 }
 
-async function findProjectForKey(userKey) {
-  const projects = await db.all('SELECT * FROM projects WHERE is_active=true ORDER BY sort_order');
-  for (const proj of projects) {
-    const { json } = await luarmorReq('GET', proj.luarmor_project_id, proj.luarmor_api_key,
-      `/users?user_key=${encodeURIComponent(userKey)}`);
-    const users = Array.isArray(json?.users) ? json.users : [];
-    if (users.length > 0) return { project: proj, luaUser: users[0] };
-  }
-  return null;
+async function findScriptForKey(userKey) {
+  const { json } = await safeReq('GET', `/admin/api/keys?search=${encodeURIComponent(userKey)}`);
+  if (!json?.keys?.length) return null;
+  const keyData = json.keys.find(k => k.key_string === userKey);
+  if (!keyData) return null;
+  const scriptId = keyData.script_id || keyData.script?.id;
+  if (!scriptId) return null;
+  const scriptRes = await safeReq('GET', `/admin/api/scripts`);
+  const script = scriptRes.json?.scripts?.find(s => s.id === scriptId) || null;
+  return { script, keyData };
 }
 
-async function getLuaUser(dbUser) {
-  if (!dbUser?.luarmor_key || !dbUser?.project_id) return null;
-  const proj = await db.one('SELECT * FROM projects WHERE id=$1', [dbUser.project_id]);
-  if (!proj) return null;
-  const { json } = await luarmorReq('GET', proj.luarmor_project_id, proj.luarmor_api_key,
-    `/users?user_key=${encodeURIComponent(dbUser.luarmor_key)}`);
-  const users = Array.isArray(json?.users) ? json.users : [];
-  return users[0] || null;
+async function getLuaKey(dbUser) {
+  if (!dbUser?.luarmor_key) return null;
+  const { json } = await safeReq('GET', `/admin/api/keys?search=${encodeURIComponent(dbUser.luarmor_key)}`);
+  const keys = json?.keys || [];
+  return keys.find(k => k.key_string === dbUser.luarmor_key) || null;
 }
 
 /* ─── Reset quota ─── */
@@ -523,7 +517,7 @@ app.use(helmet({
        scriptSrc:     ["'self'", "'unsafe-inline'", "https://checkout.bold.co"],
        scriptSrcAttr: ["'unsafe-inline'"],
        imgSrc:        ["'self'", "data:", "blob:", "https://cdn.discordapp.com", "https://i.imgur.com", "https:", "http:"],
-       connectSrc:    ["'self'", "https://api.luarmor.net", "https://api.ipify.org", "https://checkout.bold.co", "ws:", "wss:"],
+        connectSrc:    ["'self'", "https://api.ipify.org", "https://checkout.bold.co", "ws:", "wss:"],
        frameSrc:      ["'self'"],
       formAction:    ["'self'", "https://checkout.bold.co"],
     },
@@ -890,10 +884,59 @@ app.get('/auth/discord/callback', async (req, res) => {
       await db.query('UPDATE users SET discord_id=$1, avatar_url=$2 WHERE id=$3', [discordId, avatarUrl, req.session.user.id]);
       req.session.user.discordId = discordId;
       req.session.user.avatarUrl = avatarUrl;
+      
+      // Sync Discord-linked keys from AuroraSafe
+      try {
+        const { json: dcInfo } = await safeReq('GET', `/api/v4/discord/user/${discordId}`);
+        if (dcInfo?.primary_key) {
+          // Update user's primary key in Aurora DB if Discord has one
+          const primaryKey = dcInfo.primary_key;
+          await db.query('UPDATE users SET luarmor_key=$1 WHERE id=$2 AND (luarmor_key IS NULL OR luarmor_key = $3)', 
+            [primaryKey.key_string, req.session.user.id, primaryKey.key_string]);
+          req.session.user.luarmorKey = primaryKey.key_string;
+        }
+        if (dcInfo?.script) {
+          req.session.user.discordScript = dcInfo.script;
+        }
+      } catch (e) { /* non-critical: AuroraSafe might be offline */ }
+      
       return res.redirect('/settings?success=Discord+connected+successfully');
     } else {
       // User is trying to log in with Discord
-      const user = await db.one('SELECT * FROM users WHERE discord_id=$1 AND is_active=true', [discordId]);
+      let user = await db.one('SELECT * FROM users WHERE discord_id=$1 AND is_active=true', [discordId]);
+      
+      // If no local account but has Discord, try to create/update from AuroraSafe key data
+      if (!user) {
+        try {
+          const { json: dcInfo } = await safeReq('GET', `/api/v4/discord/user/${discordId}`);
+          if (dcInfo?.found && dcInfo?.primary_key) {
+            const pk = dcInfo.primary_key;
+            // Check if any local user already has this key
+            user = await db.one('SELECT * FROM users WHERE luarmor_key=$1 AND is_active=true', [pk.key_string]);
+            if (!user) {
+              // Create a new user from Discord data
+              const username = `dc_${discordId.slice(0, 8)}`;
+              const defaultProj = await db.one('SELECT id FROM projects WHERE is_free=true LIMIT 1');
+              
+              user = await db.one(`INSERT INTO users (username, password_hash, luarmor_key, discord_id, avatar_url, project_id, role, is_active)
+                VALUES ($1, $2, $3, $4, $5, $6, 'user', true) RETURNING *`,
+                [username, '', pk.key_string, discordId, avatarUrl, defaultProj?.id || null]);
+              
+              // If premium key, assign the matching project
+              if (pk.type === 'PREMIUM' && dcInfo?.script?.id) {
+                const matchingProj = await db.one(
+                  'SELECT id FROM projects WHERE script_id=$1 LIMIT 1', [dcInfo.script.id]
+                );
+                if (matchingProj) {
+                  await db.query('UPDATE users SET project_id=$1 WHERE id=$2', [matchingProj.id, user.id]);
+                  user = await db.one('SELECT * FROM users WHERE id=$1', [user.id]);
+                }
+              }
+            }
+          }
+        } catch (e) { /* AuroraSafe might be offline, fall through to error */ }
+      }
+      
       if (!user) {
         return res.redirect('/login?error=No+account+linked+to+this+Discord.+Please+login+with+username/password+and+link+it+in+settings.');
       }
@@ -1001,21 +1044,24 @@ app.post('/register', registerLimiter, async (req, res) => {
   let fullProject = null;
 
   if (key) {
-    if (key.length < 6 || key.length > 256) return fail('Invalid Luarmor key length.');
+    if (key.length < 6 || key.length > 256) return fail('Invalid key length.');
     const existsKey = await db.one('SELECT id FROM users WHERE luarmor_key=$1', [key]);
-    if (existsKey) return fail('This Luarmor key is already registered to an account.');
+    if (existsKey) return fail('This key is already registered to an account.');
 
-    const found = await findProjectForKey(key);
-    if (!found) return fail('Key not found in any active project. Make sure you purchased or requested access, then try again.');
+    const found = await findScriptForKey(key);
+    if (!found || !found.script) return fail('Key not found in any active project. Make sure you purchased or requested access, then try again.');
 
-    const { project, luaUser } = found;
+    const { script, keyData } = found;
 
-    if (luaUser.banned || luaUser.blacklisted)
+    if (keyData.status === 'BANNED' || keyData.revoked)
       return fail('This key is banned. Contact staff on Discord.');
+    if (keyData.expires_at && new Date(keyData.expires_at) < new Date())
+      return fail('This key has expired.');
     
-    finalProject = project.id;
-    fullProject = project;
-    finalDiscordId = luaUser.discord_id || '';
+    const proj = await db.one('SELECT * FROM projects WHERE script_id=$1 AND is_active=true', [script.id]);
+    finalProject = proj ? proj.id : null;
+    fullProject = proj;
+    finalDiscordId = keyData.discord_id || '';
   } else {
     finalKey = `FREE-${username}-${Date.now()}`;
     const freeProject = await db.one('SELECT * FROM projects WHERE is_free=true AND is_active=true LIMIT 1');
@@ -1033,9 +1079,10 @@ app.post('/register', registerLimiter, async (req, res) => {
     [username, hash, finalKey, finalProject, finalDiscordId, scriptToken]
   );
 
-  if (key && !finalDiscordId && fullProject) {
-    await luarmorReq('POST', fullProject.luarmor_project_id, fullProject.luarmor_api_key,
-      '/users/linkdiscord', { user_key: key, discord_id: '', force: false }).catch(() => {});
+  // If user registered with a key and has a Discord ID from Luacopy21, sync it
+  if (key && finalDiscordId && fullProject) {
+    await db.query('UPDATE users SET discord_id=$1 WHERE id=$2', [finalDiscordId, newUser.id])
+      .catch(() => {});
   }
 
   req.session.user = {
@@ -1060,7 +1107,7 @@ app.get('/dashboard', auth, async (req, res) => {
   }
   const { password_hash, script_token, ...dbUser } = dbUserRaw;
   const proj   = projectId ? await db.one('SELECT * FROM projects WHERE id=$1', [projectId]) : null;
-  const luaUser = await getLuaUser(dbUser);
+  const luaKey = await getLuaKey(dbUser);
 
   const dailyLimit  = proj?.daily_reset_limit || 3;
   const resetsToday = await getResetCount(id);
@@ -1096,9 +1143,10 @@ app.get('/dashboard', auth, async (req, res) => {
   `, [id]);
 
   res.render('dashboard', {
-    dbUser, proj, luaUser,
+    dbUser, proj, luaUser: luaKey,
     resetsToday, resetsLeft, dailyLimit, pct, pfClass, ringOffset,
-    announcements, history, liveSessions, userKeys
+    announcements, history, liveSessions, userKeys,
+    safeUrl: AURORASAFE_API_URL
   });
 });
 
@@ -1354,9 +1402,11 @@ app.post('/api/mod/user/:id/reset-hwid', apiAuth, modOrAdminApi, async (req, res
   if (!user) return res.json({ success: false, message: 'User not found.' });
   const proj = user.project_id ? await db.one('SELECT * FROM projects WHERE id=$1', [user.project_id]) : null;
   if (!proj) return res.json({ success: false, message: 'User has no project assigned.' });
-  const { json } = await luarmorReq('POST', proj.luarmor_project_id, proj.luarmor_api_key,
-    '/users/resethwid', { user_key: user.luarmor_key, force: true });
-  res.json({ success: json?.success || false, message: json?.message || 'Done.' });
+  const { json } = await safeReq('GET', `/admin/api/keys?search=${encodeURIComponent(user.luarmor_key)}`);
+  const keyData = json?.keys?.find(k => k.key_string === user.luarmor_key);
+  if (!keyData) return res.json({ success: false, message: 'Key not found in AuroraSafe.' });
+  const { json: resetJson } = await safeReq('POST', `/admin/api/keys/${keyData.id}/reset-hwid`);
+  res.json({ success: resetJson?.id ? true : false, message: resetJson?.id ? 'Done.' : (resetJson?.message || 'Error.') });
 });
 
 app.post('/api/mod/user/:id/blacklist', apiAuth, modOrAdminApi, async (req, res) => {
@@ -1389,7 +1439,7 @@ app.get('/admin', auth, adminOnly, async (req, res) => {
     db.one("SELECT COUNT(*) AS c FROM bug_reports WHERE status='open'"),
   ]);
 
-  const projects = projectsRaw.map(p => { const { luarmor_api_key, ...safe } = p; return safe; });
+  const projects = projectsRaw.map(p => { const { ...safe } = p; return safe; });
   const users = usersRaw.map(u => {
     const { luarmor_key, ...safe } = u;
     safe.key_prefix = u.luarmor_key ? u.luarmor_key.slice(0, 16) + '…' : '—';
@@ -1436,10 +1486,9 @@ app.get('/api/admin/user/:id', apiAuth, adminApiOnly, async (req, res) => {
 
 app.post('/api/admin/project', apiAuth, adminApiOnly, async (req, res) => {
   const name  = (req.body.name  || '').trim();
-  const pid   = (req.body.luarmor_project_id || '').trim();
-  const pkey  = (req.body.luarmor_api_key    || '').trim();
-  if (!name || !pid || !pkey)
-    return res.json({ success: false, message: 'Name, Project ID and API Key are required.' });
+  const sid   = (req.body.script_id || '').trim();
+  if (!name || !sid)
+    return res.json({ success: false, message: 'Name and Script ID are required.' });
 
   const slug  = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').slice(0, 32);
   const color = (req.body.color || '#8b5cf6').trim();
@@ -1452,9 +1501,9 @@ app.post('/api/admin/project', apiAuth, adminApiOnly, async (req, res) => {
 
   try {
     const proj = await db.one(`
-      INSERT INTO projects (name,slug,luarmor_project_id,luarmor_api_key,color,gradient,icon,daily_reset_limit,description,is_free)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id
-    `, [name, slug, pid, pkey, color, grad, icon, limit, desc, isFree]);
+      INSERT INTO projects (name,slug,script_id,color,gradient,icon,daily_reset_limit,description,is_free)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id
+    `, [name, slug, sid, color, grad, icon, limit, desc, isFree]);
     res.json({ success: true, id: proj.id, message: `Project "${name}" created.` });
   } catch (e) {
     res.json({ success: false, message: e.detail || e.message });
@@ -1463,7 +1512,7 @@ app.post('/api/admin/project', apiAuth, adminApiOnly, async (req, res) => {
 
 app.patch('/api/admin/project/:id', apiAuth, adminApiOnly, async (req, res) => {
   const id = Number(req.params.id);
-  const allowed = ['name','luarmor_project_id','luarmor_api_key','color','gradient','icon','daily_reset_limit','description','is_active','sort_order','is_free'];
+  const allowed = ['name','script_id','color','gradient','icon','daily_reset_limit','description','is_active','sort_order','is_free'];
   const fields = []; const vals = []; let i = 1;
   for (const key of allowed) {
     if (req.body[key] === undefined) continue;
@@ -1566,11 +1615,11 @@ app.post('/api/admin/user/:id/force-reset', apiAuth, adminApiOnly, async (req, r
   const id   = Number(req.params.id);
   const user = await db.one('SELECT * FROM users WHERE id=$1', [id]);
   if (!user) return res.json({ success: false, message: 'User not found.' });
-  const proj = user.project_id ? await db.one('SELECT * FROM projects WHERE id=$1', [user.project_id]) : null;
-  if (!proj)  return res.json({ success: false, message: 'User has no project assigned.' });
-  const { json } = await luarmorReq('POST', proj.luarmor_project_id, proj.luarmor_api_key,
-    '/users/resethwid', { user_key: user.luarmor_key, force: true });
-  res.json({ success: json?.success || false, message: json?.message || 'Done.' });
+  const { json } = await safeReq('GET', `/admin/api/keys?search=${encodeURIComponent(user.luarmor_key)}`);
+  const keyData = json?.keys?.find(k => k.key_string === user.luarmor_key);
+  if (!keyData) return res.json({ success: false, message: 'Key not found.' });
+  const { json: resetJson } = await safeReq('POST', `/admin/api/keys/${keyData.id}/reset-hwid`);
+  res.json({ success: resetJson?.id ? true : false, message: resetJson?.id ? 'HWID reset.' : (resetJson?.message || 'Error.') });
 });
 
 app.post('/api/admin/user/:id/change-password', apiAuth, adminApiOnly, async (req, res) => {
@@ -1637,23 +1686,6 @@ app.get('/api/admin/stats', apiAuth, adminApiOnly, async (_req, res) => {
     newToday:     Number(newToday.c),
     liveNow:      Number(liveSessions.c),
   }});
-});
-
-/* ─────────────────────────────────────
-   MOD API — User Actions
-───────────────────────────────────── */
-app.post('/api/mod/user/:id/reset-hwid', apiAuth, modOrAdminApi, async (req, res) => {
-  const id = Number(req.params.id);
-  const user = await db.one('SELECT * FROM users WHERE id=$1', [id]);
-  if (!user) return res.json({ success: false, message: 'User not found.' });
-  if (user.role === 'admin') return res.json({ success: false, message: 'Cannot reset admin HWID.' });
-  
-  const proj = user.project_id ? await db.one('SELECT * FROM projects WHERE id=$1', [user.project_id]) : null;
-  if (!proj) return res.json({ success: false, message: 'User has no project assigned.' });
-  
-  const { json } = await luarmorReq('POST', proj.luarmor_project_id, proj.luarmor_api_key,
-    '/users/resethwid', { user_key: user.luarmor_key, force: true });
-  res.json({ success: json?.success || false, message: json?.message || 'HWID Reset successful.' });
 });
 
 app.post('/api/mod/user/:id/blacklist', apiAuth, modOrAdminApi, async (req, res) => {
@@ -1757,15 +1789,15 @@ app.post('/api/user/check-free-key', auth, async (req, res) => {
   const { key } = req.body;
   if (!key) return res.json({ success: false, message: 'Key required.' });
   try {
-    const found = await findProjectForKey(key);
-    if (!found) return res.json({ success: false, message: 'Key not found in any active project.' });
-    const { project, luaUser } = found;
+    const found = await findScriptForKey(key);
+    if (!found || !found.script) return res.json({ success: false, message: 'Key not found in any active project.' });
+    const { keyData } = found;
     res.json({
       success: true,
-      auth_expire: luaUser.auth_expire,
-      project_name: project.name,
-      status: luaUser.status,
-      banned: luaUser.banned
+      expires_at: keyData.expires_at,
+      project_name: found.script.name,
+      status: keyData.status,
+      hwid: keyData.hwid
     });
   } catch (e) {
     res.json({ success: false, message: e.message });
@@ -1992,74 +2024,62 @@ app.get('/api/chat/online', apiAuth, (_req, res) => {
 app.get('/api/userinfo', apiAuth, apiLimiter, async (req, res) => {
   const { id } = req.session.user;
   const dbUser  = await db.one('SELECT * FROM users WHERE id=$1', [id]);
-  const luaUser = await getLuaUser(dbUser);
+  const luaKey = await getLuaKey(dbUser);
   const proj    = dbUser.project_id ? await db.one('SELECT * FROM projects WHERE id=$1', [dbUser.project_id]) : null;
   const resetsToday = await getResetCount(id);
   const dailyLimit  = proj?.daily_reset_limit || 3;
   const resetsLeft  = Math.max(0, dailyLimit - resetsToday);
-  res.json({ success:true, user: luaUser, dbUser, project: proj, resetsToday, resetsLeft, dailyLimit });
+  res.json({ success:true, keyData: luaKey, dbUser, project: proj, resetsToday, resetsLeft, dailyLimit });
 });
 
 app.post('/api/reset-hwid', apiAuth, apiLimiter, async (req, res) => {
-  const { id, luarmorKey, projectId } = req.session.user;
+  const { id, luarmorKey } = req.session.user;
 
-  const proj = projectId ? await db.one('SELECT * FROM projects WHERE id=$1', [projectId]) : null;
-  if (!proj) return res.json({ success:false, message:'No project configured for your account.' });
-
-  const dailyLimit  = proj.daily_reset_limit;
+  const dailyLimit  = req.session.user.project?.daily_reset_limit || 3;
   const resetsToday = await getResetCount(id);
   if (resetsToday >= dailyLimit)
     return res.json({ success:false, message:`Daily limit reached (${dailyLimit}/${dailyLimit}). Resets at 00:00 UTC.` });
 
-  const luaUser = await getLuaUser({ luarmor_key: luarmorKey, project_id: projectId });
-  if (!luaUser)         return res.json({ success:false, message:'Could not verify your key.' });
-  if (luaUser.banned)   return res.json({ success:false, message:'Your key is banned. Contact staff.' });
+  const { json } = await safeReq('GET', `/admin/api/keys?search=${encodeURIComponent(luarmorKey)}`);
+  const keyData = json?.keys?.find(k => k.key_string === luarmorKey);
+  if (!keyData) return res.json({ success:false, message:'Could not verify your key.' });
+  if (keyData.status === 'BANNED') return res.json({ success:false, message:'Your key is banned. Contact staff.' });
 
-  const { ok, status, json } = await luarmorReq('POST', proj.luarmor_project_id, proj.luarmor_api_key,
-    '/users/resethwid', { user_key: luarmorKey, force: true });
+  const { ok, status, json: resetJson } = await safeReq('POST', `/admin/api/keys/${keyData.id}/reset-hwid`);
 
-  if (!json?.success) {
-    console.error(`[reset] HTTP ${status}: ${json?.message}`);
-    return res.json({ success:false, message: json?.message || `API error (HTTP ${status})` });
+  if (!resetJson?.id) {
+    return res.json({ success:false, message: resetJson?.message || `API error (HTTP ${status})` });
   }
 
   const newCount = await incResetCount(id);
   const remaining = Math.max(0, dailyLimit - newCount);
-  res.json({ success:true, message: json.message || 'HWID reset successfully.',
+  res.json({ success:true, message: 'HWID reset successfully.',
     resetsToday: newCount, resetsLeft: remaining, dailyLimit });
 });
 
 app.post('/api/link-discord', apiAuth, apiLimiter, async (req, res) => {
-  const { luarmorKey, projectId } = req.session.user;
+  const { id, luarmorKey } = req.session.user;
   const discordId = (req.body.discord_id || '').trim();
   if (!discordId || !/^\d{15,20}$/.test(discordId))
     return res.json({ success:false, message:'Invalid Discord ID (15-20 digits).' });
 
-  const proj = projectId ? await db.one('SELECT * FROM projects WHERE id=$1', [projectId]) : null;
-  if (!proj) return res.json({ success:false, message:'No project found.' });
+  const { json } = await safeReq('GET', `/admin/api/keys?search=${encodeURIComponent(luarmorKey)}`);
+  const keyData = json?.keys?.find(k => k.key_string === luarmorKey);
+  if (!keyData) return res.json({ success:false, message:'Key not found.' });
 
-  const { json } = await luarmorReq('POST', proj.luarmor_project_id, proj.luarmor_api_key,
-    '/users/linkdiscord', { user_key: luarmorKey, discord_id: discordId, force: true });
-
-  if (json?.success) {
-    await db.query('UPDATE users SET discord_id=$1 WHERE id=$2', [discordId, req.session.user.id]);
-    req.session.user.discordId = discordId;
+  if (keyData.discord_id && keyData.discord_id !== discordId) {
+    return res.json({ success:false, message:'Key already linked to a different Discord account.' });
   }
-  res.json({ success: json?.success || false, message: json?.message || 'Error.' });
+
+  await db.query('UPDATE users SET discord_id=$1 WHERE id=$2', [discordId, id]);
+  req.session.user.discordId = discordId;
+  res.json({ success: true, message: 'Discord linked.' });
 });
 
 app.post('/api/update-note', apiAuth, apiLimiter, async (req, res) => {
-  const { luarmorKey, projectId } = req.session.user;
   const note = (req.body.note || '').trim().slice(0, 100);
-
-  const proj = projectId ? await db.one('SELECT * FROM projects WHERE id=$1', [projectId]) : null;
-  if (!proj) return res.json({ success:false, message:'No project found.' });
-
-  const { json } = await luarmorReq('PATCH', proj.luarmor_project_id, proj.luarmor_api_key,
-    '/users', { user_key: luarmorKey, note });
-
-  if (json?.success) await db.query('UPDATE users SET note=$1 WHERE id=$2', [note, req.session.user.id]);
-  res.json({ success: json?.success || false, message: json?.message || 'Error.' });
+  await db.query('UPDATE users SET note=$1 WHERE id=$2', [note, req.session.user.id]);
+  res.json({ success: true, message: 'Note updated.' });
 });
 
 /* ─────────────────────────────────────
@@ -2091,15 +2111,18 @@ app.post('/api/user-keys', apiAuth, apiLimiter, async (req, res) => {
   );
   if (taken) return res.json({ success: false, message: 'This key is already registered.' });
 
-  const found = await findProjectForKey(key);
-  if (!found) return res.json({ success: false, message: 'Key not found in any active project.' });
-  const { project } = found;
+  const found = await findScriptForKey(key);
+  if (!found || !found.script) return res.json({ success: false, message: 'Key not found in any active project.' });
+  const { script } = found;
+
+  const proj = await db.one('SELECT * FROM projects WHERE script_id=$1 AND is_active=true', [script.id]);
+  if (!proj) return res.json({ success: false, message: 'No project for this script.' });
 
   await db.query(
     'INSERT INTO user_keys (user_id, luarmor_key, project_id, label) VALUES ($1,$2,$3,$4)',
-    [id, key, project.id, label || project.name]
+    [id, key, proj.id, label || script.name]
   );
-  res.json({ success: true, message: `Key added (${project.name}).`, project_name: project.name, project_icon: project.icon, project_color: project.color });
+  res.json({ success: true, message: `Key added (${script.name}).`, project_name: script.name, project_icon: proj.icon, project_color: proj.color });
 });
 
 app.delete('/api/user-keys/:id', apiAuth, async (req, res) => {
@@ -2117,12 +2140,12 @@ app.post('/api/reset-hwid-extra', apiAuth, apiLimiter, async (req, res) => {
   const ukRow = await db.one('SELECT * FROM user_keys WHERE id=$1 AND user_id=$2', [keyId, id]);
   if (!ukRow) return res.json({ success: false, message: 'Key not found.' });
 
-  const proj = ukRow.project_id ? await db.one('SELECT * FROM projects WHERE id=$1', [ukRow.project_id]) : null;
-  if (!proj) return res.json({ success: false, message: 'No project for this key.' });
+  const { json } = await safeReq('GET', `/admin/api/keys?search=${encodeURIComponent(ukRow.luarmor_key)}`);
+  const keyData = json?.keys?.find(k => k.key_string === ukRow.luarmor_key);
+  if (!keyData) return res.json({ success: false, message: 'Key not found in AuroraSafe.' });
 
-  const { json } = await luarmorReq('POST', proj.luarmor_project_id, proj.luarmor_api_key,
-    '/users/resethwid', { user_key: ukRow.luarmor_key, force: true });
-  res.json({ success: json?.success || false, message: json?.message || 'Done.' });
+  const { json: resetJson } = await safeReq('POST', `/admin/api/keys/${keyData.id}/reset-hwid`);
+  res.json({ success: resetJson?.id ? true : false, message: resetJson?.id ? 'Done.' : (resetJson?.message || 'Error.') });
 });
 
 app.post('/api/change-password', apiAuth, apiLimiter, async (req, res) => {
@@ -2417,44 +2440,43 @@ app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), asyn
         [transaction_id || null, order_id]
       );
 
-      /* Auto-activate: get plan → project → generate Luarmor key for user */
+      /* Auto-activate: get plan → generate AuroraSafe key for user */
       if (order.plan_id && order.user_id) {
         const plan = await db.one('SELECT * FROM payment_plans WHERE id=$1', [order.plan_id]);
         if (plan && plan.project_id) {
           const proj = await db.one('SELECT * FROM projects WHERE id=$1', [plan.project_id]);
           if (proj) {
-            /* Create a new key in Luarmor for this user */
-            const { json } = await luarmorReq('POST', proj.luarmor_project_id, proj.luarmor_api_key,
-              '/users', {
-                note: `AuroraHub payment order ${order_id}`,
-                auth_expire: Math.floor(Date.now() / 1000) + (plan.duration_days * 86400)
-              }
-            );
-            if (json?.user_key) {
+            const { json } = await safeReq('POST', '/admin/api/keys/generate', {
+              script_id: proj.script_id,
+              type: 'PREMIUM',
+              amount: 1,
+              executions_limit: -1,
+              days_after_activation: plan.duration_days,
+              note: `AuroraHub payment order ${order_id}`
+            });
+
+            if (json?.keys?.length > 0) {
+              const newKey = json.keys[0];
               const user = await db.one('SELECT * FROM users WHERE id=$1', [order.user_id]);
               if (user) {
-                // Check if user is free (project_id is free or null)
                 const currentProj = user.project_id ? await db.oneOrNone('SELECT is_free FROM projects WHERE id=$1', [user.project_id]) : null;
                 const isFreeUser = !currentProj || currentProj.is_free;
 
                 if (isFreeUser) {
-                  // Upgrade user's main key!
                   await db.query(
                     `UPDATE users SET luarmor_key=$1, project_id=$2 WHERE id=$3`,
-                    [json.user_key, plan.project_id, order.user_id]
+                    [newKey, plan.project_id, order.user_id]
                   );
-                  console.log(`[Bold] ✅ UPGRADED FREE USER ${order.user_id} to PREMIUM: ${json.user_key}`);
+                  console.log(`[Bold] UPGRADED FREE USER ${order.user_id} to PREMIUM: ${newKey}`);
                 } else {
-                  // Already premium, just add an additional key
                   await db.query(
                     `INSERT INTO user_keys (user_id, luarmor_key, project_id, label)
                      VALUES ($1,$2,$3,$4) ON CONFLICT (luarmor_key) DO NOTHING`,
-                    [order.user_id, json.user_key, plan.project_id, `${plan.name} — Order ${order_id}`]
+                    [order.user_id, newKey, plan.project_id, `${plan.name} — Order ${order_id}`]
                   );
-                  console.log(`[Bold] ✅ Additional key activated for user ${order.user_id}: ${json.user_key}`);
+                  console.log(`[Bold] Additional key activated for user ${order.user_id}: ${newKey}`);
                 }
 
-                // Notify frontend via Socket.io
                 const onlineUser = onlineUsers.get(order.user_id);
                 if (onlineUser && onlineUser.socketId) {
                   io.to(onlineUser.socketId).emit('payment_approved', {
@@ -2513,25 +2535,28 @@ app.post('/api/payment/claim-gamepass', auth, async (req, res) => {
     const robloxData = await robloxRes.json();
 
     if (robloxData === true || robloxData === "true") {
-      // Create user's key in luarmor
+      // Create user's key via AuroraSafe
       const proj = await db.one('SELECT * FROM projects WHERE id=$1', [plan.project_id]);
       if (!proj) return res.json({ success: false, message: 'Project not found for this plan.' });
       
-      const { json } = await luarmorReq('POST', proj.luarmor_project_id, proj.luarmor_api_key,
-        '/users', {
-          note: `AuroraHub Gamepass Claim ${plan.roblox_gamepass_id}`,
-          auth_expire: Math.floor(Date.now() / 1000) + (plan.duration_days * 86400)
-        }
-      );
+      const { json } = await safeReq('POST', '/admin/api/keys/generate', {
+        script_id: proj.script_id,
+        type: 'PREMIUM',
+        amount: 1,
+        executions_limit: -1,
+        days_after_activation: plan.duration_days,
+        note: `AuroraHub Gamepass Claim ${plan.roblox_gamepass_id}`
+      });
       
-      if (json?.user_key) {
+      if (json?.keys?.length > 0) {
+        const newKey = json.keys[0];
         await db.query(
           `INSERT INTO user_keys (user_id, luarmor_key, project_id, label)
            VALUES ($1,$2,$3,$4) ON CONFLICT (luarmor_key) DO NOTHING`,
-          [req.session.user.id, json.user_key, plan.project_id, `${plan.name} — Gamepass`]
+          [req.session.user.id, newKey, plan.project_id, `${plan.name} — Gamepass`]
         );
       } else {
-        return res.json({ success: false, message: 'Failed to generate key from Luarmor.' });
+        return res.json({ success: false, message: 'Failed to generate key from AuroraSafe.' });
       }
 
       // Record claim
@@ -2725,10 +2750,11 @@ async function main() {
     console.log(`🔗 Discord: ${dynSettings.discord_url || DISCORD_URL}`);
     console.log(`💾 Sessions: PostgreSQL (persistent)`);
     console.log(`💬 Chat: Socket.io enabled`);
+    console.log(`🔑 AuroraSafe API: ${AURORASAFE_API_URL}`);
     try {
       const r = await fetch('https://api.ipify.org?format=json', { timeout: 6000 });
       const d = await r.json();
-      console.log(`🌐 Outbound IP (whitelist this in Luarmor): ${d.ip}`);
+      console.log(`🌐 Outbound IP: ${d.ip}`);
     } catch {
       console.log(`🌐 Outbound IP: could not detect (check Railway logs later)`);
     }

@@ -1,7 +1,7 @@
 {
-  "name": "luarmor-panel",
-  "version": "4.0.0",
-  "description": "Luarmor Multi-Project Web Dashboard",
+  "name": "aurorasafe-panel",
+  "version": "5.0.0",
+  "description": "AuroraSafe Multi-Project Web Dashboard",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

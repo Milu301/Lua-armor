@@ -89,40 +89,6 @@ const isFreeUser   = !!(proj && proj.is_free) || !!(user && user.luarmorKey && u
       </div>
       <% } %>
 
-      <!-- Announcements -->
-      <% if (announcements && announcements.length > 0) { %>
-      <div style="display:flex; flex-direction:column; gap:1rem; margin-bottom:1.5rem; animation: slideUp 0.5s ease backwards;">
-        <% announcements.forEach(a => { 
-             let bg, border, icon, textGlow;
-             if(a.type==='info')    { bg='rgba(59,130,246,0.1)'; border='rgba(59,130,246,0.3)'; icon='ℹ️'; textGlow='rgba(59,130,246,0.5)'; }
-             if(a.type==='success') { bg='rgba(34,197,94,0.1)'; border='rgba(34,197,94,0.3)'; icon='🎉'; textGlow='rgba(34,197,94,0.5)'; }
-             if(a.type==='warning') { bg='rgba(245,158,11,0.1)'; border='rgba(245,158,11,0.3)'; icon='⚠️'; textGlow='rgba(245,158,11,0.5)'; }
-             if(a.type==='danger')  { bg='rgba(239,68,68,0.1)'; border='rgba(239,68,68,0.3)'; icon='🚨'; textGlow='rgba(239,68,68,0.5)'; }
-        %>
-        <div style="background: <%= bg %>; border: 1px solid <%= border %>; border-radius: 16px; padding: 1.25rem; display:flex; gap:1rem; align-items:flex-start; position: relative; overflow: hidden; backdrop-filter: blur(10px); box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-          <!-- Ambient Glow -->
-          <div style="position:absolute; top:-20px; left:-20px; width:60px; height:60px; background:<%= textGlow %>; filter:blur(40px); z-index:0;"></div>
-          
-          <div style="font-size:1.5rem; z-index:1; text-shadow: 0 0 10px <%= textGlow %>;"><%= icon %></div>
-          
-          <div style="flex:1; z-index:1;">
-            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem;">
-              <% if(a.pinned) { %>
-                <span class="badge badge-purple" style="font-size:0.6rem; padding:0.15rem 0.4rem;">📌 PINNED</span>
-              <% } %>
-              <div style="font-weight:700; font-size:1rem; color:var(--text); text-shadow: 0 0 10px <%= textGlow %>;"><%= a.title %></div>
-            </div>
-            <div style="color:var(--text-2); font-size:0.9rem; line-height:1.4;"><%= a.content %></div>
-          </div>
-          
-          <div style="font-size:0.75rem; color:var(--text-3); z-index:1; flex-shrink:0;">
-            <%= new Date(a.created_at).toLocaleDateString('en', {month:'short', day:'numeric'}) %>
-          </div>
-        </div>
-        <% }) %>
-      </div>
-      <% } %>
-
       <!-- Welcome banner -->
       <div class="welcome-banner" style="animation: slideUp 0.6s ease; position: relative; overflow: hidden; border: 1px solid var(--accent-border); box-shadow: 0 10px 40px rgba(139, 92, 246, 0.15);">
         <div style="position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.1) 0%, transparent 60%); z-index: 0; pointer-events: none;"></div>
@@ -226,7 +192,7 @@ const isFreeUser   = !!(proj && proj.is_free) || !!(user && user.luarmorKey && u
              <p style="margin-bottom:0.5rem; color:var(--text-2);" data-i18n="Enter your Free Key to check your remaining time:">
                Enter your Free Key to check your remaining time:
              </p>
-             <input type="text" class="input" id="freeKeyInput" placeholder="Paste your Luarmor Free Key here..." required style="padding: 1rem; font-size: 1rem;" autocomplete="off" spellcheck="false" />
+             <input type="text" class="input" id="freeKeyInput" placeholder="Paste your key here..." required style="padding: 1rem; font-size: 1rem;" autocomplete="off" spellcheck="false" />
              <button type="submit" class="btn btn-primary" id="freeKeyBtn" style="padding: 1rem; font-weight: 600; font-size: 1rem; background: var(--cyan); border-color: var(--cyan); color: white;">
                 <span data-i18n="Check Remaining Time">Check Remaining Time</span>
              </button>
@@ -376,7 +342,7 @@ const isFreeUser   = !!(proj && proj.is_free) || !!(user && user.luarmorKey && u
               <div style="position: absolute; top: 0; left: 0; bottom: 0; width: 3px; background: var(--accent);"></div>
               <code id="script-ant" style="font-family:'Fira Code', 'JetBrains Mono', monospace; font-size:0.8rem; line-height: 1.6; white-space:pre; display: block;">
 <span style="color:#ff7b72;">getgenv</span>().<span style="color:#79c0ff;">script_key</span> <span style="color:#ff7b72;">=</span> <span style="color:#a5d6ff;">"<%= user ? user.luarmorKey : 'Your-Key' %>"</span>;
-<span style="color:#d2a8ff;">loadstring</span>(<span style="color:#79c0ff;">game</span>:<span style="color:#d2a8ff;">HttpGet</span>(<span style="color:#a5d6ff;">"https://api.luarmor.net/files/v4/loaders/31649ec8f11421d042ab19f33ea4e5f2.lua"</span>))()
+<span style="color:#d2a8ff;">loadstring</span>(<span style="color:#79c0ff;">game</span>:<span style="color:#d2a8ff;">HttpGet</span>(<span style="color:#a5d6ff;">"<%= typeof safeUrl !== 'undefined' ? safeUrl : 'http://localhost:3001' %>/files/v4/loaders/31649ec8f11421d042ab19f33ea4e5f2.lua"</span>))()
               </code>
             </div>
           </div>
@@ -400,7 +366,7 @@ const isFreeUser   = !!(proj && proj.is_free) || !!(user && user.luarmorKey && u
               <div style="position: absolute; top: 0; left: 0; bottom: 0; width: 3px; background: var(--yellow);"></div>
               <code id="script-gold" style="font-family:'Fira Code', 'JetBrains Mono', monospace; font-size:0.8rem; line-height: 1.6; white-space:pre; display: block;">
 <span style="color:#ff7b72;">getgenv</span>().<span style="color:#79c0ff;">script_key</span> <span style="color:#ff7b72;">=</span> <span style="color:#a5d6ff;">"<%= user ? user.luarmorKey : 'Your-Key' %>"</span>;
-<span style="color:#d2a8ff;">loadstring</span>(<span style="color:#79c0ff;">game</span>:<span style="color:#d2a8ff;">HttpGet</span>(<span style="color:#a5d6ff;">"https://api.luarmor.net/files/v4/loaders/9fa922adc3e9c42fc4fcb70f03584b49.lua"</span>))()
+<span style="color:#d2a8ff;">loadstring</span>(<span style="color:#79c0ff;">game</span>:<span style="color:#d2a8ff;">HttpGet</span>(<span style="color:#a5d6ff;">"<%= typeof safeUrl !== 'undefined' ? safeUrl : 'http://localhost:3001' %>/files/v4/loaders/9fa922adc3e9c42fc4fcb70f03584b49.lua"</span>))()
               </code>
             </div>
           </div>
@@ -424,7 +390,7 @@ const isFreeUser   = !!(proj && proj.is_free) || !!(user && user.luarmorKey && u
               <div style="position: absolute; top: 0; left: 0; bottom: 0; width: 3px; background: var(--green);"></div>
               <code id="script-ancienttree" style="font-family:'Fira Code', 'JetBrains Mono', monospace; font-size:0.8rem; line-height: 1.6; white-space:pre; display: block;">
 <span style="color:#ff7b72;">getgenv</span>().<span style="color:#79c0ff;">script_key</span> <span style="color:#ff7b72;">=</span> <span style="color:#a5d6ff;">"<%= user ? user.luarmorKey : 'Your-Key' %>"</span>;
-<span style="color:#d2a8ff;">loadstring</span>(<span style="color:#79c0ff;">game</span>:<span style="color:#d2a8ff;">HttpGet</span>(<span style="color:#a5d6ff;">"https://api.luarmor.net/files/v4/loaders/a596679fc29c6ec3d9624860cd88022d.lua"</span>))()
+<span style="color:#d2a8ff;">loadstring</span>(<span style="color:#79c0ff;">game</span>:<span style="color:#d2a8ff;">HttpGet</span>(<span style="color:#a5d6ff;">"<%= typeof safeUrl !== 'undefined' ? safeUrl : 'http://localhost:3001' %>/files/v4/loaders/a596679fc29c6ec3d9624860cd88022d.lua"</span>))()
               </code>
             </div>
           </div>
@@ -448,7 +414,7 @@ const isFreeUser   = !!(proj && proj.is_free) || !!(user && user.luarmorKey && u
               <div style="position: absolute; top: 0; left: 0; bottom: 0; width: 3px; background: var(--blue);"></div>
               <code id="script-premium" style="font-family:'Fira Code', 'JetBrains Mono', monospace; font-size:0.8rem; line-height: 1.6; white-space:pre; display: block;">
 <span style="color:#ff7b72;">getgenv</span>().<span style="color:#79c0ff;">script_key</span> <span style="color:#ff7b72;">=</span> <span style="color:#a5d6ff;">"<%= user ? user.luarmorKey : 'Your-Key' %>"</span>;
-<span style="color:#d2a8ff;">loadstring</span>(<span style="color:#79c0ff;">game</span>:<span style="color:#d2a8ff;">HttpGet</span>(<span style="color:#a5d6ff;">"https://api.luarmor.net/files/v4/loaders/2cf155c92c4f3c169ab27e6a66395a10.lua"</span>))()
+<span style="color:#d2a8ff;">loadstring</span>(<span style="color:#79c0ff;">game</span>:<span style="color:#d2a8ff;">HttpGet</span>(<span style="color:#a5d6ff;">"<%= typeof safeUrl !== 'undefined' ? safeUrl : 'http://localhost:3001' %>/files/v4/loaders/2cf155c92c4f3c169ab27e6a66395a10.lua"</span>))()
               </code>
             </div>
           </div>
@@ -466,7 +432,7 @@ const isFreeUser   = !!(proj && proj.is_free) || !!(user && user.luarmorKey && u
           <div class="card-icon ci-purple">🔗</div>
           <div>
             <div class="card-title" data-i18n="Connected Accounts & Devices">Connected Accounts & Devices</div>
-            <div class="card-desc">Everything linked to your Luarmor key</div>
+            <div class="card-desc">Everything linked to your AuroraSafe key</div>
           </div>
         </div>
 
@@ -739,7 +705,7 @@ const isFreeUser   = !!(proj && proj.is_free) || !!(user && user.luarmorKey && u
           </span>
           <span id="btn-state-loading" class="hwid-btn-state" style="display:none;">
             <span class="hwid-spinner"></span>
-            <span id="loading-msg">Contacting Luarmor…</span>
+            <span id="loading-msg">Contacting AuroraSafe…</span>
           </span>
           <span id="btn-state-success" class="hwid-btn-state" style="display:none;">
             <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -765,7 +731,7 @@ const isFreeUser   = !!(proj && proj.is_free) || !!(user && user.luarmorKey && u
           <div class="card-icon ci-blue">🔑</div>
           <div>
             <div class="card-title" data-i18n="Key Information">Key Information</div>
-            <div class="card-desc" data-i18n="Live data pulled from Luarmor">Live data pulled from Luarmor</div>
+            <div class="card-desc" data-i18n="Live data pulled from AuroraSafe">Live data pulled from AuroraSafe</div>
           </div>
           <button class="btn btn-sm btn-ghost" style="margin-left:auto;" onclick="openModal('key-modal')">
             <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -827,7 +793,7 @@ const isFreeUser   = !!(proj && proj.is_free) || !!(user && user.luarmorKey && u
           <div class="card-icon" style="background:rgba(34,197,94,0.12);border:1px solid var(--green-border);">🗝️</div>
           <div>
             <div class="card-title" data-i18n="My Keys">My Keys</div>
-            <div class="card-desc">All Luarmor keys linked to your account — each can be reset independently</div>
+            <div class="card-desc">All AuroraSafe keys linked to your account — each can be reset independently</div>
           </div>
           <span class="badge badge-green" style="margin-left:auto;font-size:0.7rem;" id="keys-total-badge">
             <%= 1 + (userKeys ? userKeys.length : 0) %> key<%= (1 + (userKeys ? userKeys.length : 0)) !== 1 ? 's' : '' %>
@@ -891,7 +857,7 @@ const isFreeUser   = !!(proj && proj.is_free) || !!(user && user.luarmorKey && u
           <div id="key-add-result"></div>
           <div class="key-add-grid" style="display:grid;grid-template-columns:1fr 160px auto;gap:0.6rem;align-items:end;">
             <div class="form-group" style="margin-bottom:0;">
-              <label class="label" style="font-size:0.72rem;">Luarmor Key</label>
+              <label class="label" style="font-size:0.72rem;">Key</label>
               <input type="text" class="input mono" id="new-key-input" placeholder="paste your key here" />
             </div>
             <div class="form-group" style="margin-bottom:0;">
@@ -939,7 +905,7 @@ const isFreeUser   = !!(proj && proj.is_free) || !!(user && user.luarmorKey && u
             <div class="card-icon ci-yellow">📝</div>
             <div>
               <div class="card-title">Custom Note</div>
-              <div class="card-desc">Visible in the Luarmor dashboard</div>
+              <div class="card-desc">Visible in the AuroraSafe dashboard</div>
             </div>
           </div>
           <div id="note-result"></div>
@@ -1110,7 +1076,7 @@ function spawnParticles(container, count = 18, success = true) {
 
 /* ── Loading message rotation ── */
 const loadingMessages = [
-  'Contacting Luarmor…',
+  'Contacting AuroraSafe…',
   'Sending reset request…',
   'Unlinking device…',
   'Almost done…',

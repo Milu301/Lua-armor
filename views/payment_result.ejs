@@ -43,7 +43,7 @@
         
         <p id="status-desc" style="color:var(--text-3);font-size:0.9rem;line-height:1.6;margin-bottom:1.5rem;">
           <% if (order.status === 'approved') { %>
-            Your Luarmor key has been activated! Redirecting you to the dashboard...
+            Your AuroraSafe key has been activated! Redirecting you to the dashboard...
           <% } else { %>
             Waiting for confirmation from Bold. This usually takes just a few seconds. Do not close this page.
           <% } %>
@@ -86,7 +86,7 @@
             document.getElementById('status-icon').style.animation = 'none';
 
             document.getElementById('status-title').innerText = 'Payment Approved!';
-            document.getElementById('status-desc').innerText = 'Your Luarmor key has been activated! Redirecting you to the dashboard...';
+            document.getElementById('status-desc').innerText = 'Your AuroraSafe key has been activated! Redirecting you to the dashboard...';
             
             const badge = document.getElementById('order-status-badge');
             badge.innerText = '✓ Approved';

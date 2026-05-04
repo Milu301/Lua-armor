@@ -1,339 +1,136 @@
 <%- include('partials/head', { title: 'Create Account — ' + panelName }) %>
 
-<style>
-/* Remove inline Google Fonts imports since they are in head.ejs */
+<div class="auth-page">
+  <div class="auth-card auth-card-wide">
+    <div class="auth-card-shine"></div>
 
-:root {
-  --bg: #07070f;
-  --surface: rgba(18, 18, 26, 0.6);
-  --primary: #8b5cf6;
-  --primary-light: #a78bfa;
-  --border: rgba(255, 255, 255, 0.12);
-  --text: #f8fafc;
-  --text-dim: #94a3b8;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  overflow: hidden;
-  background-color: var(--bg);
-}
-
-.auth-container {
-  display: flex;
-  width: 100%;
-  max-width: 1200px;
-  height: 100vh;
-  position: relative;
-  z-index: 10;
-}
-
-/* Left Panel (Branding) */
-.auth-left {
-  flex: 1;
-  display: none; /* hidden on mobile */
-  flex-direction: column;
-  justify-content: center;
-  padding: 4rem;
-  position: relative;
-}
-
-@media (min-width: 1024px) {
-  .auth-left {
-    display: flex;
-  }
-}
-
-.auth-left h1 {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 3.5rem;
-  font-weight: 800;
-  line-height: 1.1;
-  margin-bottom: 1.5rem;
-  background: linear-gradient(135deg, #fff, #a78bfa);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.auth-left p {
-  font-size: 1.1rem;
-  color: var(--text-dim);
-  max-width: 400px;
-  line-height: 1.6;
-  margin-bottom: 3rem;
-}
-
-.info-box {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(14, 165, 233, 0.05));
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 1.5rem;
-  max-width: 440px;
-}
-.info-box-title {
-  font-family: 'Space Grotesk', sans-serif; font-weight: 700; color: var(--primary-light);
-  display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;
-}
-.info-step { display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: flex-start; }
-.info-step:last-child { margin-bottom: 0; }
-.info-icon {
-  width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
-}
-.info-text h4 { margin: 0 0 0.3rem; font-family: 'Space Grotesk', sans-serif; font-size: 1rem; color: #fff; }
-.info-text p { margin: 0; font-size: 0.85rem; color: var(--text-dim); line-height: 1.5; }
-
-/* Right Panel (Form) */
-.auth-right {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  overflow-y: auto; /* allows scrolling for register form if it's too tall */
-}
-
-/* Auth Card */
-.auth-card {
-  width: 100%;
-  max-width: 440px;
-  background: var(--surface);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid var(--border);
-  border-radius: 24px;
-  padding: 2.5rem;
-  box-shadow: 0 30px 80px rgba(0,0,0,0.8), inset 0 1px 1px rgba(255,255,255,0.05);
-  position: relative;
-  overflow: hidden;
-  animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-  margin: auto 0;
-}
-
-.auth-card::before {
-  content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px;
-  background: linear-gradient(90deg, transparent, var(--primary-light), transparent);
-  opacity: 0.5;
-}
-
-.brand-header-mobile {
-  display: flex; align-items: center; justify-content: center; flex-direction: column;
-  margin-bottom: 2.5rem;
-}
-@media (min-width: 1024px) {
-  .brand-header-mobile { display: none; }
-}
-
-.brand-header-mobile img {
-  width: 56px; height: 56px; border-radius: 16px; margin-bottom: 1rem;
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.4); border: 1px solid var(--border);
-}
-.brand-header-mobile h2 {
-  font-family: 'Space Grotesk', sans-serif; font-size: 1.8rem; font-weight: 800; margin: 0 0 0.5rem; letter-spacing: -0.5px;
-}
-
-.form-title {
-  display: none;
-}
-@media (min-width: 1024px) {
-  .form-title {
-    display: block;
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 2rem;
-    font-weight: 800;
-    margin-bottom: 0.5rem;
-  }
-  .form-subtitle {
-    color: var(--text-dim);
-    margin-bottom: 2rem;
-  }
-}
-
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
-@media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
-
-.form-group { margin-bottom: 1.5rem; }
-.form-label {
-  display: flex; justify-content: space-between; align-items: center;
-  font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 0.9rem;
-  color: var(--text-dim); margin-bottom: 0.6rem;
-}
-
-.input-wrapper { position: relative; display: flex; align-items: center; }
-.input-wrapper i.left-icon {
-  position: absolute; left: 1rem; color: var(--text-dim); font-size: 1.2rem;
-  transition: 0.3s;
-}
-.form-input {
-  width: 100%; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--border);
-  border-radius: 12px; padding: 0.8rem 1rem 0.8rem 2.8rem;
-  color: #fff; font-size: 1rem; font-family: 'Inter', sans-serif; transition: 0.3s;
-}
-.form-input:focus {
-  outline: none; border-color: var(--primary); background: rgba(0,0,0,0.7);
-  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15);
-}
-.form-input:focus + i.left-icon { color: var(--primary-light); }
-.input-hint { font-size: 0.75rem; color: var(--text-dim); margin-top: 0.4rem; }
-
-.badge {
-  font-size: 0.7rem; padding: 0.2rem 0.6rem; border-radius: 12px; font-weight: 700; text-transform: uppercase;
-}
-.badge-free { background: rgba(16, 185, 129, 0.1); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2); }
-.badge-premium { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
-
-.pw-bars { display: flex; gap: 4px; margin-top: 0.5rem; }
-.pw-bar { height: 4px; flex-grow: 1; background: rgba(255,255,255,0.1); border-radius: 2px; transition: 0.3s; }
-.pw-label { font-size: 0.75rem; margin-top: 0.3rem; text-align: right; }
-
-.btn-submit {
-  width: 100%; background: linear-gradient(135deg, var(--primary), #6366f1);
-  color: #fff; border: none; padding: 1rem; border-radius: 12px;
-  font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.1rem;
-  cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 0.5rem;
-  box-shadow: 0 8px 20px rgba(139, 92, 246, 0.3); margin-top: 1rem;
-}
-.btn-submit:hover { transform: translateY(-2px); box-shadow: 0 12px 25px rgba(139, 92, 246, 0.5); }
-.btn-submit:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
-
-.auth-footer { margin-top: 2rem; text-align: center; color: var(--text-dim); font-size: 0.95rem; }
-.auth-footer a { color: #fff; font-weight: 600; text-decoration: none; position: relative; }
-.auth-footer a::after { content: ''; position: absolute; bottom: -2px; left: 0; width: 0%; height: 1px; background: #fff; transition: 0.3s; }
-.auth-footer a:hover::after { width: 100%; }
-
-.discord-strip {
-  margin-top: 2rem; background: rgba(88, 101, 242, 0.1); border: 1px solid rgba(88, 101, 242, 0.2);
-  border-radius: 12px; padding: 1rem; display: flex; align-items: center; gap: 1rem;
-}
-.discord-strip i { color: #5865f2; font-size: 1.5rem; }
-.discord-text { flex-grow: 1; font-size: 0.85rem; color: #cbd5e1; }
-.btn-discord { background: rgba(88, 101, 242, 0.2); color: #818cf8; text-decoration: none; font-size: 0.8rem; font-weight: 600; padding: 0.4rem 0.8rem; border-radius: 8px; transition: 0.3s; }
-.btn-discord:hover { background: rgba(88, 101, 242, 0.4); color: #fff; }
-
-@keyframes slideUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
-.spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* Fix right column scroll on small heights */
-@media (max-height: 850px) {
-  body { align-items: flex-start; overflow-y: auto; }
-  .auth-container { height: auto; min-height: 100vh; }
-}
-</style>
-
-<div class="auth-container">
-  <!-- Left Panel -->
-  <div class="auth-left">
-    <h1>Join the<br>Community</h1>
-    <p>Unlock powerful scripting tools and manage your HWID with our secure authentication platform.</p>
-    
-    <div class="info-box">
-      <div class="info-box-title"><i class="ph-bold ph-info"></i> How Registration Works</div>
-      
-      <div class="info-step">
-        <div class="info-icon" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3);"><i class="ph-fill ph-crown"></i></div>
-        <div class="info-text">
-          <h4>Premium Access</h4>
-          <p>Paste your <strong>Luarmor key</strong> below. Keys are provided upon purchase and unlock instant generation and resets.</p>
-        </div>
+    <!-- Brand -->
+    <div class="auth-brand">
+      <div class="auth-logo">
+        <img src="<%= typeof panelLogo !== 'undefined' ? panelLogo : '/logo.png' %>" alt="Logo" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;" onerror="this.parentElement.innerHTML='🔑'" />
       </div>
-      
-      <div class="info-step">
-        <div class="info-icon" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);"><i class="ph-fill ph-user"></i></div>
-        <div class="info-text">
-          <h4>Free Access</h4>
-          <p>Leave the key field <strong>blank</strong> to register a standard free account.</p>
+      <div>
+        <div class="auth-brand-name"><%= panelName %></div>
+        <div class="auth-brand-sub">Create Account</div>
+      </div>
+    </div>
+
+    <div class="auth-divider"></div>
+
+    <!-- Heading -->
+    <h1 class="auth-heading">Join the community</h1>
+    <p class="auth-sub">Register to unlock powerful scripting tools and manage your HWID securely.</p>
+
+    <!-- Error -->
+    <% if (error) { %>
+    <div class="alert alert-danger mb-3">
+      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      <span><%= error %></span>
+    </div>
+    <% } %>
+
+    <!-- Info box -->
+    <div class="card mb-3" style="background:linear-gradient(135deg, rgba(124,58,233,0.06), rgba(6,182,212,0.04));border-color:var(--accent-border);">
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:var(--accent-light);"><path stroke-linecap="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent-light);">How Registration Works</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <div style="display:flex;gap:0.75rem;align-items:flex-start;">
+          <div style="width:32px;height:32px;border-radius:8px;background:var(--warning-dim);border:1px solid var(--warning-border);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24" style="color:var(--warning-light);"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          </div>
+          <div>
+            <div style="font-size:0.82rem;font-weight:600;margin-bottom:2px;">Premium Access</div>
+            <div style="font-size:0.72rem;color:var(--text-2);">Paste your <strong>AuroraSafe key</strong> to unlock instant generation and resets.</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:0.75rem;align-items:flex-start;">
+          <div style="width:32px;height:32px;border-radius:8px;background:var(--success-dim);border:1px solid var(--success-border);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:var(--success-light);"><path stroke-linecap="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+          </div>
+          <div>
+            <div style="font-size:0.82rem;font-weight:600;margin-bottom:2px;">Free Access</div>
+            <div style="font-size:0.72rem;color:var(--text-2);">Leave the key field <strong>blank</strong> to register a standard free account.</div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Right Panel -->
-  <div class="auth-right">
-    <div class="auth-card">
-      <div class="brand-header-mobile">
-        <img src="<%= typeof panelLogo !== 'undefined' ? panelLogo : '/logo.png' %>" alt="Logo" onerror="this.src='https://ui-avatars.com/api/?name=AH&background=8b5cf6&color=fff'">
-        <h2>Create Account</h2>
+    <!-- Form -->
+    <form action="/register" method="POST" id="regForm" autocomplete="off">
+      <div class="form-group">
+        <label class="label">Username</label>
+        <div class="input-wrap">
+          <svg class="input-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+          <input type="text" name="username" class="input input-icon-pad" placeholder="your_username" required minlength="3" maxlength="20" autocomplete="off" spellcheck="false" pattern="[a-zA-Z0-9_]{3,20}" />
+        </div>
+        <div style="font-size:0.7rem;color:var(--text-3);margin-top:0.3rem;">3-20 chars: letters, numbers, underscore</div>
       </div>
 
-      <div class="form-title">Create Account</div>
-      <div class="form-subtitle">Register a new account to get started</div>
-
-      <% if (error) { %>
-      <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; padding: 0.8rem 1rem; border-radius: 10px; font-size: 0.9rem; display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1.5rem;">
-        <i class="ph-fill ph-warning-circle" style="font-size: 1.2rem;"></i>
-        <span><%= error %></span>
+      <div class="form-group">
+        <label class="label">
+          Key
+          <span id="key-badge" class="badge badge-green">Optional — Free</span>
+        </label>
+        <div class="input-wrap">
+          <svg class="input-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0v6m-4 0h1M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z"/></svg>
+          <input type="text" name="key" id="keyField" class="input input-icon-pad mono" placeholder="Paste key or leave blank..." minlength="6" maxlength="256" autocomplete="off" spellcheck="false" />
+        </div>
+        <div style="font-size:0.7rem;color:var(--text-3);margin-top:0.3rem;" id="key-hint">Leave blank to register as a Free User</div>
       </div>
-      <% } %>
 
-      <form action="/register" method="POST" id="regForm" autocomplete="off">
-        
+      <div class="reg-grid">
         <div class="form-group">
-          <div class="form-label">Username</div>
-          <div class="input-wrapper">
-            <input type="text" name="username" class="form-input" placeholder="your_username" required minlength="3" maxlength="20" autocomplete="off" spellcheck="false" pattern="[a-zA-Z0-9_]{3,20}">
-            <i class="ph ph-user left-icon"></i>
+          <label class="label">Password</label>
+          <div class="input-wrap">
+            <svg class="input-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            <input type="password" name="password" id="pw1" class="input input-icon-pad" placeholder="Min. 8 chars" required minlength="8" autocomplete="new-password" />
           </div>
-          <div class="input-hint">3-20 chars: letters, numbers, underscore</div>
         </div>
 
         <div class="form-group">
-          <div class="form-label">
-            Luarmor Key
-            <span id="key-badge" class="badge badge-free">Optional - Free</span>
-          </div>
-          <div class="input-wrapper">
-            <input type="text" name="key" id="keyField" class="form-input" style="font-family: monospace;" placeholder="Paste key or leave blank..." minlength="6" maxlength="256" autocomplete="off" spellcheck="false">
-            <i class="ph ph-key left-icon"></i>
-          </div>
-          <div class="input-hint" id="key-hint">Leave blank to register as a Free User</div>
-        </div>
-
-        <div class="form-grid">
-          <div class="form-group" style="margin-bottom:0;">
-            <div class="form-label">Password</div>
-            <div class="input-wrapper">
-              <input type="password" name="password" id="pw1" class="form-input" placeholder="Min. 8 chars" required minlength="8" autocomplete="new-password">
-              <i class="ph ph-lock-key left-icon"></i>
-            </div>
-          </div>
-
-          <div class="form-group" style="margin-bottom:0;">
-            <div class="form-label">Confirm Password</div>
-            <div class="input-wrapper">
-              <input type="password" name="confirm" id="pw2" class="form-input" placeholder="Repeat" required minlength="8" autocomplete="new-password">
-              <i class="ph ph-check-circle left-icon" id="pw-match-icon"></i>
-            </div>
+          <label class="label">Confirm Password</label>
+          <div class="input-wrap">
+            <svg class="input-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" id="pw-match-icon"><path stroke-linecap="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <input type="password" name="confirm" id="pw2" class="input input-icon-pad" placeholder="Repeat" required minlength="8" autocomplete="new-password" />
           </div>
         </div>
-
-        <div id="pw-strength-wrap" style="display:none; margin-bottom: 1.5rem;">
-          <div class="pw-bars">
-            <div class="pw-bar" id="pb1"></div><div class="pw-bar" id="pb2"></div><div class="pw-bar" id="pb3"></div><div class="pw-bar" id="pb4"></div>
-          </div>
-          <div class="pw-label" id="pw-label"></div>
-        </div>
-
-        <button type="submit" class="btn-submit" id="regBtn">
-          Create Account <i class="ph-bold ph-arrow-right"></i>
-        </button>
-      </form>
-
-      <div class="auth-footer">
-        Already have an account? <a href="/login">Sign in</a><br>
-        <a href="/home" style="color: var(--text-dim); font-size: 0.85rem; font-weight: 400; margin-top: 0.8rem; display: inline-block;">← Back to Home</a>
       </div>
 
-      <div class="discord-strip">
-        <i class="ph-fill ph-discord-logo"></i>
-        <div class="discord-text">Buy or request a key in our server.</div>
-        <a href="<%= typeof discordUrl !== 'undefined' ? discordUrl : '#' %>" target="_blank" class="btn-discord">Join Discord</a>
+      <div id="pw-strength-wrap" style="display:none;margin-bottom:1.5rem;">
+        <div class="pw-strength">
+          <div class="pw-bar" id="pb1"></div><div class="pw-bar" id="pb2"></div><div class="pw-bar" id="pb3"></div><div class="pw-bar" id="pb4"></div>
+        </div>
+        <div style="font-size:0.72rem;margin-top:0.3rem;text-align:right;" id="pw-label"></div>
       </div>
+
+      <button type="submit" class="btn btn-primary btn-lg btn-full" id="regBtn">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+        Create Account
+      </button>
+    </form>
+
+    <!-- Footer -->
+    <div class="auth-footer-links">
+      <a href="/login" class="auth-link">
+        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
+        Sign in
+      </a>
+      <a href="/home" class="auth-link" style="color:var(--text-3);">
+        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+        Back to home
+      </a>
     </div>
+
+    <!-- Discord strip -->
+    <div class="auth-discord-strip">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color:#5865f2;flex-shrink:0;"><path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03z"/></svg>
+      <div style="flex:1;font-size:0.8rem;color:var(--text-2);">Buy or request a key in our server.</div>
+      <a href="<%= typeof discordUrl !== 'undefined' ? discordUrl : '#' %>" target="_blank" class="btn btn-sm btn-ghost" style="color:#818cf8;border-color:rgba(88,101,242,0.2);">Join Discord</a>
+    </div>
+
+    <div class="auth-version">v5.0.0 — © <%= new Date().getFullYear() %> <%= panelName %></div>
   </div>
 </div>
 
@@ -362,7 +159,7 @@ pw1.addEventListener('input', function() {
   score = Math.max(1, Math.min(4, score));
 
   bars.forEach((b, i) => {
-    b.style.background = i < score ? strengthColors[score - 1] : 'rgba(255,255,255,0.1)';
+    b.style.background = i < score ? strengthColors[score - 1] : 'rgba(255,255,255,0.06)';
   });
   label.textContent = strengthLabels[score - 1];
   label.style.color = strengthColors[score - 1];
@@ -374,14 +171,17 @@ pw2.addEventListener('input', checkMatch);
 function checkMatch() {
   if(pw2.value && pw1.value) {
     if(pw2.value === pw1.value) {
-      pw2.style.borderColor = '#10b981';
-      matchIcon.style.color = '#10b981';
+      pw2.style.borderColor = 'var(--success-border)';
+      matchIcon.innerHTML = '<path stroke-linecap="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>';
+      matchIcon.style.color = 'var(--success-light)';
     } else {
-      pw2.style.borderColor = '#ef4444';
-      matchIcon.style.color = '#ef4444';
+      pw2.style.borderColor = 'var(--danger-border)';
+      matchIcon.innerHTML = '<path stroke-linecap="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-6 6l4-4m0 0l4 4m-6-6a9 9 0 1118 0 9 9 0 01-18 0z"/>';
+      matchIcon.style.color = 'var(--danger-light)';
     }
   } else {
     pw2.style.borderColor = '';
+    matchIcon.innerHTML = '<path stroke-linecap="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>';
     matchIcon.style.color = '';
   }
 }
@@ -394,13 +194,13 @@ const keyHint = document.getElementById('key-hint');
 keyField.addEventListener('input', function() {
   const val = this.value.trim();
   if (!val) {
-    keyBadge.className = 'badge badge-free';
-    keyBadge.innerHTML = 'Optional - Free';
+    keyBadge.className = 'badge badge-green';
+    keyBadge.textContent = 'Optional — Free';
     keyHint.textContent = 'Leave blank to register as a Free User';
   } else {
-    keyBadge.className = 'badge badge-premium';
-    keyBadge.innerHTML = '<i class="ph-fill ph-crown"></i> Premium Key';
-    keyHint.textContent = 'Key will be verified via Luarmor API upon submit';
+    keyBadge.className = 'badge badge-purple';
+    keyBadge.innerHTML = '<svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24" style="display:inline;vertical-align:middle;margin-right:2px;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> Premium Key';
+    keyHint.textContent = 'Key will be verified via AuroraSafe API upon submit';
   }
 });
 
@@ -408,13 +208,13 @@ keyField.addEventListener('input', function() {
 document.getElementById('regForm').addEventListener('submit', function(e) {
   if (pw1.value !== pw2.value) {
     e.preventDefault();
-    pw2.style.borderColor = '#ef4444';
+    pw2.style.borderColor = 'var(--danger-border)';
     return;
   }
   const btn = document.getElementById('regBtn');
   btn.disabled = true;
   const isPremium = keyField.value.trim().length > 0;
-  btn.innerHTML = `<div class="spinner"></div> ${isPremium ? 'Verifying Key...' : 'Creating Free Account...'}`;
+  btn.innerHTML = '<span class="spinner"></span> ' + (isPremium ? 'Verifying Key...' : 'Creating Account...');
 });
 </script>
 </body>

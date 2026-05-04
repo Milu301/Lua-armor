@@ -1,11 +1,13 @@
 <%- include('partials/head', { title: 'Admin Panel — ' + panelName }) %>
 
 <style>
-.tab-bar { display:flex; gap:2px; padding:0 1.75rem; background:var(--bg-card); border-bottom:1px solid var(--border); position:sticky; top:53px; z-index:40; overflow-x:auto; scrollbar-width:none; }
+.tab-bar { display:flex; gap:2px; padding:0 1rem; background:var(--bg-card); border-bottom:1px solid var(--border); position:sticky; top:53px; z-index:40; overflow-x:auto; scrollbar-width:none; }
 .tab-bar::-webkit-scrollbar { display:none; }
-.tab-btn { padding:0.75rem 1rem; font-size:0.8rem; font-weight:600; color:var(--text-2); background:none; border:none; cursor:pointer; border-bottom:2px solid transparent; transition:color 0.15s, border-color 0.15s; font-family:inherit; display:flex; align-items:center; gap:0.4rem; white-space:nowrap; flex-shrink:0; }
+.tab-btn { padding:0.7rem 0.85rem; font-size:0.77rem; font-weight:600; color:var(--text-2); background:none; border:none; cursor:pointer; border-bottom:2px solid transparent; transition:color 0.15s, border-color 0.15s; font-family:inherit; display:flex; align-items:center; gap:0.35rem; white-space:nowrap; flex-shrink:0; }
 .tab-btn:hover { color:var(--text); }
 .tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
+.tab-separator { width:1px; height:20px; background:var(--border); margin:auto 0.3rem; flex-shrink:0; align-self:center; }
+.tab-label { padding:0.7rem 0.6rem; font-size:0.6rem; font-weight:800; color:var(--text-3); letter-spacing:0.1em; text-transform:uppercase; white-space:nowrap; flex-shrink:0; display:flex; align-items:center; }
 .tab-panel { display:none; animation:fadeIn 0.15s ease; }
 .tab-panel.active { display:block; }
 .modal-overlay { display:none; position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:1.5rem; }
@@ -44,13 +46,10 @@
 
     <!-- Tab bar -->
     <div class="tab-bar">
+      <span class="tab-label">Management</span>
       <button class="tab-btn active" onclick="switchTab('overview',this)">
         <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke-width="2"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke-width="2"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke-width="2"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke-width="2"/></svg>
         Overview
-      </button>
-      <button class="tab-btn" onclick="switchTab('projects',this)">
-        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
-        Projects
       </button>
       <button class="tab-btn" onclick="switchTab('users',this)">
         <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"/></svg>
@@ -60,40 +59,51 @@
       <button class="tab-btn" onclick="switchTab('live',this);refreshAdminLive();">
         <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" stroke-width="2"/><path stroke-linecap="round" stroke-width="2" d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14M15.54 8.46a5 5 0 010 7.07M8.46 8.46a5 5 0 000 7.07"/></svg>
         Live
-        <span class="sb-badge" id="live-count-badge" style="background:var(--green);display:none;">0</span>
+        <span class="sb-badge" id="live-count-badge" style="background:var(--success);display:none;">0</span>
+      </button>
+      <span class="tab-separator"></span>
+      <span class="tab-label">Content</span>
+      <button class="tab-btn" onclick="switchTab('projects',this)">
+        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+        Projects
       </button>
       <button class="tab-btn" onclick="switchTab('announcements',this)">
         <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
         Announcements
       </button>
+      <button class="tab-btn" onclick="switchTab('tutorials',this);loadTutorialsTab();">
+        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Tutorials
+      </button>
+      <button class="tab-btn" onclick="switchTab('bugs',this)">
+        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        Reports
+        <% if (Number(stats.openBugs) > 0) { %>
+        <span class="sb-badge" style="background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.3);color:#fbbf24;"><%= stats.openBugs %></span>
+        <% } %>
+      </button>
+      <span class="tab-separator"></span>
+      <span class="tab-label">Community</span>
       <button class="tab-btn" onclick="switchTab('chat',this)">
         <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
         Chat
         <span class="sb-badge" style="background:rgba(6,182,212,0.15);color:#22d3ee;border-color:rgba(6,182,212,0.25);">MOD</span>
       </button>
-      <button class="tab-btn" onclick="switchTab('bugs',this)">
-        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-        Bug Reports
-        <% if (Number(stats.openBugs) > 0) { %>
-        <span class="sb-badge" style="background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.3);color:#fbbf24;"><%= stats.openBugs %></span>
-        <% } %>
+      <button class="tab-btn" onclick="switchTab('promos',this);loadPromosTab();">
+        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+        Promos
       </button>
-      <button class="tab-btn" onclick="switchTab('settings',this)">
-        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-        Settings
-      </button>
+      <span class="tab-separator"></span>
+      <span class="tab-label">Finance</span>
       <button class="tab-btn" onclick="switchTab('payments',this);loadPaymentsTab();">
         <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
         Payments
-        <span class="sb-badge" style="background:rgba(139,92,246,0.12);border-color:rgba(139,92,246,0.25);color:#a78bfa;">BOLD</span>
       </button>
-      <button class="tab-btn" onclick="switchTab('promos',this);loadPromosTab();">
-        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
-        Promo Codes
-      </button>
-      <button class="tab-btn" onclick="switchTab('tutorials',this);loadTutorialsTab();">
-        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        Tutorials
+      <span class="tab-separator"></span>
+      <span class="tab-label">System</span>
+      <button class="tab-btn" onclick="switchTab('settings',this)">
+        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        Settings
       </button>
     </div>
 
@@ -165,7 +175,7 @@
         <div class="card">
           <div class="card-head">
             <div class="card-icon ci-purple">🗂️</div>
-            <div><div class="card-title">Projects / Tiers</div><div class="card-desc">Each project maps to a Luarmor project. Users are auto-assigned on registration.</div></div>
+            <div><div class="card-title">Projects / Tiers</div><div class="card-desc">Each project maps to a AuroraSafe script. Users are auto-assigned on registration.</div></div>
             <button class="btn btn-primary btn-sm" style="margin-left:auto;" onclick="openProjectModal()">
               <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
               Add Project
@@ -183,7 +193,7 @@
                 </div>
                 <div class="t-xs dimmed" style="margin-top:2px;"><%= p.user_count %> users · <%= p.daily_reset_limit %> resets/day · <span class="mono"><%= p.slug %></span></div>
               </div>
-              <div class="t-xs mono dimmed" style="flex-shrink:0;max-width:140px;overflow:hidden;text-overflow:ellipsis;" title="<%= p.luarmor_project_id %>"><%= p.luarmor_project_id %></div>
+              <div class="t-xs mono dimmed" style="flex-shrink:0;max-width:140px;overflow:hidden;text-overflow:ellipsis;" title="<%= p.script_id %>"><%= p.script_id %></div>
               <div style="display:flex;gap:0.4rem;flex-shrink:0;">
                 <button class="btn btn-sm btn-secondary" onclick='openProjectModal(<%= p.id %>)'>Edit</button>
                 <button class="btn btn-sm" style="background:var(--red-dim);border:1px solid var(--red-border);color:#f87171;" onclick="disableProject(<%= p.id %>, '<%= p.name %>')">Disable</button>
@@ -214,7 +224,7 @@
                 <tr>
                   <th>#</th>
                   <th>Username</th>
-                  <th>Luarmor Key</th>
+                  <th>Key</th>
                   <th>Project</th>
                   <th>Discord</th>
                   <th>Role</th>
@@ -450,7 +460,7 @@
 
           <div class="form-row">
             <label class="label">Panel Name</label>
-            <input type="text" class="input" id="s-panel-name" value="<%= settings.panel_name || panelName %>" maxlength="64" placeholder="LuarmorHub"/>
+            <input type="text" class="input" id="s-panel-name" value="<%= settings.panel_name || panelName %>" maxlength="64" placeholder="AuroraSafeHub"/>
           </div>
 
           <div class="form-row">
@@ -509,7 +519,7 @@
             <div class="card-icon" style="background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.22);">💳</div>
             <div>
               <div class="card-title">Payment Plans</div>
-              <div class="card-desc">Manage the plans users can buy at /plans. Each plan auto-delivers a Luarmor key on payment.</div>
+              <div class="card-desc">Manage the plans users can buy at /plans. Each plan auto-delivers a AuroraSafe key on payment.</div>
             </div>
             <button class="btn btn-primary btn-sm" style="margin-left:auto;" onclick="openPlanModal()">
               <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
@@ -634,8 +644,7 @@
       <div class="form-row"><label class="label">Project Name *</label><input type="text" class="input" id="pm-name" placeholder="Premium" maxlength="64"/></div>
       <div class="form-row"><label class="label">Icon (emoji)</label><input type="text" class="input" id="pm-icon" placeholder="⭐" maxlength="8" style="font-size:1.2rem;"/></div>
     </div>
-    <div class="form-row"><label class="label">Luarmor Project ID *</label><input type="text" class="input mono" id="pm-pid" placeholder="your_project_id" /></div>
-    <div class="form-row"><label class="label">Luarmor API Key *</label><input type="text" class="input mono" id="pm-pkey" placeholder="your_api_key" /></div>
+    <div class="form-row"><label class="label">AuroraSafe Script ID *</label><input type="text" class="input mono" id="pm-pid" placeholder="script_uuid_from_luacopy" /></div>
     <div class="field-grid">
       <div class="form-row"><label class="label">Daily Reset Limit</label><input type="number" class="input" id="pm-limit" value="3" min="1" max="999"/></div>
       <div class="form-row"><label class="label">Accent Color</label><input type="color" class="input" id="pm-color" value="#8b5cf6" style="height:40px;padding:4px;" oninput="updateGradientPreview()"/></div>
@@ -645,7 +654,7 @@
     <div class="form-row">
       <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.82rem;margin-top:0.5rem;">
         <input type="checkbox" id="pm-free" style="accent-color:var(--cyan);width:16px;height:16px;"/>
-        Free Tier Project (Users without a Luarmor key will be assigned here)
+        Free Tier Project (Users without a key will be assigned here)
       </label>
     </div>
     <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
@@ -734,10 +743,10 @@
       <div class="um-tab-content" id="um-tab-premium" style="display:none;">
         <div class="form-row">
           <label class="label" style="display:flex;justify-content:space-between;">
-            <span>Luarmor Key (Main)</span>
+            <span>Key (Main)</span>
             <span style="font-size:0.7rem;color:var(--text-3);font-weight:normal;">Edit carefully!</span>
           </label>
-          <input type="text" class="input mono" id="um-key-input" style="font-size:0.72rem;padding:0.6rem;" placeholder="luarmor_xxxxxxxx"/>
+          <input type="text" class="input mono" id="um-key-input" style="font-size:0.72rem;padding:0.6rem;" placeholder="PREM-XXXXXXXX"/>
         </div>
         
         <div class="stat-grid" style="grid-template-columns:1fr 1fr; margin-bottom:1.5rem; gap:0.5rem;">
@@ -824,14 +833,14 @@
       <div class="form-row"><label class="label">Duration (days) *</label><input type="number" class="input" id="plm-days" placeholder="30" min="1" max="365" value="30"/></div>
     </div>
     <div class="form-row">
-      <label class="label">Luarmor Project</label>
+      <label class="label">AuroraSafe Script</label>
       <select class="input" id="plm-project">
         <option value="">— None / manual assign —</option>
         <% projects.forEach(p => { %>
-        <option value="<%= p.id %>"><%= p.icon %> <%= p.name %> (ID: <%= p.luarmor_project_id %>)</option>
+        <option value="<%= p.id %>"><%= p.icon %> <%= p.name %> (ID: <%= p.script_id %>)</option>
         <% }) %>
       </select>
-      <div class="input-hint">When a payment is approved, a key is auto-created in this Luarmor project for the buyer.</div>
+      <div class="input-hint">When a payment is approved, a key is auto-created in AuroraSafe for this script.</div>
     </div>
     <div class="form-row">
       <label class="label">Roblox Gamepass ID</label>
@@ -973,8 +982,7 @@ async function openProjectModal(projId) {
     const proj = d.project;
     document.getElementById('pm-name').value     = proj.name || '';
     document.getElementById('pm-icon').value     = proj.icon || '⚡';
-    document.getElementById('pm-pid').value      = proj.luarmor_project_id || '';
-    document.getElementById('pm-pkey').value     = proj.luarmor_api_key || '';
+    document.getElementById('pm-pid').value      = proj.script_id || '';
     document.getElementById('pm-limit').value    = proj.daily_reset_limit || 3;
     document.getElementById('pm-color').value    = proj.color || '#8b5cf6';
     document.getElementById('pm-gradient').value = proj.gradient || 'linear-gradient(135deg,#8b5cf6,#6366f1)';
@@ -995,8 +1003,7 @@ async function saveProject() {
   const id   = document.getElementById('pm-id').value;
   const body = {
     name:                document.getElementById('pm-name').value.trim(),
-    luarmor_project_id:  document.getElementById('pm-pid').value.trim(),
-    luarmor_api_key:     document.getElementById('pm-pkey').value.trim(),
+    script_id:           document.getElementById('pm-pid').value.trim(),
     daily_reset_limit:   document.getElementById('pm-limit').value,
     color:               document.getElementById('pm-color').value,
     gradient:            document.getElementById('pm-gradient').value.trim(),
